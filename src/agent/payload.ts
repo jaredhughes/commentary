@@ -60,7 +60,7 @@ export class PayloadBuilder {
 
         // Update the note with calculated lines if they weren't there
         if (!note.lines && calculatedLines) {
-          (note as any).lines = calculatedLines;
+          note.lines = calculatedLines;
         }
       } else {
         // Fallback: Use position-based context

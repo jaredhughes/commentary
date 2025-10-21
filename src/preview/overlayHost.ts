@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { MessageHandler } from '../messaging';
 import { StorageManager } from '../storage';
-import { MessageType, SaveCommentMessage, DeleteCommentMessage, Note } from '../types';
+import { MessageType, SaveCommentMessage, DeleteCommentMessage, Note, PreviewMessage } from '../types';
 
 export class OverlayHost {
   private messageHandler: MessageHandler;
@@ -42,13 +42,13 @@ export class OverlayHost {
   /**
    * Handle message from preview webview
    */
-  async handlePreviewMessage(message: any, documentUri: string, panel: vscode.WebviewPanel): Promise<void> {
+  async handlePreviewMessage(message: PreviewMessage, documentUri: string, panel: vscode.WebviewPanel): Promise<void> {
     console.log('OverlayHost handling message:', message, 'for document:', documentUri);
 
     // CRITICAL: Add documentUri to the message so handlers can use it
-    message.documentUri = documentUri;
+    const messageWithUri = { ...message, documentUri } as unknown as PreviewMessage;
 
-    await this.messageHandler.handleMessage(message);
+    await this.messageHandler.handleMessage(messageWithUri);
 
     // After handling, refresh the preview
     await this.refreshPreviewForDocument(documentUri, panel);
