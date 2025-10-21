@@ -33,19 +33,21 @@ suite('Commentary Extension Test Suite', () => {
 
 suite('Storage Tests', () => {
   let storage: WorkspaceStorage;
-  let context: vscode.ExtensionContext;
 
   suiteSetup(async () => {
     const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
     assert.ok(extension);
-    context = extension!.exports;
   });
 
   setup(() => {
+    const storedData: Record<string, Record<string, Note[]>> = {};
+
     const mockContext = {
       workspaceState: {
-        get: () => ({}),
-        update: async () => {},
+        get: (key: string, defaultValue?: Record<string, Note[]>): Record<string, Note[]> => storedData[key] ?? defaultValue ?? {},
+        update: async (key: string, value: Record<string, Note[]>): Promise<void> => {
+          storedData[key] = value;
+        },
       },
     } as unknown as vscode.ExtensionContext;
 
