@@ -3,6 +3,7 @@
  */
 
 import * as vscode from 'vscode';
+import { PreviewMessage } from '../types';
 
 export class RendererBridge {
   /**
@@ -48,12 +49,12 @@ export class RendererBridge {
   /**
    * Convert a webview message to preview message protocol
    */
-  static parseMessage(message: any): any {
+  static parseMessage(message: unknown): PreviewMessage {
     // Basic validation and parsing
     if (!message || typeof message !== 'object') {
       throw new Error('Invalid message format');
     }
 
-    return message;
+    return message as PreviewMessage;
   }
 }

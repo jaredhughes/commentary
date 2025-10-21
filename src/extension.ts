@@ -164,7 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register markdown preview extension API consumer
   // This allows us to inject scripts and styles into the preview
   return {
-    extendMarkdownIt(md: any) {
+    extendMarkdownIt(md: Record<string, unknown>): Record<string, unknown> {
       // We don't need to modify markdown-it itself
       // We rely on preview scripts and styles injection
       return md;

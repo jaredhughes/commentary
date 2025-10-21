@@ -9,6 +9,7 @@ import markdownItAnchor from 'markdown-it-anchor';
 import markdownItTaskLists from 'markdown-it-task-lists';
 import { StorageManager } from '../storage';
 import { OverlayHost } from './overlayHost';
+import { PreviewMessage } from '../types';
 
 export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider {
   private panels: Map<string, vscode.WebviewPanel> = new Map();
@@ -261,7 +262,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   /**
    * Handle messages from webview
    */
-  private async handleMessage(message: any, document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
+  private async handleMessage(message: PreviewMessage, document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
     console.log('Webview received message:', message);
     // Handle the message directly through overlayHost
     await this.overlayHost.handlePreviewMessage(message, document.uri.toString(), panel);
