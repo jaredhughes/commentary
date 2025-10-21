@@ -1,14 +1,20 @@
 /**
- * GitHub Light Theme for Markdown Preview
- * Simplified version - for production, use github-markdown-css (MIT)
+ * GitHub Light Theme - Matches github.com exactly
+ * Based on github-markdown-css (MIT)
  */
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
   font-size: 16px;
-  line-height: 1.5;
-  color: #24292f;
+  line-height: 1.6;
+  color: #1f2328;
   background-color: #ffffff;
+  word-wrap: break-word;
+}
+
+#markdown-content {
+  box-sizing: border-box;
+  min-width: 200px;
   max-width: 980px;
   margin: 0 auto;
   padding: 45px;
@@ -37,7 +43,8 @@ code {
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 85%;
-  background-color: rgba(175, 184, 193, 0.2);
+  white-space: break-spaces;
+  background-color: #eff1f3;
   border-radius: 6px;
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
@@ -49,11 +56,32 @@ pre {
   line-height: 1.45;
   background-color: #f6f8fa;
   border-radius: 6px;
+  margin-top: 0;
+  margin-bottom: 16px;
 }
 
 pre code {
   background-color: transparent;
+  border: 0;
   padding: 0;
+  display: inline;
+  line-height: inherit;
+  word-wrap: normal;
+  white-space: pre;
+}
+
+/* Task lists - GitHub style */
+.task-list-item {
+  list-style-type: none;
+}
+
+.task-list-item input[type="checkbox"] {
+  margin: 0 0.2em 0.25em -1.4em;
+  vertical-align: middle;
+}
+
+.task-list-item + .task-list-item {
+  margin-top: 3px;
 }
 
 blockquote {

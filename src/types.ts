@@ -64,6 +64,7 @@ export interface SaveCommentMessage extends BaseMessage {
   type: MessageType.SaveComment;
   selection: SerializedSelection;
   commentText: string;
+  documentUri?: string;
 }
 
 export interface DeleteCommentMessage extends BaseMessage {

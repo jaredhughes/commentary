@@ -3,58 +3,98 @@
  * Handles text selection, comment bubbles, and highlighting
  */
 
+console.log('[OVERLAY.JS] Script is loading...');
+
 (function () {
   'use strict';
 
+  console.log('[OVERLAY.JS] IIFE starting...');
+
   // VS Code API for messaging
   const vscode = acquireVsCodeApi();
+  console.log('[OVERLAY.JS] vscode API acquired:', vscode);
 
   let currentSelection = null;
   let commentBubble = null;
   let highlights = new Map(); // noteId -> highlight element
+  let bubbleJustOpened = false; // Track if bubble was just created to avoid immediate close
+  let activeHighlight = null; // Temporary highlight while bubble is open
 
   /**
    * Initialize the overlay
    */
   function init() {
-    console.log('Commentary overlay initialized');
+    console.log('[OVERLAY.JS] init() called');
+    console.log('[OVERLAY.JS] Commentary overlay initialized');
 
     // Listen for mouseup to detect selections
     document.addEventListener('mouseup', handleMouseUp);
+    console.log('[OVERLAY.JS] mouseup listener added');
 
     // Listen for messages from extension
     window.addEventListener('message', handleHostMessage);
+    console.log('[OVERLAY.JS] message listener added');
 
     // Notify extension that preview is ready
     postMessage({ type: 'ready' });
+    console.log('[OVERLAY.JS] Ready message sent');
   }
 
   /**
    * Handle mouse up event (potential selection)
    */
   function handleMouseUp(event) {
-    // Small delay to ensure selection is finalized
-    setTimeout(() => {
-      const selection = window.getSelection();
+    console.log('[OVERLAY] handleMouseUp fired, target:', event.target);
+    console.log('[OVERLAY] commentBubble exists:', !!commentBubble);
+    console.log('[OVERLAY] bubbleJustOpened:', bubbleJustOpened);
 
-      if (!selection || selection.isCollapsed) {
-        // No selection, hide bubble
-        hideBubble();
-        return;
-      }
+    // Ignore events that fire immediately after opening the bubble
+    if (bubbleJustOpened) {
+      console.log('[OVERLAY] Ignoring mouseup - bubble just opened');
+      bubbleJustOpened = false;
+      return;
+    }
 
-      const text = selection.toString().trim();
-      if (!text || text.length === 0) {
-        hideBubble();
-        return;
-      }
+    // Don't process if clicking inside the bubble
+    if (commentBubble && commentBubble.contains(event.target)) {
+      console.log('[OVERLAY] Click inside bubble, ignoring');
+      return;
+    }
 
-      // Valid selection - serialize and show bubble
-      currentSelection = serializeSelection(selection);
-      if (currentSelection) {
-        showBubble(selection, event.clientX, event.clientY);
-      }
-    }, 10);
+    // If bubble is open and user clicked outside, close it
+    if (commentBubble) {
+      console.log('[OVERLAY] Bubble is open, user clicked outside - hiding bubble');
+      hideBubble();
+      return;
+    }
+
+    const selection = window.getSelection();
+    console.log('[OVERLAY] Selection collapsed:', selection?.isCollapsed);
+
+    // Only show new bubble if there's a valid text selection
+    if (!selection || selection.isCollapsed) {
+      console.log('[OVERLAY] No selection and no bubble to show');
+      return;
+    }
+
+    const text = selection.toString().trim();
+    console.log('[OVERLAY] Selected text:', text);
+    if (!text || text.length === 0) {
+      return;
+    }
+
+    // Valid selection - serialize and show bubble
+    currentSelection = serializeSelection(selection);
+    console.log('[OVERLAY] currentSelection set:', currentSelection);
+    if (currentSelection) {
+      // Create visual highlight before browser selection is cleared
+      const range = selection.getRangeAt(0);
+      createActiveHighlight(range);
+
+      showBubble(selection, event.clientX, event.clientY);
+      bubbleJustOpened = true; // Set flag to ignore next mouseup
+      console.log('[OVERLAY] bubbleJustOpened flag set');
+    }
   }
 
   /**
@@ -65,11 +105,14 @@
     const exact = selection.toString();
 
     // Get prefix and suffix for TextQuoteSelector
-    const prefix = getPrefix(range.startContainer, range.startOffset, 32);
-    const suffix = getSuffix(range.endContainer, range.endOffset, 32);
+    // Using 100 chars for better agent context when editing/rewriting
+    const prefix = getPrefix(range.startContainer, range.startOffset, 100);
+    const suffix = getSuffix(range.endContainer, range.endOffset, 100);
 
     // Get text position
     const position = getTextPosition(range);
+
+    console.log('[OVERLAY] Serialized selection:', {exact, prefix, suffix, position});
 
     return {
       quote: {
@@ -83,6 +126,7 @@
 
   /**
    * Get prefix text before selection
+   * Increased to 100 chars for better agent context
    */
   function getPrefix(node, offset, length) {
     const textBefore = getTextBefore(node, offset);
@@ -91,6 +135,7 @@
 
   /**
    * Get suffix text after selection
+   * Increased to 100 chars for better agent context
    */
   function getSuffix(node, offset, length) {
     const textAfter = getTextAfter(node, offset);
@@ -136,7 +181,11 @@
    * Show comment bubble near selection
    */
   function showBubble(selection, x, y) {
-    hideBubble();
+    // Don't call hideBubble() here - it clears currentSelection!
+    // Just remove old bubble if it exists
+    if (commentBubble) {
+      commentBubble.remove();
+    }
 
     commentBubble = document.createElement('div');
     commentBubble.className = 'commentary-bubble';
@@ -151,27 +200,38 @@
     textarea.placeholder = 'Add comment...';
     textarea.className = 'commentary-textarea';
 
+    // Add keyboard shortcuts
+    textarea.addEventListener('keydown', (e) => {
+      // Cmd+Enter / Ctrl+Enter to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveComment(textarea.value);
+      }
+      // Escape to close
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideBubble();
+      }
+    });
+
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
 
     const saveBtn = document.createElement('button');
     saveBtn.textContent = 'Save';
     saveBtn.className = 'commentary-btn commentary-btn-primary';
-    saveBtn.onclick = () => saveComment(textarea.value);
+    saveBtn.onclick = () => {
+      console.log('[OVERLAY] Save button clicked!');
+      saveComment(textarea.value);
+    };
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.className = 'commentary-btn';
     cancelBtn.onclick = hideBubble;
 
-    const agentBtn = document.createElement('button');
-    agentBtn.textContent = '→ Agent';
-    agentBtn.className = 'commentary-btn commentary-btn-agent';
-    agentBtn.onclick = () => sendToAgent(textarea.value);
-
     buttonContainer.appendChild(saveBtn);
     buttonContainer.appendChild(cancelBtn);
-    buttonContainer.appendChild(agentBtn);
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
@@ -183,13 +243,68 @@
   }
 
   /**
+   * Create a visual highlight for the active selection
+   * Uses positioned divs instead of DOM manipulation to avoid errors
+   */
+  function createActiveHighlight(range) {
+    console.log('[OVERLAY] Creating active highlight');
+
+    // Remove any existing active highlight
+    removeActiveHighlight();
+
+    try {
+      // Get all the rectangles for this range (handles multi-line)
+      const rects = range.getClientRects();
+      console.log('[OVERLAY] Selection has', rects.length, 'rectangles');
+
+      // Create a container for all highlight divs
+      activeHighlight = document.createElement('div');
+      activeHighlight.className = 'commentary-active-highlight-container';
+
+      // Create a div for each rectangle
+      for (let i = 0; i < rects.length; i++) {
+        const rect = rects[i];
+        const highlightDiv = document.createElement('div');
+        highlightDiv.className = 'commentary-active-highlight';
+        highlightDiv.style.position = 'fixed';
+        highlightDiv.style.left = rect.left + 'px';
+        highlightDiv.style.top = rect.top + 'px';
+        highlightDiv.style.width = rect.width + 'px';
+        highlightDiv.style.height = rect.height + 'px';
+        highlightDiv.style.pointerEvents = 'none'; // Don't block interactions
+        activeHighlight.appendChild(highlightDiv);
+      }
+
+      document.body.appendChild(activeHighlight);
+      console.log('[OVERLAY] Active highlight created with', rects.length, 'divs');
+    } catch (error) {
+      console.error('[OVERLAY] Failed to create active highlight:', error);
+    }
+  }
+
+  /**
+   * Remove the active highlight
+   */
+  function removeActiveHighlight() {
+    if (activeHighlight && activeHighlight.parentNode) {
+      console.log('[OVERLAY] Removing active highlight');
+      activeHighlight.remove();
+      activeHighlight = null;
+    }
+  }
+
+  /**
    * Hide comment bubble
    */
   function hideBubble() {
+    console.log('[OVERLAY] hideBubble called');
     if (commentBubble) {
+      console.log('[OVERLAY] Removing bubble from DOM');
       commentBubble.remove();
       commentBubble = null;
     }
+    removeActiveHighlight();
+    console.log('[OVERLAY] Clearing currentSelection');
     currentSelection = null;
   }
 
@@ -197,34 +312,26 @@
    * Save comment
    */
   function saveComment(text) {
+    console.log('saveComment called with:', text);
+    console.log('currentSelection:', currentSelection);
+
     if (!text.trim() || !currentSelection) {
+      console.log('Skipping save - empty text or no selection');
       return;
     }
 
-    postMessage({
+    const message = {
       type: 'saveComment',
       selection: currentSelection,
       commentText: text.trim(),
-    });
+      // documentUri will be added by the extension host
+    };
+
+    console.log('Sending message:', message);
+    postMessage(message);
 
     hideBubble();
     window.getSelection()?.removeAllRanges();
-  }
-
-  /**
-   * Send selection and comment to agent
-   */
-  function sendToAgent(text) {
-    if (!currentSelection) {
-      return;
-    }
-
-    // First save the comment
-    if (text.trim()) {
-      saveComment(text);
-    }
-
-    // Note: Actual agent sending is handled by extension host
   }
 
   /**
@@ -407,9 +514,15 @@
   }
 
   // Initialize when DOM is ready
+  console.log('[OVERLAY.JS] Checking document.readyState:', document.readyState);
   if (document.readyState === 'loading') {
+    console.log('[OVERLAY.JS] Document still loading, waiting for DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', init);
   } else {
+    console.log('[OVERLAY.JS] Document already loaded, calling init() now');
     init();
   }
+  console.log('[OVERLAY.JS] IIFE complete');
 })();
+
+console.log('[OVERLAY.JS] Script fully loaded');

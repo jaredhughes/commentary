@@ -46,7 +46,13 @@ export class StorageManager {
    * Save a note
    */
   async saveNote(note: Note): Promise<void> {
+    console.log('[StorageManager] Saving note:', note);
     await this.storage.saveNote(note);
+    console.log('[StorageManager] Note saved successfully');
+
+    // Verify it was saved
+    const notes = await this.storage.getNotes(note.file);
+    console.log('[StorageManager] Total notes for file:', notes.length);
   }
 
   /**
