@@ -4,6 +4,9 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { Note, AgentRequest, AgentResponse } from '../types';
 import { PayloadBuilder } from './payload';
 
@@ -60,29 +63,43 @@ export class AgentClient {
   }
 
   /**
+   * Get human-friendly provider name
+   */
+  private getProviderDisplayName(provider: string): string {
+    switch (provider) {
+      case 'claude':
+        return 'Claude';
+      case 'openai':
+        return 'OpenAI';
+      case 'custom':
+        return 'AI Agent';
+      default:
+        return 'AI Agent';
+    }
+  }
+
+  /**
    * Send request to agent
    */
   private async sendRequest(request: AgentRequest): Promise<AgentResponse | void> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     const provider = config.get<string>('provider', 'claude');
+    const providerName = this.getProviderDisplayName(provider);
 
     // Format as prompt
     const prompt = PayloadBuilder.formatAsPrompt(request);
 
-    // Try to send to Claude Code extension first
+    // Try to send via Claude CLI in terminal
     if (provider === 'claude') {
-      const sent = await this.sendToClaudeCode(prompt);
-      if (sent) {
-        vscode.window.showInformationMessage(
-          `Sent ${request.contexts.length} comment(s) to Claude Code`
-        );
+      const usedCLI = await this.sendViaClaudeCLI(prompt, request);
+      if (usedCLI) {
         return this.mockAgentResponse(request);
       }
     }
 
-    // Fallback: log to output channel and copy to clipboard
+    // Fallback: Log to output channel and copy to clipboard
     this.outputChannel.clear();
-    this.outputChannel.appendLine('=== Commentary Agent Request ===');
+    this.outputChannel.appendLine(`=== Commentary ${providerName} Request ===`);
     this.outputChannel.appendLine('');
     this.outputChannel.appendLine(prompt);
     this.outputChannel.appendLine('');
@@ -92,42 +109,78 @@ export class AgentClient {
     // Copy to clipboard
     await vscode.env.clipboard.writeText(prompt);
 
-    // Show notification
+    // Show clearer instructions for next steps
     const action = await vscode.window.showInformationMessage(
-      `Request copied to clipboard (${request.contexts.length} comment(s))`,
-      'Open Output',
-      'Paste in Claude Code'
+      `📋 Prompt copied to clipboard! Paste it into ${providerName}.`,
+      'View Full Prompt',
+      'Got it'
     );
 
-    if (action === 'Open Output') {
+    if (action === 'View Full Prompt') {
       this.outputChannel.show();
-    } else if (action === 'Paste in Claude Code') {
-      // Try to open Claude Code chat
-      await vscode.commands.executeCommand('claude.newChat');
     }
 
     return this.mockAgentResponse(request);
   }
 
   /**
-   * Try to send prompt to Claude Code extension
+   * Send prompt via Claude CLI in integrated terminal
    */
-  private async sendToClaudeCode(prompt: string): Promise<boolean> {
+  private async sendViaClaudeCLI(prompt: string, request: AgentRequest): Promise<boolean> {
     try {
-      // Try to execute Claude Code's sendMessage command
-      await vscode.commands.executeCommand('claude.sendMessage', prompt);
-      return true;
-    } catch (error) {
-      // Claude Code might use a different command - try alternatives
-      try {
-        await vscode.commands.executeCommand('claude.newChat');
-        await vscode.env.clipboard.writeText(prompt);
-        vscode.window.showInformationMessage('Prompt copied - paste into Claude Code chat');
-        return true;
-      } catch {
-        // Claude Code extension not available or different API
+      // Check if claude CLI is available
+      const terminal = vscode.window.createTerminal({
+        name: 'Commentary → Claude',
+        hideFromUser: false,
+      });
+
+      terminal.show();
+
+      // Get the file being commented on
+      const firstNote = request.contexts[0]?.note;
+      if (!firstNote) {
         return false;
       }
+
+      const fileUri = vscode.Uri.parse(firstNote.file);
+      const filePath = fileUri.fsPath;
+
+      // Create a temporary file with the prompt
+      const tempPromptPath = path.join(
+        os.tmpdir(),
+        `commentary-prompt-${Date.now()}.md`
+      );
+
+      fs.writeFileSync(tempPromptPath, prompt);
+
+      // Execute: cat prompt.md | claude --output-file original.md
+      // This will send the prompt to Claude and save the response back to the original file
+      const command = `cat "${tempPromptPath}" | claude --output-file "${filePath}"`;
+
+      terminal.sendText(command);
+
+      vscode.window.showInformationMessage(
+        `🤖 Sending ${request.contexts.length} comment(s) to Claude CLI...`,
+        'View Terminal'
+      ).then((action) => {
+        if (action === 'View Terminal') {
+          terminal.show();
+        }
+      });
+
+      // Clean up temp file after a delay
+      setTimeout(() => {
+        try {
+          fs.unlinkSync(tempPromptPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }, 5000);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to use Claude CLI:', error);
+      return false;
     }
   }
 

@@ -19,20 +19,48 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 16px;
   font-weight: 600;
   line-height: 1.25;
-  color: #c9d1d9;
+  color: #c9d1d9 !important;
 }
 
-h1 { font-size: 2em; border-bottom: 1px solid #21262d; padding-bottom: 0.3em; }
-h2 { font-size: 1.5em; border-bottom: 1px solid #21262d; padding-bottom: 0.3em; }
-h3 { font-size: 1.25em; }
-h4 { font-size: 1em; }
-h5 { font-size: 0.875em; }
-h6 { font-size: 0.85em; color: #8b949e; }
+h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 0.3em;
+  color: #c9d1d9 !important;
+}
+h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 0.3em;
+  color: #c9d1d9 !important;
+}
+h3 { font-size: 1.25em; color: #c9d1d9 !important; }
+h4 { font-size: 1em; color: #c9d1d9 !important; }
+h5 { font-size: 0.875em; color: #c9d1d9 !important; }
+h6 { font-size: 0.85em; color: #8b949e !important; }
 
 p { margin-top: 0; margin-bottom: 16px; }
 
-a { color: #58a6ff; text-decoration: none; }
+a { color: #58a6ff !important; text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+/* Ensure heading anchor links don't make the whole heading blue */
+h1 a.header-anchor,
+h2 a.header-anchor,
+h3 a.header-anchor,
+h4 a.header-anchor,
+h5 a.header-anchor,
+h6 a.header-anchor {
+  color: #c9d1d9 !important;
+  text-decoration: none;
+}
+
+/* Regular text links should be blue */
+p a,
+li a,
+td a {
+  color: #58a6ff !important;
+}
 
 code {
   padding: 0.2em 0.4em;
