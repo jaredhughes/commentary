@@ -1,0 +1,236 @@
+{
+  "name": "commentary",
+  "displayName": "Commentary",
+  "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
+  "version": "0.1.0",
+  "publisher": "your-publisher-name",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "comments",
+    "annotations",
+    "review",
+    "ai"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "commentary.saveComment",
+        "title": "Save Comment",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.deleteComment",
+        "title": "Delete Comment",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.deleteAllComments",
+        "title": "Delete All Comments",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.sendToAgent",
+        "title": "Send Comment to Agent",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.sendAllToAgent",
+        "title": "Send All Comments to Agent",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.exportComments",
+        "title": "Export Comments",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.importComments",
+        "title": "Import Comments",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.revealComment",
+        "title": "Reveal Comment in Preview",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.refreshComments",
+        "title": "Refresh Comments",
+        "category": "Commentary",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "commentary-sidebar",
+          "title": "Commentary",
+          "icon": "$(comment)"
+        }
+      ]
+    },
+    "views": {
+      "commentary-sidebar": [
+        {
+          "id": "commentary.commentsView",
+          "name": "Comments"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "commentary.sendAllToAgent",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "commentary.exportComments",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "commentary.importComments",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "commentary.refreshComments",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "commentary.deleteAllComments",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "commentary.revealComment",
+          "when": "view == commentary.commentsView && viewItem == comment",
+          "group": "inline@1"
+        },
+        {
+          "command": "commentary.sendToAgent",
+          "when": "view == commentary.commentsView && viewItem == comment",
+          "group": "inline@2"
+        },
+        {
+          "command": "commentary.deleteComment",
+          "when": "view == commentary.commentsView && viewItem == comment",
+          "group": "inline@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Commentary",
+      "properties": {
+        "commentary.theme.name": {
+          "type": "string",
+          "default": "github-light",
+          "enum": [
+            "github-light",
+            "github-dark",
+            "primer-light",
+            "primer-dark",
+            "tokyo-night",
+            "mdbook"
+          ],
+          "description": "Built-in theme for the Markdown preview"
+        },
+        "commentary.theme.customCssPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a custom CSS file (absolute or workspace-relative)"
+        },
+        "commentary.theme.useCustomFirst": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true and custom CSS path is set, load custom CSS before built-in theme"
+        },
+        "commentary.storage.mode": {
+          "type": "string",
+          "default": "workspace",
+          "enum": [
+            "workspace",
+            "sidecar"
+          ],
+          "enumDescriptions": [
+            "Store comments in VS Code workspace storage (not tracked by git)",
+            "Store comments in .comments/ folder as JSON files (shareable)"
+          ],
+          "description": "Storage mode for comments"
+        },
+        "commentary.agent.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AI agent integration"
+        },
+        "commentary.agent.provider": {
+          "type": "string",
+          "default": "claude",
+          "enum": [
+            "claude",
+            "openai",
+            "custom"
+          ],
+          "description": "AI agent provider"
+        },
+        "commentary.agent.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the AI agent (leave empty to use environment variable)"
+        },
+        "commentary.agent.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Custom endpoint URL for AI agent (only used when provider is 'custom')"
+        },
+        "commentary.agent.model": {
+          "type": "string",
+          "default": "claude-3-5-sonnet-20241022",
+          "description": "Model to use for AI agent"
+        },
+        "commentary.agent.contextLines": {
+          "type": "number",
+          "default": 6,
+          "description": "Number of lines before and after selection to include as context"
+        }
+      }
+    },
+    "markdown.previewStyles": [
+      "./media/overlay.css"
+    ],
+    "markdown.previewScripts": [
+      "./media/overlay.js"
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.x",
+    "@typescript-eslint/parser": "^6.x",
+    "eslint": "^8.x",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,145 @@
+/**
+ * Commentary overlay styles
+ * Theme-aware highlight and bubble styles for the Markdown preview
+ */
+
+/* Comment highlights */
+.commentary-highlight {
+  background-color: rgba(255, 212, 0, 0.3);
+  border-bottom: 2px solid rgba(255, 212, 0, 0.6);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.commentary-highlight:hover {
+  background-color: rgba(255, 212, 0, 0.5);
+  border-bottom-color: rgba(255, 212, 0, 0.8);
+}
+
+.commentary-highlight-focus {
+  background-color: rgba(255, 212, 0, 0.6) !important;
+  border-bottom-color: rgba(255, 212, 0, 1) !important;
+  animation: highlight-pulse 0.5s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    background-color: rgba(255, 212, 0, 0.6);
+  }
+  50% {
+    background-color: rgba(255, 212, 0, 0.9);
+  }
+}
+
+/* Comment bubble */
+.commentary-bubble {
+  position: fixed;
+  z-index: 10000;
+  min-width: 300px;
+  max-width: 400px;
+  background: var(--vscode-editorWidget-background, #fff);
+  border: 1px solid var(--vscode-editorWidget-border, #ccc);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editorWidget-foreground, #333);
+}
+
+.commentary-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--vscode-input-border, #ccc);
+  border-radius: 4px;
+  background: var(--vscode-input-background, #fff);
+  color: var(--vscode-input-foreground, #333);
+  font-family: inherit;
+  font-size: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.commentary-textarea:focus {
+  border-color: var(--vscode-focusBorder, #007acc);
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder, #007acc);
+}
+
+.commentary-textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground, #999);
+}
+
+.commentary-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.commentary-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, #e0e0e0);
+  color: var(--vscode-button-secondaryForeground, #333);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  outline: none;
+}
+
+.commentary-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, #d0d0d0);
+}
+
+.commentary-btn:active {
+  transform: translateY(1px);
+}
+
+.commentary-btn-primary {
+  background: var(--vscode-button-background, #007acc);
+  color: var(--vscode-button-foreground, #fff);
+}
+
+.commentary-btn-primary:hover {
+  background: var(--vscode-button-hoverBackground, #005a9e);
+}
+
+.commentary-btn-agent {
+  background: var(--vscode-button-background, #6c5ce7);
+  color: var(--vscode-button-foreground, #fff);
+  border-color: transparent;
+}
+
+.commentary-btn-agent:hover {
+  background: var(--vscode-button-hoverBackground, #5849c7);
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .commentary-highlight {
+    background-color: rgba(255, 212, 0, 0.2);
+    border-bottom-color: rgba(255, 212, 0, 0.4);
+  }
+
+  .commentary-highlight:hover {
+    background-color: rgba(255, 212, 0, 0.35);
+    border-bottom-color: rgba(255, 212, 0, 0.6);
+  }
+
+  .commentary-highlight-focus {
+    background-color: rgba(255, 212, 0, 0.45) !important;
+    border-bottom-color: rgba(255, 212, 0, 0.8) !important;
+  }
+}
+
+/* User selection styling */
+::selection {
+  background-color: rgba(173, 214, 255, 0.4);
+}
+
+::-moz-selection {
+  background-color: rgba(173, 214, 255, 0.4);
+}
