@@ -60,7 +60,7 @@ export class AgentClient {
   }
 
   /**
-   * Send request to agent (MVP: show in output panel and copy to clipboard)
+   * Send request to agent
    */
   private async sendRequest(request: AgentRequest): Promise<AgentResponse | void> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
@@ -69,7 +69,18 @@ export class AgentClient {
     // Format as prompt
     const prompt = PayloadBuilder.formatAsPrompt(request);
 
-    // Log to output channel
+    // Try to send to Claude Code extension first
+    if (provider === 'claude') {
+      const sent = await this.sendToClaudeCode(prompt);
+      if (sent) {
+        vscode.window.showInformationMessage(
+          `Sent ${request.contexts.length} comment(s) to Claude Code`
+        );
+        return this.mockAgentResponse(request);
+      }
+    }
+
+    // Fallback: log to output channel and copy to clipboard
     this.outputChannel.clear();
     this.outputChannel.appendLine('=== Commentary Agent Request ===');
     this.outputChannel.appendLine('');
@@ -83,18 +94,41 @@ export class AgentClient {
 
     // Show notification
     const action = await vscode.window.showInformationMessage(
-      `Request copied to clipboard and logged to output (${request.contexts.length} comment(s))`,
+      `Request copied to clipboard (${request.contexts.length} comment(s))`,
       'Open Output',
-      'OK'
+      'Paste in Claude Code'
     );
 
     if (action === 'Open Output') {
       this.outputChannel.show();
+    } else if (action === 'Paste in Claude Code') {
+      // Try to open Claude Code chat
+      await vscode.commands.executeCommand('claude.newChat');
     }
 
-    // TODO: In future versions, actually send HTTP request to agent API
-    // For now, this MVP implementation just prepares and displays the prompt
     return this.mockAgentResponse(request);
+  }
+
+  /**
+   * Try to send prompt to Claude Code extension
+   */
+  private async sendToClaudeCode(prompt: string): Promise<boolean> {
+    try {
+      // Try to execute Claude Code's sendMessage command
+      await vscode.commands.executeCommand('claude.sendMessage', prompt);
+      return true;
+    } catch (error) {
+      // Claude Code might use a different command - try alternatives
+      try {
+        await vscode.commands.executeCommand('claude.newChat');
+        await vscode.env.clipboard.writeText(prompt);
+        vscode.window.showInformationMessage('Prompt copied - paste into Claude Code chat');
+        return true;
+      } catch {
+        // Claude Code extension not available or different API
+        return false;
+      }
+    }
   }
 
   /**

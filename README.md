@@ -1,4 +1,4 @@
-# Commentary
+# 📝 Commentary
 
 **Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.**
 
