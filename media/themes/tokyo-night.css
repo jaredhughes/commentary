@@ -1,0 +1,52 @@
+/**
+ * Tokyo Night Theme
+ * Dark theme with a cool purple/blue aesthetic
+ */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #a9b1d6;
+  background-color: #1a1b26;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #7aa2f7;
+}
+
+h1 { font-size: 2em; border-bottom: 1px solid #292e42; padding-bottom: 0.3em; }
+h2 { font-size: 1.5em; border-bottom: 1px solid #292e42; padding-bottom: 0.3em; }
+
+a { color: #7aa2f7; }
+a:hover { color: #9aa5ce; }
+
+code {
+  padding: 0.2em 0.4em;
+  background-color: #24283b;
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 85%;
+  color: #9ece6a;
+}
+
+pre {
+  padding: 16px;
+  overflow: auto;
+  background-color: #24283b;
+  border-radius: 6px;
+  font-size: 85%;
+}
+
+blockquote {
+  padding: 0 1em;
+  color: #565f89;
+  border-left: 0.25em solid #292e42;
+}
