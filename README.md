@@ -213,15 +213,44 @@ Press `F5` in VS Code to launch the Extension Development Host.
 
 Set breakpoints in TypeScript source files. The debugger will attach automatically when you press `F5`.
 
-## Roadmap
+### Testing
 
-- [ ] Real HTTP agent integration (currently MVP: clipboard + output panel)
-- [ ] Threading (nested replies)
-- [ ] Synced source gutter comments
-- [ ] Code fence awareness
-- [ ] Theme packs
-- [ ] Collaborative comments (live share integration)
-- [ ] Export to various formats (GitHub issues, Notion, etc.)
+```bash
+# Run all tests
+npm test
+
+# Compile and lint before testing
+npm run pretest
+
+# Lint only
+npm run lint
+```
+
+**Test Coverage:**
+- **Extension Tests** (`src/test/suite/extension.test.ts`)
+  - Extension activation and commands
+  - Package.json metadata validation
+  - Cursor provider configuration
+- **Agent Tests** (`src/test/suite/agent.test.ts`)
+  - Provider display names (claude, cursor, openai, custom)
+  - Single and multiple comment handling
+  - Payload building and formatting
+  - End-to-end workflows for all providers
+- **Configuration Tests** (`src/test/suite/configuration.test.ts`)
+  - All agent provider configurations
+  - Cursor-specific settings (cursorCliPath, cursorInteractive)
+  - Theme and storage configurations
+  - Configuration interactions and edge cases
+- **Storage Tests** (`src/test/suite/extension.test.ts`)
+  - Save and retrieve notes
+  - Delete notes
+  - Export and import functionality
+
+**Running Tests in VS Code:**
+1. Press `F5` to launch Extension Development Host
+2. Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
+3. Select "Developer: Reload Window" to activate the extension
+4. Tests will run automatically in the test environment
 
 ## Contributing
 

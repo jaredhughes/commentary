@@ -34,6 +34,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All changes compile cleanly with TypeScript strict mode
 - No new ESLint errors introduced
 
+### Testing
+
+- **New test files:**
+  - `agent.test.ts`: Comprehensive agent client and payload builder tests (60+ tests)
+  - `configuration.test.ts`: Full configuration validation suite (30+ tests)
+- **Expanded coverage:**
+  - Provider display names for all providers (claude, cursor, openai, custom)
+  - Cursor-specific configuration (cursorCliPath, cursorInteractive)
+  - Single and multiple comment handling
+  - Payload building and formatting
+  - End-to-end workflows for all agent providers
+  - Configuration interactions and edge cases
+- **Enhanced extension.test.ts:**
+  - Added metadata validation tests
+  - Added Cursor provider configuration tests
+  - Improved command registration checks
+- **Documentation:**
+  - Added comprehensive Testing section to README
+  - Test coverage breakdown by suite
+  - Instructions for running tests in VS Code
+
 ## [0.1.0] - 2025-01-XX
 
 ### Added
