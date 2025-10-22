@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { AgentClient } from '../../agent/client';
 import { PayloadBuilder } from '../../agent/payload';
-import { Note, AgentRequest } from '../../types';
+import { Note } from '../../types';
 
 suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;
@@ -82,29 +82,33 @@ suite('Agent Client Tests', () => {
   });
 
   suite('Provider Display Names', () => {
+    // Helper to access private method for testing
+    function getProviderDisplayName(clientInstance: AgentClient, provider: string): string {
+      return (clientInstance as unknown as { getProviderDisplayName: (provider: string) => string }).getProviderDisplayName(provider);
+    }
+
     test('Should return correct display name for claude', () => {
-      // Access private method through any type for testing
-      const displayName = (client as any).getProviderDisplayName('claude');
+      const displayName = getProviderDisplayName(client, 'claude');
       assert.strictEqual(displayName, 'Claude');
     });
 
     test('Should return correct display name for cursor', () => {
-      const displayName = (client as any).getProviderDisplayName('cursor');
+      const displayName = getProviderDisplayName(client, 'cursor');
       assert.strictEqual(displayName, 'Cursor');
     });
 
     test('Should return correct display name for openai', () => {
-      const displayName = (client as any).getProviderDisplayName('openai');
+      const displayName = getProviderDisplayName(client, 'openai');
       assert.strictEqual(displayName, 'OpenAI');
     });
 
     test('Should return correct display name for custom', () => {
-      const displayName = (client as any).getProviderDisplayName('custom');
+      const displayName = getProviderDisplayName(client, 'custom');
       assert.strictEqual(displayName, 'AI Agent');
     });
 
     test('Should return default display name for unknown provider', () => {
-      const displayName = (client as any).getProviderDisplayName('unknown');
+      const displayName = getProviderDisplayName(client, 'unknown');
       assert.strictEqual(displayName, 'AI Agent');
     });
   });
