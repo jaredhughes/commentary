@@ -3,7 +3,15 @@
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
   "version": "0.9.0",
-  "publisher": "your-publisher-name",
+  "publisher": "jaredhughes",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaredhughes/commentary"
+  },
+  "bugs": {
+    "url": "https://github.com/jaredhughes/commentary/issues"
+  },
+  "homepage": "https://github.com/jaredhughes/commentary#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
