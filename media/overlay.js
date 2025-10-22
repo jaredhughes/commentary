@@ -190,10 +190,12 @@ console.log('[OVERLAY.JS] Script is loading...');
     commentBubble = document.createElement('div');
     commentBubble.className = 'commentary-bubble';
 
-    // Position near cursor
+    // Position near cursor with viewport bounds checking
     commentBubble.style.position = 'fixed';
-    commentBubble.style.left = x + 'px';
-    commentBubble.style.top = (y + 20) + 'px';
+
+    // Temporarily append to measure dimensions
+    commentBubble.style.visibility = 'hidden';
+    document.body.appendChild(commentBubble);
 
     // Create bubble content
     const textarea = document.createElement('textarea');
@@ -236,7 +238,36 @@ console.log('[OVERLAY.JS] Script is loading...');
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
 
-    document.body.appendChild(commentBubble);
+    // Calculate position that keeps bubble within viewport
+    const bubbleRect = commentBubble.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const padding = 10; // Padding from viewport edges
+
+    // Calculate ideal position (below and to the right of cursor)
+    let left = x;
+    let top = y + 20;
+
+    // Check right edge - flip to left if would overflow
+    if (left + bubbleRect.width + padding > viewportWidth) {
+      left = Math.max(padding, viewportWidth - bubbleRect.width - padding);
+    }
+
+    // Check bottom edge - flip to above cursor if would overflow
+    if (top + bubbleRect.height + padding > viewportHeight) {
+      top = Math.max(padding, y - bubbleRect.height - 10);
+    }
+
+    // Ensure bubble doesn't go off left edge
+    left = Math.max(padding, left);
+
+    // Ensure bubble doesn't go off top edge
+    top = Math.max(padding, top);
+
+    // Apply final position and make visible
+    commentBubble.style.left = left + 'px';
+    commentBubble.style.top = top + 'px';
+    commentBubble.style.visibility = 'visible';
 
     // Focus textarea
     textarea.focus();
