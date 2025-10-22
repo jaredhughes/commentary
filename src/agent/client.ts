@@ -208,7 +208,8 @@ export class AgentClient {
         ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
         : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
 
-      await vscode.window.showInformationMessage(message, 'Got it');
+      // Don't await - just show the message and continue (prevents test timeouts)
+      vscode.window.showInformationMessage(message, 'Got it');
 
       return true;
     } catch (error) {

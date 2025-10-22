@@ -2,6 +2,20 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 suite('Configuration Tests', () => {
+  // Reset all configuration after each test to prevent pollution
+  teardown(async () => {
+    const config = vscode.workspace.getConfiguration('commentary');
+    await config.update('agent.provider', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.cursorCliPath', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.cursorInteractive', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.enabled', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.contextLines', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('storage.mode', undefined, vscode.ConfigurationTarget.Global);
+
+    // Give VS Code time to process configuration changes
+    await new Promise(resolve => setTimeout(resolve, 200));
+  });
+
   suite('Agent Provider Configuration', () => {
     test('Should have cursor in provider enum', () => {
       const config = vscode.workspace.getConfiguration('commentary.agent');

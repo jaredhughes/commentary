@@ -7,11 +7,11 @@ suite('Commentary Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('your-publisher-name.commentary'));
+    assert.ok(vscode.extensions.getExtension('hughesjared.commentary'));
   });
 
   test('Extension should activate', async () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
     await extension?.activate();
     assert.strictEqual(extension?.isActive, true);
