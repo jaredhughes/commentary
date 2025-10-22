@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(cat)",
+      "Shell(ls)",
+      "Shell(echo)",
+      "Shell(git status)",
+      "Shell(git diff)",
+      "Shell(git log)",
+      "Read(*.md)",
+      "Read(*.ts)",
+      "Read(*.js)",
+      "Read(*.json)",
+      "Read(src/**/*)",
+      "Read(media/**/*)",
+      "Read(docs/**/*)",
+      "Write(*.md)",
+      "Write(docs/**/*.md)"
+    ],
+    "deny": [
+      "Shell(rm)",
+      "Shell(sudo)",
+      "Shell(chmod)",
+      "Shell(chown)",
+      "Shell(kill)",
+      "Shell(pkill)",
+      "Shell(git push)",
+      "Shell(git reset --hard)",
+      "Shell(npm publish)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/*.key)",
+      "Read(**/*.pem)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(package.json)",
+      "Write(package-lock.json)",
+      "Write(tsconfig.json)",
+      "Write(.gitignore)",
+      "Write(.git/**/*)"
+    ]
+  },
+  "description": "Commentary extension Cursor CLI permissions",
+  "notes": [
+    "Allows Cursor Agent to read source files and documentation",
+    "Allows writing to documentation files (*.md) for comment integration",
+    "Prevents destructive operations (rm, sudo, chmod)",
+    "Prevents git operations that could lose work (push, reset --hard)",
+    "Prevents modification of critical configuration files",
+    "Prevents access to secrets and environment variables"
+  ]
+}

@@ -29,6 +29,66 @@ suite('Commentary Extension Test Suite', () => {
     assert.ok(commentaryCommands.includes('commentary.refreshComments'));
     assert.ok(commentaryCommands.includes('commentary.revealComment'));
   });
+
+  test('All required commands should be present', async () => {
+    const commands = await vscode.commands.getCommands(true);
+    const requiredCommands = [
+      'commentary.openPreview',
+      'commentary.saveComment',
+      'commentary.deleteComment',
+      'commentary.deleteAllComments',
+      'commentary.sendToAgent',
+      'commentary.sendAllToAgent',
+      'commentary.exportComments',
+      'commentary.importComments',
+      'commentary.revealComment',
+      'commentary.refreshComments',
+      'commentary.showCommentsSidebar',
+    ];
+
+    for (const cmd of requiredCommands) {
+      assert.ok(
+        commands.includes(cmd),
+        `Command ${cmd} should be registered`
+      );
+    }
+  });
+
+  test('Extension should have proper package.json metadata', () => {
+    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    assert.ok(extension);
+
+    const packageJSON = extension.packageJSON;
+    assert.strictEqual(packageJSON.name, 'commentary');
+    assert.strictEqual(packageJSON.displayName, 'Commentary');
+    assert.ok(packageJSON.description);
+    assert.ok(packageJSON.version);
+  });
+
+  test('Extension should have Cursor provider in configuration', () => {
+    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    assert.ok(extension);
+
+    const packageJSON = extension.packageJSON;
+    const providerConfig = packageJSON.contributes.configuration.properties['commentary.agent.provider'];
+
+    assert.ok(providerConfig);
+    assert.ok(providerConfig.enum.includes('cursor'));
+    assert.ok(providerConfig.enum.includes('claude'));
+    assert.ok(providerConfig.enum.includes('openai'));
+    assert.ok(providerConfig.enum.includes('custom'));
+  });
+
+  test('Extension should have Cursor-specific configuration properties', () => {
+    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    assert.ok(extension);
+
+    const packageJSON = extension.packageJSON;
+    const props = packageJSON.contributes.configuration.properties;
+
+    assert.ok(props['commentary.agent.cursorCliPath']);
+    assert.ok(props['commentary.agent.cursorInteractive']);
+  });
 });
 
 suite('Storage Tests', () => {

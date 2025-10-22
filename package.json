@@ -2,7 +2,7 @@
   "name": "commentary",
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "your-publisher-name",
   "engines": {
     "vscode": "^1.85.0"
@@ -262,6 +262,7 @@
           "default": "claude",
           "enum": [
             "claude",
+            "cursor",
             "openai",
             "custom"
           ],
@@ -286,6 +287,16 @@
           "type": "number",
           "default": 6,
           "description": "Number of lines before and after selection to include as context"
+        },
+        "commentary.agent.cursorCliPath": {
+          "type": "string",
+          "default": "cursor-agent",
+          "description": "Path to cursor-agent CLI executable (only used when provider is 'cursor')"
+        },
+        "commentary.agent.cursorInteractive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use interactive mode for Cursor CLI (only used when provider is 'cursor')"
         }
       }
     }

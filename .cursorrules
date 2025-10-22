@@ -1,0 +1,94 @@
+# Commentary Extension - Cursor AI Rules
+
+## Project Overview
+
+Commentary is a VS Code extension that brings Google Docs-style commenting to rendered Markdown previews. It allows users to:
+- Select text in rendered Markdown and add inline comments
+- Store comments outside the source file (workspace storage or sidecar JSON files)
+- Send comments to AI agents (Claude, Cursor, OpenAI, or custom) for review
+- Export/import comments for sharing and collaboration
+
+## Architecture
+
+### Core Components
+- `src/extension.ts` - Main activation and registration
+- `src/preview/` - Custom webview editor for Markdown with overlay
+- `src/sidebar/` - Comments tree view and commands
+- `src/agent/` - AI agent integration (provider-agnostic)
+- `src/storage/` - Workspace and sidecar storage backends
+- `media/overlay.js` - Client-side selection, bubble, and highlight rendering
+
+### Key Design Principles
+1. **Separation of concerns**: Comments stored separately from source Markdown
+2. **Smart anchoring**: 3-layer fallback (TextQuoteSelector → TextPositionSelector → fuzzy search)
+3. **Provider-agnostic**: Support multiple AI agents via unified interface
+4. **Themeable**: Built-in themes + custom CSS support
+
+## AI Agent Integration
+
+When reviewing markdown comments from this extension:
+- Comments include the selected text (quote) and configurable context lines before/after
+- The file being commented on is usually a documentation file (*.md)
+- Users are asking for feedback on specific sections of their documentation
+- Comments may reference multiple sections across the same document
+- Responses should be constructive and focused on improving clarity, accuracy, and readability
+
+## Code Style
+
+- TypeScript strict mode enabled
+- No explicit 'any' types (use generics or specific types)
+- Use async/await for asynchronous operations
+- Prefer VS Code API patterns (commands, configuration, webviews)
+- Log errors to console, show user-friendly messages via vscode.window
+
+## When Modifying Agent Integration
+
+If making changes to `src/agent/client.ts` or `src/agent/payload.ts`:
+1. Ensure all providers (claude, cursor, openai, custom) are handled consistently
+2. Test both CLI integration (when available) and clipboard fallback
+3. Maintain backwards compatibility with existing comment payloads
+4. Update configuration schema in package.json if adding new settings
+
+## Testing
+
+- Test suite in `src/test/suite/extension.test.ts`
+- Run tests with `npm test`
+- Manual testing: Press F5 to launch Extension Development Host
+- Test with both workspace and sidecar storage modes
+- Verify comments survive document edits (smart anchoring)
+
+## Important Files to Preserve
+
+- `media/overlay.js` - Complex selection and rendering logic
+- `src/types.ts` - Shared type definitions used across the extension
+- `package.json` - VS Code extension manifest and configuration schema
+
+## Common Tasks
+
+### Adding a new AI provider
+1. Update `package.json` configuration enum
+2. Add case to `getProviderDisplayName()` in `client.ts`
+3. Implement provider-specific CLI method (if applicable)
+4. Update README.md with setup instructions
+
+### Modifying comment storage format
+1. Update types in `src/types.ts`
+2. Implement migration logic in storage backends
+3. Increment storage version constant
+4. Test import/export functionality
+
+### Changing selection/highlight behavior
+1. Modify `media/overlay.js` (client-side script)
+2. Update messaging protocol if needed (`src/messaging.ts`)
+3. Test with various Markdown structures (headings, code blocks, lists)
+
+## Dependencies
+
+- VS Code Extension API (^1.85.0)
+- markdown-it for Markdown rendering
+- markdown-it-anchor, markdown-it-github-headings for enhanced navigation
+- markdown-it-task-lists for GitHub-style task list support
+
+## License
+
+MIT License - See LICENSE file for details
