@@ -76,17 +76,30 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       this.context.subscriptions
     );
 
-    // Watch for document changes
+    // Watch for document changes with debouncing (300ms)
+    let updateTimer: NodeJS.Timeout | undefined;
     const changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document === document) {
-        this.updateContent(webviewPanel, document);
+        // Clear previous timer
+        if (updateTimer) {
+          clearTimeout(updateTimer);
+        }
+        // Debounce updates to avoid re-rendering on every keystroke
+        updateTimer = setTimeout(() => {
+          this.updateContent(webviewPanel, document);
+        }, 300);
       }
     });
 
-    webviewPanel.onDidDispose(() => changeDisposable.dispose());
+    webviewPanel.onDidDispose(() => {
+      if (updateTimer) {
+        clearTimeout(updateTimer);
+      }
+      changeDisposable.dispose();
+    });
 
-    // Auto-reveal Comments sidebar
-    await vscode.commands.executeCommand('commentary.commentsView.focus');
+    // Auto-reveal Comments sidebar (non-blocking - fire and forget)
+    vscode.commands.executeCommand('commentary.commentsView.focus');
   }
 
   /**
@@ -138,14 +151,27 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       this.context.subscriptions
     );
 
-    // Watch for document changes
+    // Watch for document changes with debouncing (300ms)
+    let updateTimer: NodeJS.Timeout | undefined;
     const changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document === document) {
-        this.updateContent(panel, document);
+        // Clear previous timer
+        if (updateTimer) {
+          clearTimeout(updateTimer);
+        }
+        // Debounce updates to avoid re-rendering on every keystroke
+        updateTimer = setTimeout(() => {
+          this.updateContent(panel, document);
+        }, 300);
       }
     });
 
-    panel.onDidDispose(() => changeDisposable.dispose());
+    panel.onDidDispose(() => {
+      if (updateTimer) {
+        clearTimeout(updateTimer);
+      }
+      changeDisposable.dispose();
+    });
   }
 
   /**
