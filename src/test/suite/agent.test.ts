@@ -8,7 +8,20 @@ suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;
   let client: AgentClient;
 
-  setup(() => {
+  setup(async function() {
+    // Increase timeout for setup
+    this.timeout(5000);
+
+    // Reset configuration BEFORE creating client
+    const config = vscode.workspace.getConfiguration('commentary');
+    await config.update('agent.provider', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.cursorCliPath', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.cursorInteractive', undefined, vscode.ConfigurationTarget.Global);
+    await config.update('agent.enabled', undefined, vscode.ConfigurationTarget.Global);
+
+    // Give VS Code time to process configuration changes
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     mockContext = {
       subscriptions: [],
       workspaceState: {
@@ -39,18 +52,8 @@ suite('Agent Client Tests', () => {
     client = new AgentClient(mockContext);
   });
 
-  teardown(async () => {
+  teardown(() => {
     client.dispose();
-
-    // Reset configuration to prevent pollution between tests
-    const config = vscode.workspace.getConfiguration('commentary');
-    await config.update('agent.provider', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.cursorCliPath', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.cursorInteractive', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.enabled', undefined, vscode.ConfigurationTarget.Global);
-
-    // Give VS Code time to process configuration changes
-    await new Promise(resolve => setTimeout(resolve, 200));
   });
 
   suite('Provider Configuration', () => {

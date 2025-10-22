@@ -2,8 +2,11 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 
 suite('Configuration Tests', () => {
-  // Reset all configuration after each test to prevent pollution
-  teardown(async () => {
+  // Reset all configuration BEFORE each test to prevent pollution
+  setup(async function() {
+    // Increase timeout for setup
+    this.timeout(5000);
+
     const config = vscode.workspace.getConfiguration('commentary');
     await config.update('agent.provider', undefined, vscode.ConfigurationTarget.Global);
     await config.update('agent.cursorCliPath', undefined, vscode.ConfigurationTarget.Global);
@@ -13,7 +16,7 @@ suite('Configuration Tests', () => {
     await config.update('storage.mode', undefined, vscode.ConfigurationTarget.Global);
 
     // Give VS Code time to process configuration changes
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 300));
   });
 
   suite('Agent Provider Configuration', () => {
