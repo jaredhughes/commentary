@@ -7,11 +7,11 @@ suite('Commentary Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('your-publisher-name.commentary'));
+    assert.ok(vscode.extensions.getExtension('hughesjared.commentary'));
   });
 
   test('Extension should activate', async () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
     await extension?.activate();
     assert.strictEqual(extension?.isActive, true);
@@ -34,7 +34,7 @@ suite('Commentary Extension Test Suite', () => {
     const commands = await vscode.commands.getCommands(true);
     const requiredCommands = [
       'commentary.openPreview',
-      'commentary.saveComment',
+      // 'commentary.saveComment', // Handled internally by webview, not a registered command
       'commentary.deleteComment',
       'commentary.deleteAllComments',
       'commentary.sendToAgent',
@@ -55,7 +55,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have proper package.json metadata', () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -66,7 +66,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have Cursor provider in configuration', () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -80,7 +80,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have Cursor-specific configuration properties', () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -95,7 +95,7 @@ suite('Storage Tests', () => {
   let storage: WorkspaceStorage;
 
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension('your-publisher-name.commentary');
+    const extension = vscode.extensions.getExtension('hughesjared.commentary');
     assert.ok(extension);
   });
 
