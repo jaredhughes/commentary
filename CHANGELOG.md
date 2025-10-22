@@ -5,6 +5,35 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-10-22
+
+### Added
+
+- **Cursor AI integration**: Full support for Cursor's AI agent via CLI
+- New agent provider option: `cursor` (alongside `claude`, `openai`, `custom`)
+- Cursor CLI integration: Automatically pipes comments to `cursor-agent` terminal
+- Interactive and non-interactive modes for Cursor CLI
+- `.cursorrules` configuration file with project-specific AI instructions
+- `cli-config.json` with safe default permissions for Cursor CLI
+- New settings:
+  - `commentary.agent.cursorCliPath`: Path to cursor-agent executable
+  - `commentary.agent.cursorInteractive`: Toggle interactive mode
+- Comprehensive documentation for Cursor setup and usage in README.md
+
+### Changed
+
+- Updated README.md with "Getting Started with Cursor" section
+- Enhanced AI Agent Integration section to highlight Claude and Cursor CLI features
+- Provider display name now includes "Cursor" for better UX
+
+### Technical
+
+- Added `sendViaCursorCLI()` method in `client.ts`
+- Extended `getProviderDisplayName()` to handle Cursor provider
+- Updated package.json configuration schema for Cursor settings
+- All changes compile cleanly with TypeScript strict mode
+- No new ESLint errors introduced
+
 ## [0.1.0] - 2025-01-XX
 
 ### Added

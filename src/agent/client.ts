@@ -69,6 +69,8 @@ export class AgentClient {
     switch (provider) {
       case 'claude':
         return 'Claude';
+      case 'cursor':
+        return 'Cursor';
       case 'openai':
         return 'OpenAI';
       case 'custom':
@@ -92,6 +94,14 @@ export class AgentClient {
     // Try to send via Claude CLI in terminal
     if (provider === 'claude') {
       const usedCLI = await this.sendViaClaudeCLI(prompt, request);
+      if (usedCLI) {
+        return this.mockAgentResponse(request);
+      }
+    }
+
+    // Try to send via Cursor CLI in terminal
+    if (provider === 'cursor') {
+      const usedCLI = await this.sendViaCursorCLI(prompt, request);
       if (usedCLI) {
         return this.mockAgentResponse(request);
       }
@@ -180,6 +190,75 @@ export class AgentClient {
       return true;
     } catch (error) {
       console.error('Failed to use Claude CLI:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send prompt via Cursor CLI in integrated terminal
+   */
+  private async sendViaCursorCLI(prompt: string, request: AgentRequest): Promise<boolean> {
+    try {
+      const config = vscode.workspace.getConfiguration('commentary.agent');
+      const cliPath = config.get<string>('cursorCliPath', 'cursor-agent');
+      const interactive = config.get<boolean>('cursorInteractive', true);
+      const model = config.get<string>('model', 'claude-3-5-sonnet-20241022');
+
+      // Create terminal
+      const terminal = vscode.window.createTerminal({
+        name: 'Commentary → Cursor',
+        hideFromUser: false,
+      });
+
+      terminal.show();
+
+      // Get the file being commented on
+      const firstNote = request.contexts[0]?.note;
+      if (!firstNote) {
+        return false;
+      }
+
+      // Create a temporary file with the prompt
+      const tempPromptPath = path.join(
+        os.tmpdir(),
+        `commentary-prompt-${Date.now()}.md`
+      );
+
+      fs.writeFileSync(tempPromptPath, prompt);
+
+      // Build the Cursor command
+      let command: string;
+      if (interactive) {
+        // Interactive mode: pipe prompt and allow conversational response
+        command = `cat "${tempPromptPath}" | ${cliPath} --model ${model}`;
+      } else {
+        // Non-interactive mode: run the prompt and exit
+        command = `${cliPath} -p "$(cat '${tempPromptPath}')" --model ${model} --no-interactive`;
+      }
+
+      terminal.sendText(command);
+
+      vscode.window.showInformationMessage(
+        `🤖 Sending ${request.contexts.length} comment(s) to Cursor Agent...`,
+        'View Terminal'
+      ).then((action) => {
+        if (action === 'View Terminal') {
+          terminal.show();
+        }
+      });
+
+      // Clean up temp file after a delay
+      setTimeout(() => {
+        try {
+          fs.unlinkSync(tempPromptPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }, 5000);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to use Cursor CLI:', error);
       return false;
     }
   }

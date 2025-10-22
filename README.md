@@ -29,9 +29,10 @@ Commentary brings Google Docs-style commenting to rendered Markdown inside VS Co
 ### 🤖 AI Agent Integration
 
 - Send individual or all comments to your AI agent
-- Supports Claude, OpenAI, or custom endpoints
+- Supports Claude Code, Cursor, OpenAI, or custom endpoints
 - Agent receives comment + context (configurable lines before/after)
-- MVP: Copies formatted prompt to clipboard and output panel
+- **Claude Code** & **Cursor**: Direct CLI integration (sends to terminal automatically)
+- **Fallback**: Copies formatted prompt to clipboard and output panel
 
 ### 📍 Smart Anchoring
 
@@ -114,11 +115,60 @@ Access settings via `Preferences: Open Settings (UI)` and search for "commentary
   "commentary.agent.apiKey": "",
   "commentary.agent.endpoint": "",
   "commentary.agent.model": "claude-3-5-sonnet-20241022",
-  "commentary.agent.contextLines": 6
+  "commentary.agent.contextLines": 6,
+  "commentary.agent.cursorCliPath": "cursor-agent",
+  "commentary.agent.cursorInteractive": true
 }
 ```
 
-**Providers:** `claude`, `openai`, `custom`
+**Providers:** `claude`, `cursor`, `openai`, `custom`
+
+**Cursor-Specific Settings:**
+- `cursorCliPath`: Path to cursor-agent CLI executable (default: `cursor-agent`)
+- `cursorInteractive`: Use interactive mode for conversational sessions (default: `true`)
+
+**Claude Code Integration:**
+- Automatically uses `claude --output-file` to pipe comments to Claude CLI
+- Responses are written back to the original Markdown file
+
+**Cursor Integration:**
+- Automatically uses `cursor-agent` CLI to send comments
+- Interactive mode: Opens conversational session in terminal
+- Non-interactive mode: Runs prompt and exits (for automation)
+
+## Getting Started with Cursor
+
+To use Commentary with Cursor's AI agent:
+
+1. **Install Cursor CLI**
+   ```bash
+   curl https://cursor.com/install -fsS | bash
+   ```
+
+2. **Configure Commentary to use Cursor**
+   - Open VS Code Settings (`Cmd+,` or `Ctrl+,`)
+   - Search for "commentary agent provider"
+   - Select `cursor` from the dropdown
+
+3. **Send Comments to Cursor**
+   - Add comments to your Markdown files using Commentary
+   - Click the "Send to Agent" button (or use "Send All to Agent")
+   - Commentary will open a terminal and pipe your comments to `cursor-agent`
+   - Review Cursor's suggestions and apply changes as needed
+
+4. **Optional: Customize Cursor CLI Path**
+   - If cursor-agent is not in your PATH, set `commentary.agent.cursorCliPath` to the full path
+   - Example: `/usr/local/bin/cursor-agent`
+
+5. **Optional: Configure Interactive Mode**
+   - Set `commentary.agent.cursorInteractive` to `false` for automation workflows
+   - Interactive mode (default) allows conversational follow-up in the terminal
+
+6. **Cursor CLI Permissions**
+   - The repository includes `cli-config.json` with safe default permissions
+   - Cursor Agent can read source files and documentation
+   - Cursor Agent can write to documentation files (*.md)
+   - Destructive operations (rm, sudo, git push) are blocked
 
 ## Architecture
 
