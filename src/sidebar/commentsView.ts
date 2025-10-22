@@ -161,13 +161,26 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   /**
    * Get all comments for the active editor
+   * When Commentary preview is open, it becomes the active editor,
+   * so we search through visible editors to find the markdown file
    */
   async getActiveFileComments(): Promise<Note[]> {
+    // First try the active editor
     const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-      return [];
+    if (activeEditor && activeEditor.document.languageId === 'markdown') {
+      return this.storage.getNotes(activeEditor.document.uri.toString());
     }
 
-    return this.storage.getNotes(activeEditor.document.uri.toString());
+    // If active editor isn't markdown (e.g., Commentary preview is active),
+    // search through all visible editors for a markdown document
+    const markdownEditor = vscode.window.visibleTextEditors.find(
+      (editor) => editor.document.languageId === 'markdown'
+    );
+
+    if (markdownEditor) {
+      return this.storage.getNotes(markdownEditor.document.uri.toString());
+    }
+
+    return [];
   }
 }
