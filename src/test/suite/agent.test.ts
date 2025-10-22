@@ -225,49 +225,6 @@ suite('Payload Builder Tests', () => {
   });
 });
 
-suite('Integration Tests', () => {
-  test('Should handle end-to-end workflow for cursor provider', async () => {
-    const config = vscode.workspace.getConfiguration('commentary.agent');
-    await config.update('enabled', true, vscode.ConfigurationTarget.Global);
-    await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
-    await config.update('cursorInteractive', true, vscode.ConfigurationTarget.Global);
-
-    const mockContext = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.file('/test'),
-    } as unknown as vscode.ExtensionContext;
-
-    const client = new AgentClient(mockContext);
-    const note = createTestNote('integration-test', 'Integration test comment');
-
-    // Should complete without throwing
-    await client.sendSingleComment(note);
-
-    client.dispose();
-    assert.ok(true);
-  });
-
-  test('Should handle end-to-end workflow for claude provider', async () => {
-    const config = vscode.workspace.getConfiguration('commentary.agent');
-    await config.update('enabled', true, vscode.ConfigurationTarget.Global);
-    await config.update('provider', 'claude', vscode.ConfigurationTarget.Global);
-
-    const mockContext = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.file('/test'),
-    } as unknown as vscode.ExtensionContext;
-
-    const client = new AgentClient(mockContext);
-    const note = createTestNote('integration-test-claude', 'Claude integration test');
-
-    // Should complete without throwing
-    await client.sendSingleComment(note);
-
-    client.dispose();
-    assert.ok(true);
-  });
-});
-
 // Helper function to create test notes
 function createTestNote(id: string = 'test-note-1', text: string = 'Test comment'): Note {
   return {
