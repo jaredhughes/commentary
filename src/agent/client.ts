@@ -195,70 +195,24 @@ export class AgentClient {
   }
 
   /**
-   * Send prompt via Cursor CLI in integrated terminal
+   * Send prompt via Cursor chat (copies to clipboard and prompts user)
    */
   private async sendViaCursorCLI(prompt: string, request: AgentRequest): Promise<boolean> {
     try {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      const cliPath = config.get<string>('cursorCliPath', 'cursor-agent');
-      const interactive = config.get<boolean>('cursorInteractive', true);
-      const model = config.get<string>('model', 'claude-3-5-sonnet-20241022');
+      // Copy prompt to clipboard
+      await vscode.env.clipboard.writeText(prompt);
 
-      // Create terminal
-      const terminal = vscode.window.createTerminal({
-        name: 'Commentary → Cursor',
-        hideFromUser: false,
-      });
+      // Show message prompting user to open Cursor chat
+      const commentCount = request.contexts.length;
+      const message = commentCount === 1
+        ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
+        : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
 
-      terminal.show();
-
-      // Get the file being commented on
-      const firstNote = request.contexts[0]?.note;
-      if (!firstNote) {
-        return false;
-      }
-
-      // Create a temporary file with the prompt
-      const tempPromptPath = path.join(
-        os.tmpdir(),
-        `commentary-prompt-${Date.now()}.md`
-      );
-
-      fs.writeFileSync(tempPromptPath, prompt);
-
-      // Build the Cursor command
-      let command: string;
-      if (interactive) {
-        // Interactive mode: pipe prompt and allow conversational response
-        command = `cat "${tempPromptPath}" | ${cliPath} --model ${model}`;
-      } else {
-        // Non-interactive mode: run the prompt and exit
-        command = `${cliPath} -p "$(cat '${tempPromptPath}')" --model ${model} --no-interactive`;
-      }
-
-      terminal.sendText(command);
-
-      vscode.window.showInformationMessage(
-        `🤖 Sending ${request.contexts.length} comment(s) to Cursor Agent...`,
-        'View Terminal'
-      ).then((action) => {
-        if (action === 'View Terminal') {
-          terminal.show();
-        }
-      });
-
-      // Clean up temp file after a delay
-      setTimeout(() => {
-        try {
-          fs.unlinkSync(tempPromptPath);
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }, 5000);
+      await vscode.window.showInformationMessage(message, 'Got it');
 
       return true;
     } catch (error) {
-      console.error('Failed to use Cursor CLI:', error);
+      console.error('Failed to copy prompt for Cursor:', error);
       return false;
     }
   }
