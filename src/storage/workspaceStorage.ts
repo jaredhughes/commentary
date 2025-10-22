@@ -27,19 +27,26 @@ export class WorkspaceStorage implements ICommentStorage {
   }
 
   async saveNote(note: Note): Promise<void> {
+    console.log('[WorkspaceStorage] saveNote called with:', note);
     const allNotes = await this.getAllStoredNotes();
+    console.log('[WorkspaceStorage] Current notes in storage:', allNotes.size, 'files');
     const fileNotes = allNotes.get(note.file) || [];
+    console.log('[WorkspaceStorage] Current notes for file:', fileNotes.length);
 
     // Replace if exists, otherwise append
     const index = fileNotes.findIndex((n) => n.id === note.id);
     if (index >= 0) {
+      console.log('[WorkspaceStorage] Replacing existing note at index', index);
       fileNotes[index] = note;
     } else {
+      console.log('[WorkspaceStorage] Appending new note');
       fileNotes.push(note);
     }
 
     allNotes.set(note.file, fileNotes);
+    console.log('[WorkspaceStorage] Saving to workspace state...');
     await this.saveAllNotes(allNotes);
+    console.log('[WorkspaceStorage] Save complete. Total notes for file now:', fileNotes.length);
   }
 
   async deleteNote(noteId: string, fileUri: string): Promise<void> {
@@ -63,7 +70,13 @@ export class WorkspaceStorage implements ICommentStorage {
   }
 
   async getAllNotes(): Promise<Map<string, Note[]>> {
-    return this.getAllStoredNotes();
+    console.log('[WorkspaceStorage] getAllNotes called');
+    const notes = await this.getAllStoredNotes();
+    console.log('[WorkspaceStorage] Returning', notes.size, 'files with notes');
+    for (const [fileUri, fileNotes] of notes.entries()) {
+      console.log('[WorkspaceStorage]  -', fileUri, ':', fileNotes.length, 'notes');
+    }
+    return notes;
   }
 
   async exportNotes(): Promise<string> {

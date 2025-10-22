@@ -2,7 +2,7 @@
   "name": "commentary",
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "publisher": "your-publisher-name",
   "engines": {
     "vscode": "^1.85.0"
@@ -18,11 +18,17 @@
     "ai"
   ],
   "activationEvents": [
-    "onLanguage:markdown"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "commentary.openPreview",
+        "title": "Open with Commentary",
+        "category": "Commentary",
+        "icon": "$(comment)"
+      },
       {
         "command": "commentary.saveComment",
         "title": "Save Comment",
@@ -31,43 +37,67 @@
       {
         "command": "commentary.deleteComment",
         "title": "Delete Comment",
-        "category": "Commentary"
+        "category": "Commentary",
+        "icon": "$(trash)"
       },
       {
         "command": "commentary.deleteAllComments",
-        "title": "Delete All Comments",
-        "category": "Commentary"
+        "title": "Delete All",
+        "category": "Commentary",
+        "icon": "$(trash)"
       },
       {
         "command": "commentary.sendToAgent",
-        "title": "Send Comment to Agent",
-        "category": "Commentary"
+        "title": "Send to Agent",
+        "category": "Commentary",
+        "icon": "$(send)"
       },
       {
         "command": "commentary.sendAllToAgent",
-        "title": "Send All Comments to Agent",
-        "category": "Commentary"
+        "title": "Send All to Agent",
+        "category": "Commentary",
+        "icon": "$(send)"
       },
       {
         "command": "commentary.exportComments",
-        "title": "Export Comments",
-        "category": "Commentary"
+        "title": "Export",
+        "category": "Commentary",
+        "icon": "$(export)"
       },
       {
         "command": "commentary.importComments",
-        "title": "Import Comments",
-        "category": "Commentary"
+        "title": "Import",
+        "category": "Commentary",
+        "icon": "$(go-to-file)"
       },
       {
         "command": "commentary.revealComment",
-        "title": "Reveal Comment in Preview",
-        "category": "Commentary"
+        "title": "Reveal",
+        "category": "Commentary",
+        "icon": "$(eye)"
       },
       {
         "command": "commentary.refreshComments",
-        "title": "Refresh Comments",
+        "title": "Refresh",
         "category": "Commentary",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "commentary.showCommentsSidebar",
+        "title": "Show Comments Sidebar",
+        "category": "Commentary"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "commentary.markdownEditor",
+        "displayName": "Commentary Markdown Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "default"
       }
     ],
     "viewsContainers": {
@@ -88,6 +118,66 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "commentary.openPreview",
+          "when": "true"
+        },
+        {
+          "command": "commentary.sendAllToAgent",
+          "when": "true"
+        },
+        {
+          "command": "commentary.showCommentsSidebar",
+          "when": "true"
+        },
+        {
+          "command": "commentary.deleteAllComments",
+          "when": "true"
+        },
+        {
+          "command": "commentary.saveComment",
+          "when": "false"
+        },
+        {
+          "command": "commentary.deleteComment",
+          "when": "false"
+        },
+        {
+          "command": "commentary.sendToAgent",
+          "when": "false"
+        },
+        {
+          "command": "commentary.exportComments",
+          "when": "false"
+        },
+        {
+          "command": "commentary.importComments",
+          "when": "false"
+        },
+        {
+          "command": "commentary.revealComment",
+          "when": "false"
+        },
+        {
+          "command": "commentary.refreshComments",
+          "when": "false"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "commentary.openPreview",
+          "when": "resourceExtname == .md",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "commentary.openPreview",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ],
       "view/title": [
         {
           "command": "commentary.sendAllToAgent",
@@ -95,24 +185,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "commentary.exportComments",
+          "command": "commentary.refreshComments",
           "when": "view == commentary.commentsView",
           "group": "navigation@2"
         },
         {
-          "command": "commentary.importComments",
-          "when": "view == commentary.commentsView",
-          "group": "navigation@3"
-        },
-        {
-          "command": "commentary.refreshComments",
-          "when": "view == commentary.commentsView",
-          "group": "navigation@4"
-        },
-        {
           "command": "commentary.deleteAllComments",
           "when": "view == commentary.commentsView",
-          "group": "navigation@5"
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -208,13 +288,7 @@
           "description": "Number of lines before and after selection to include as context"
         }
       }
-    },
-    "markdown.previewStyles": [
-      "./media/overlay.css"
-    ],
-    "markdown.previewScripts": [
-      "./media/overlay.js"
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -225,12 +299,22 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.6",
     "@types/node": "^20.x",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.x",
     "@typescript-eslint/parser": "^6.x",
+    "@vscode/test-electron": "^2.3.8",
     "eslint": "^8.x",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
     "typescript": "^5.3.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0",
+    "markdown-it-github-headings": "^2.0.1",
+    "markdown-it-task-lists": "^2.1.1"
+  }
 }

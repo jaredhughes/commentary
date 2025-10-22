@@ -9,10 +9,12 @@ import { OverlayHost } from './preview/overlayHost';
 import { CommentsViewProvider } from './sidebar/commentsView';
 import { CommandManager } from './sidebar/commands';
 import { AgentClient } from './agent/client';
+import { MarkdownWebviewProvider } from './preview/markdownWebview';
 
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
 let commentsViewProvider: CommentsViewProvider | undefined;
+let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Commentary extension is now active');
@@ -24,8 +26,93 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize overlay host
   overlayHost = new OverlayHost(context, storageManager);
 
+  // Initialize markdown webview provider with overlay host
+  markdownWebviewProvider = new MarkdownWebviewProvider(context, storageManager, overlayHost);
+
+  // Register custom editor provider for markdown files
+  context.subscriptions.push(
+    vscode.window.registerCustomEditorProvider(
+      'commentary.markdownEditor',
+      markdownWebviewProvider,
+      {
+        webviewOptions: {
+          retainContextWhenHidden: true,
+        },
+      }
+    )
+  );
+
   // Initialize agent client
   const agentClient = new AgentClient(context);
+
+  // Register command to open markdown in Commentary view
+  context.subscriptions.push(
+    vscode.commands.registerCommand('commentary.openPreview', async (uri?: vscode.Uri, allUris?: vscode.Uri[]) => {
+      // If called from explorer context menu with file URI(s)
+      if (uri) {
+        const urisToOpen = allUris && allUris.length > 0 ? allUris : [uri];
+
+        for (const fileUri of urisToOpen) {
+          try {
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            if (document.languageId === 'markdown') {
+              await markdownWebviewProvider?.openMarkdown(document);
+            }
+          } catch (error) {
+            console.error('Failed to open file:', error);
+          }
+        }
+
+        // Auto-reveal Comments sidebar
+        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        return;
+      }
+
+      // If called without URI, use active editor
+      const editor = vscode.window.activeTextEditor;
+
+      // Check active editor first
+      if (editor && editor.document.languageId === 'markdown') {
+        await markdownWebviewProvider?.openMarkdown(editor.document);
+        // Auto-reveal Comments sidebar
+        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        return;
+      }
+
+      // Check visible editors
+      const markdownEditor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.languageId === 'markdown'
+      );
+
+      if (markdownEditor) {
+        await markdownWebviewProvider?.openMarkdown(markdownEditor.document);
+        // Auto-reveal Comments sidebar
+        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        return;
+      }
+
+      // Check all open text documents
+      const markdownDoc = vscode.workspace.textDocuments.find(
+        (doc) => doc.languageId === 'markdown'
+      );
+
+      if (markdownDoc) {
+        await markdownWebviewProvider?.openMarkdown(markdownDoc);
+        // Auto-reveal Comments sidebar
+        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        return;
+      }
+
+      vscode.window.showWarningMessage('Please open a Markdown file first');
+    })
+  );
+
+  // Register command to show Comments sidebar
+  context.subscriptions.push(
+    vscode.commands.registerCommand('commentary.showCommentsSidebar', async () => {
+      await vscode.commands.executeCommand('commentary.commentsView.focus');
+    })
+  );
 
   // Initialize comments view provider
   commentsViewProvider = new CommentsViewProvider(storageManager);
@@ -38,7 +125,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Refresh view when notes change
   overlayHost.onNotesChanged(() => {
+    console.log('[Extension] onNotesChanged fired - refreshing sidebar');
     commentsViewProvider?.refresh();
+    console.log('[Extension] Sidebar refresh called');
   });
 
   // Initialize command manager
@@ -75,7 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register markdown preview extension API consumer
   // This allows us to inject scripts and styles into the preview
   return {
-    extendMarkdownIt(md: any) {
+    extendMarkdownIt(md: Record<string, unknown>): Record<string, unknown> {
       // We don't need to modify markdown-it itself
       // We rely on preview scripts and styles injection
       return md;

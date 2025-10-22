@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { StorageManager } from '../storage';
 import { OverlayHost } from '../preview/overlayHost';
 import { AgentClient } from '../agent/client';
-import { CommentsViewProvider } from './commentsView';
+import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 
 export class CommandManager {
   constructor(
@@ -27,7 +27,7 @@ export class CommandManager {
 
     // Delete specific comment
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.deleteComment', async (item: any) => {
+      vscode.commands.registerCommand('commentary.deleteComment', async (item: CommentTreeItem) => {
         if (!item || !item.note) {
           return;
         }
@@ -71,7 +71,7 @@ export class CommandManager {
 
     // Send comment to agent
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.sendToAgent', async (item: any) => {
+      vscode.commands.registerCommand('commentary.sendToAgent', async (item: CommentTreeItem) => {
         if (!item || !item.note) {
           return;
         }

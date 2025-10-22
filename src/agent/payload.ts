@@ -3,6 +3,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as os from 'os';
 import { Note, AgentContext, AgentRequest } from '../types';
 
 export class PayloadBuilder {
@@ -18,28 +19,51 @@ export class PayloadBuilder {
     let contextBefore = '';
     let contextAfter = '';
     let fullDocument: string | undefined;
+    let calculatedLines: { start: number; end: number } | undefined;
 
     try {
       const document = await vscode.workspace.openTextDocument(uri);
       fullDocument = document.getText();
 
-      // Calculate context lines based on position
-      if (note.lines) {
-        const startLine = Math.max(0, note.lines.start - contextLines - 1);
-        const endLine = Math.min(document.lineCount - 1, note.lines.end + contextLines);
+      // If we don't have line numbers, calculate them by finding the exact quote
+      if (!note.lines && note.quote.exact) {
+        const text = document.getText();
+        const quoteIndex = text.indexOf(note.quote.exact);
+        if (quoteIndex !== -1) {
+          const startPos = document.positionAt(quoteIndex);
+          const endPos = document.positionAt(quoteIndex + note.quote.exact.length);
+          calculatedLines = {
+            start: startPos.line + 1, // 1-indexed for display
+            end: endPos.line + 1,
+          };
+        }
+      }
 
-        const beforeRange = new vscode.Range(startLine, 0, note.lines.start - 1, 0);
+      // Use existing or calculated line numbers
+      const lines = note.lines || calculatedLines;
+
+      // Calculate context lines based on position
+      if (lines) {
+        const startLine = Math.max(0, lines.start - contextLines - 1);
+        const endLine = Math.min(document.lineCount - 1, lines.end + contextLines);
+
+        const beforeRange = new vscode.Range(startLine, 0, lines.start - 1, 0);
         const afterRange = new vscode.Range(
-          note.lines.end,
+          lines.end,
           0,
           endLine,
-          document.lineAt(endLine).text.length
+          document.lineAt(Math.min(endLine, document.lineCount - 1)).text.length
         );
 
         contextBefore = document.getText(beforeRange);
         contextAfter = document.getText(afterRange);
+
+        // Update the note with calculated lines if they weren't there
+        if (!note.lines && calculatedLines) {
+          note.lines = calculatedLines;
+        }
       } else {
-        // Use position-based context
+        // Fallback: Use position-based context
         const beforePos = Math.max(0, note.position.start - 200);
         const afterPos = Math.min(fullDocument.length, note.position.end + 200);
 
@@ -83,30 +107,92 @@ export class PayloadBuilder {
   }
 
   /**
+   * Get human-readable filename from URI
+   */
+  private static getFilename(fileUri: string): string {
+    try {
+      const uri = vscode.Uri.parse(fileUri);
+      const pathParts = uri.fsPath.split('/');
+      return pathParts[pathParts.length - 1];
+    } catch {
+      return fileUri;
+    }
+  }
+
+  /**
+   * Get workspace-relative or home-relative path
+   */
+  private static getRelativePath(fileUri: string): string {
+    try {
+      const uri = vscode.Uri.parse(fileUri);
+
+      // Try workspace-relative first
+      const workspaceRelative = vscode.workspace.asRelativePath(uri, false);
+      if (workspaceRelative !== uri.fsPath) {
+        return workspaceRelative;
+      }
+
+      // Fall back to home-relative
+      const homeDir = os.homedir();
+      if (uri.fsPath.startsWith(homeDir)) {
+        return '~' + uri.fsPath.substring(homeDir.length);
+      }
+
+      return uri.fsPath;
+    } catch {
+      return fileUri;
+    }
+  }
+
+  /**
    * Format a request as a readable prompt for the AI agent
    */
   static formatAsPrompt(request: AgentRequest): string {
     const lines = [request.instruction || 'Please review the following comments:', ''];
 
     for (const ctx of request.contexts) {
-      lines.push('---', `Comment: ${ctx.note.text}`, '');
-      lines.push('Selected text:');
-      lines.push(`"${ctx.note.quote.exact}"`, '');
+      const filename = this.getFilename(ctx.note.file);
+      const filepath = this.getRelativePath(ctx.note.file);
+
+      lines.push('---');
+      lines.push(`**File:** \`${filepath}\``);
+
+      // Add line number if available
+      if (ctx.note.lines) {
+        if (ctx.note.lines.start === ctx.note.lines.end) {
+          lines.push(`**Line:** ${ctx.note.lines.start}`);
+        } else {
+          lines.push(`**Lines:** ${ctx.note.lines.start}–${ctx.note.lines.end}`);
+        }
+      } else {
+        lines.push(`**Position:** ${ctx.note.position.start}–${ctx.note.position.end}`);
+      }
+
+      lines.push('');
+      lines.push(`**Comment:** ${ctx.note.text}`);
+      lines.push('');
+      lines.push('**Selected text:**');
+      lines.push(`"${ctx.note.quote.exact}"`);
+      lines.push('');
 
       if (ctx.contextBefore || ctx.contextAfter) {
-        lines.push('Context:');
+        lines.push('**Context:**');
+        lines.push('');
         if (ctx.contextBefore) {
           lines.push('```markdown');
           lines.push(ctx.contextBefore.trim());
-          lines.push('```', '');
+          lines.push('```');
+          lines.push('');
         }
 
-        lines.push('**[Selected text appears here]**', '');
+        lines.push('**[Selected text appears here]**');
+        lines.push('');
 
         if (ctx.contextAfter) {
           lines.push('```markdown');
           lines.push(ctx.contextAfter.trim());
-          lines.push('```', '');
+          lines.push('```');
+          lines.push('');
         }
       }
 

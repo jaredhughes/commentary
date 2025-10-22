@@ -3,10 +3,10 @@
  */
 
 import * as vscode from 'vscode';
-import { PreviewMessage, HostMessage, MessageType, HostMessageType } from './types';
+import { PreviewMessage, HostMessage, MessageType, HostMessageType, Note } from './types';
 
 export class MessageHandler {
-  private listeners: Map<MessageType, Array<(message: any) => void>> = new Map();
+  private listeners: Map<MessageType, Array<(message: unknown) => void | Promise<void>>> = new Map();
 
   /**
    * Register a listener for a specific message type
@@ -18,7 +18,7 @@ export class MessageHandler {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, []);
     }
-    this.listeners.get(type)!.push(handler);
+    this.listeners.get(type)!.push(handler as (message: unknown) => void | Promise<void>);
   }
 
   /**
@@ -58,7 +58,7 @@ export class PreviewBridge {
   /**
    * Paint highlights in the preview
    */
-  async paintHighlights(notes: any[]): Promise<void> {
+  async paintHighlights(notes: Note[]): Promise<void> {
     await this.sendToPreview({
       type: HostMessageType.PaintHighlights,
       notes,
