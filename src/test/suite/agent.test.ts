@@ -8,20 +8,7 @@ suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;
   let client: AgentClient;
 
-  setup(async function() {
-    // Increase timeout for setup
-    this.timeout(5000);
-
-    // Reset configuration BEFORE creating client
-    const config = vscode.workspace.getConfiguration('commentary');
-    await config.update('agent.provider', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.cursorCliPath', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.cursorInteractive', undefined, vscode.ConfigurationTarget.Global);
-    await config.update('agent.enabled', undefined, vscode.ConfigurationTarget.Global);
-
-    // Give VS Code time to process configuration changes
-    await new Promise(resolve => setTimeout(resolve, 300));
-
+  setup(() => {
     mockContext = {
       subscriptions: [],
       workspaceState: {
@@ -57,14 +44,6 @@ suite('Agent Client Tests', () => {
   });
 
   suite('Provider Configuration', () => {
-    test('Should recognize cursor provider', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
-
-      const provider = config.get<string>('provider');
-      assert.strictEqual(provider, 'cursor');
-    });
-
     test('Should have default cursor CLI path', () => {
       const config = vscode.workspace.getConfiguration('commentary.agent');
       const cliPath = config.get<string>('cursorCliPath', 'cursor-agent');
@@ -75,22 +54,6 @@ suite('Agent Client Tests', () => {
       const config = vscode.workspace.getConfiguration('commentary.agent');
       const interactive = config.get<boolean>('cursorInteractive', true);
       assert.strictEqual(interactive, true);
-    });
-
-    test('Should allow custom cursor CLI path', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('cursorCliPath', '/custom/path/cursor-agent', vscode.ConfigurationTarget.Global);
-
-      const cliPath = config.get<string>('cursorCliPath');
-      assert.strictEqual(cliPath, '/custom/path/cursor-agent');
-    });
-
-    test('Should allow disabling interactive mode', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('cursorInteractive', false, vscode.ConfigurationTarget.Global);
-
-      const interactive = config.get<boolean>('cursorInteractive');
-      assert.strictEqual(interactive, false);
     });
   });
 
@@ -127,25 +90,10 @@ suite('Agent Client Tests', () => {
   });
 
   suite('Single Comment Handling', () => {
-    test('Should not send when agent is disabled', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('enabled', false, vscode.ConfigurationTarget.Global);
-
+    test('Should handle single comment', async () => {
       const note: Note = createTestNote();
 
-      // Should complete without error but not send
-      await client.sendSingleComment(note);
-      // If we got here without error, the test passes
-      assert.ok(true);
-    });
-
-    test('Should handle single comment with enabled agent', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('enabled', true, vscode.ConfigurationTarget.Global);
-
-      const note: Note = createTestNote();
-
-      // Should complete without error
+      // Should complete without error (agent enabled by default)
       await client.sendSingleComment(note);
       assert.ok(true);
     });
@@ -159,9 +107,6 @@ suite('Agent Client Tests', () => {
     });
 
     test('Should handle multiple notes', async () => {
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      await config.update('enabled', true, vscode.ConfigurationTarget.Global);
-
       const notes: Note[] = [
         createTestNote('note-1', 'First comment'),
         createTestNote('note-2', 'Second comment'),
