@@ -137,6 +137,12 @@
   outline: none;
 }
 
+.commentary-btn-icon {
+  padding: 5px 10px;
+  min-width: 36px;
+  font-size: 16px;
+}
+
 .commentary-btn:hover {
   color: rgba(255, 255, 255, 1.0);
 }
