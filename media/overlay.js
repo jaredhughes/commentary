@@ -22,6 +22,23 @@ console.log('[OVERLAY.JS] Script is loading...');
   let trackedRange = null; // Track the range for repositioning on scroll
   let scrollListener = null; // Reference to scroll listener for cleanup
   let isDocumentLevelComment = false; // Track if current bubble is for document-level comment
+  let editingNoteId = null; // Track which note is being edited (null for new comments)
+
+  /**
+   * Get agent button text and icon based on provider
+   */
+  function getAgentButtonConfig() {
+    const provider = window.commentaryAgentProvider || 'cursor';
+    const isCursor = provider === 'cursor';
+
+    return {
+      icon: isCursor ? '📋' : '➤',
+      text: isCursor ? 'Copy for agent' : 'Send to agent',
+      tooltip: isCursor
+        ? 'Copy comment to clipboard for pasting into Cursor'
+        : 'Send comment to AI agent for automatic processing'
+    };
+  }
 
   /**
    * Initialize the overlay
@@ -29,6 +46,10 @@ console.log('[OVERLAY.JS] Script is loading...');
   function init() {
     console.log('[OVERLAY.JS] init() called');
     console.log('[OVERLAY.JS] Commentary overlay initialized');
+
+    // Create document comment button
+    createDocumentCommentButton();
+    console.log('[OVERLAY.JS] Document comment button created');
 
     // Listen for mouseup to detect selections
     document.addEventListener('mouseup', handleMouseUp);
@@ -54,24 +75,16 @@ console.log('[OVERLAY.JS] Script is loading...');
     button.setAttribute('aria-label', 'Add comment for entire document');
 
     button.onclick = () => {
-      // Set flag to indicate this is a document-level comment
-      isDocumentLevelComment = true;
+      // Check if a document-level comment already exists
+      const existingDocComment = Array.from(highlights.entries()).find(([noteId, mark]) => {
+        // Document comments don't have visible highlights, so check our stored notes
+        return false; // We'll rely on the extension to handle duplicate prevention
+      });
 
-      // Create a placeholder selection for the entire document
-      currentSelection = {
-        quote: {
-          exact: '[Entire Document]',
-          prefix: '',
-          suffix: ''
-        },
-        position: {
-          start: 0,
-          end: document.body.textContent.length
-        }
-      };
-
-      // Show the bubble centered on screen
-      showBubbleForDocument();
+      // Request to add/edit document comment (extension will handle if one exists)
+      postMessage({
+        type: 'addDocumentComment',
+      });
     };
 
     document.body.appendChild(button);
@@ -365,21 +378,37 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Detect platform for keyboard shortcut hint
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.textContent = 'Save';
+    saveBtn.innerHTML = '💾 Save';
     saveBtn.title = `Save comment (${shortcut})`;
-    saveBtn.className = 'commentary-btn commentary-btn-primary';
+    saveBtn.className = 'commentary-btn';
     saveBtn.onclick = () => {
       console.log('[OVERLAY] Save button clicked!');
       saveComment(textarea.value);
     };
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.className = 'commentary-btn';
-    cancelBtn.onclick = hideBubble;
+    const submitBtn = document.createElement('button');
+    const agentConfig = getAgentButtonConfig();
+    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+    submitBtn.title = agentConfig.tooltip;
+    submitBtn.className = 'commentary-btn commentary-btn-primary';
+    submitBtn.onclick = () => {
+      const text = textarea.value;
+      if (!text.trim()) {
+        return;
+      }
+      // Send atomic save-and-submit message
+      postMessage({
+        type: 'saveAndSubmitToAgent',
+        selection: currentSelection,
+        commentText: text.trim(),
+        isDocumentLevel: isDocumentLevelComment,
+      });
+      hideBubble();
+      window.getSelection()?.removeAllRanges();
+    };
 
     buttonContainer.appendChild(saveBtn);
-    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(submitBtn);
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
@@ -456,18 +485,33 @@ console.log('[OVERLAY.JS] Script is loading...');
     const saveBtn = document.createElement('button');
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.textContent = 'Save';
+    saveBtn.innerHTML = '💾 Save';
     saveBtn.title = `Save comment (${shortcut})`;
-    saveBtn.className = 'commentary-btn commentary-btn-primary';
+    saveBtn.className = 'commentary-btn';
     saveBtn.onclick = () => saveComment(textarea.value);
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.className = 'commentary-btn';
-    cancelBtn.onclick = () => hideBubble();
+    const submitBtn = document.createElement('button');
+    const agentConfig = getAgentButtonConfig();
+    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+    submitBtn.title = agentConfig.tooltip;
+    submitBtn.className = 'commentary-btn commentary-btn-primary';
+    submitBtn.onclick = () => {
+      const text = textarea.value;
+      if (!text.trim()) {
+        return;
+      }
+      // Send atomic save-and-submit message
+      postMessage({
+        type: 'saveAndSubmitToAgent',
+        selection: currentSelection,
+        commentText: text.trim(),
+        isDocumentLevel: isDocumentLevelComment,
+      });
+      hideBubble();
+    };
 
-    buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(saveBtn);
+    buttonContainer.appendChild(submitBtn);
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
@@ -577,28 +621,42 @@ console.log('[OVERLAY.JS] Script is loading...');
     console.log('[OVERLAY] Clearing currentSelection');
     currentSelection = null;
     isDocumentLevelComment = false; // Reset document-level flag
+    editingNoteId = null; // Reset editing state
   }
 
   /**
-   * Save comment
+   * Save comment (new or edited)
    */
   function saveComment(text) {
     console.log('saveComment called with:', text);
     console.log('currentSelection:', currentSelection);
     console.log('isDocumentLevelComment:', isDocumentLevelComment);
+    console.log('editingNoteId:', editingNoteId);
 
     if (!text.trim() || !currentSelection) {
       console.log('Skipping save - empty text or no selection');
       return;
     }
 
-    const message = {
-      type: 'saveComment',
-      selection: currentSelection,
-      commentText: text.trim(),
-      isDocumentLevel: isDocumentLevelComment,
-      // documentUri will be added by the extension host
-    };
+    let message;
+
+    if (editingNoteId) {
+      // Editing existing comment
+      message = {
+        type: 'updateComment',
+        noteId: editingNoteId,
+        commentText: text.trim(),
+      };
+    } else {
+      // Creating new comment
+      message = {
+        type: 'saveComment',
+        selection: currentSelection,
+        commentText: text.trim(),
+        isDocumentLevel: isDocumentLevelComment,
+        // documentUri will be added by the extension host
+      };
+    }
 
     console.log('Sending message:', message);
     postMessage(message);
@@ -606,7 +664,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     hideBubble();
 
     // Only clear selection if it's not a document-level comment
-    if (!isDocumentLevelComment) {
+    if (!isDocumentLevelComment && !editingNoteId) {
       window.getSelection()?.removeAllRanges();
     }
   }
@@ -646,12 +704,15 @@ console.log('[OVERLAY.JS] Script is loading...');
       range.surroundContents(mark);
       highlights.set(note.id, mark);
 
-      // Add click handler
+      // Add click handler to edit comment
       mark.addEventListener('click', () => {
+        console.log('[OVERLAY] Click on highlight', note.id);
+        // Request the full note data from extension to edit
         postMessage({
-          type: 'revealComment',
+          type: 'editHighlightComment',
           noteId: note.id,
         });
+        bubbleJustOpened = true;
       });
     } catch (error) {
       console.error('Failed to paint highlight:', error);
@@ -759,6 +820,235 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Show edit bubble for an existing comment
+   */
+  function showEditBubble(note) {
+    console.log('[OVERLAY] Showing edit bubble for note:', note.id);
+
+    // Set up state for editing
+    editingNoteId = note.id;
+    currentSelection = {
+      quote: note.quote,
+      position: note.position
+    };
+
+    // Get the highlight element to position near it
+    const mark = highlights.get(note.id);
+    if (!mark) {
+      console.error('[OVERLAY] No highlight found for note:', note.id);
+      return;
+    }
+
+    // Remove old bubble if exists
+    if (commentBubble) {
+      commentBubble.remove();
+    }
+
+    // Get the range for positioning
+    const range = document.createRange();
+    range.selectNode(mark);
+    trackedRange = range;
+
+    commentBubble = document.createElement('div');
+    commentBubble.className = 'commentary-bubble';
+    commentBubble.style.position = 'fixed';
+    commentBubble.style.visibility = 'hidden';
+    document.body.appendChild(commentBubble);
+
+    // Create textarea with existing comment text
+    const textarea = document.createElement('textarea');
+    textarea.value = note.text; // Pre-fill with existing comment
+    textarea.className = 'commentary-textarea';
+    textarea.placeholder = 'Edit comment...';
+
+    // Add keyboard shortcuts
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveComment(textarea.value);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideBubble();
+      }
+    });
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'commentary-buttons';
+
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.innerHTML = '💾 Save';
+    saveBtn.title = `Save changes (${shortcut})`;
+    saveBtn.className = 'commentary-btn';
+    saveBtn.onclick = () => saveComment(textarea.value);
+
+    const submitBtn = document.createElement('button');
+    const agentConfig = getAgentButtonConfig();
+    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+    submitBtn.title = agentConfig.tooltip;
+    submitBtn.className = 'commentary-btn commentary-btn-primary';
+    submitBtn.onclick = () => {
+      const text = textarea.value;
+      if (!text.trim()) {
+        return;
+      }
+      // Send atomic save-and-submit message with existing noteId
+      postMessage({
+        type: 'saveAndSubmitToAgent',
+        selection: currentSelection,
+        commentText: text.trim(),
+        isDocumentLevel: note.isDocumentLevel,
+        noteId: note.id,  // Include noteId for editing existing comment
+      });
+      hideBubble();
+    };
+
+    buttonContainer.appendChild(saveBtn);
+    buttonContainer.appendChild(submitBtn);
+
+    commentBubble.appendChild(textarea);
+    commentBubble.appendChild(buttonContainer);
+
+    // Position the bubble
+    commentBubble.style.visibility = 'visible';
+    updatePositions();
+
+    // Add scroll listener
+    scrollListener = () => {
+      updatePositions();
+    };
+    window.addEventListener('scroll', scrollListener, true);
+
+    // Focus textarea and select all text for easy editing
+    textarea.focus();
+    textarea.select();
+  }
+
+  /**
+   * Show edit bubble for document-level comment (positioned near button)
+   */
+  function showEditBubbleForDocumentComment(note) {
+    console.log('[OVERLAY] Showing edit bubble for document comment:', note.id);
+
+    // Set up state for editing
+    editingNoteId = note.id;
+    isDocumentLevelComment = true;
+    currentSelection = {
+      quote: note.quote,
+      position: note.position
+    };
+
+    // Remove old bubble if exists
+    if (commentBubble) {
+      commentBubble.remove();
+    }
+
+    commentBubble = document.createElement('div');
+    commentBubble.className = 'commentary-bubble';
+    commentBubble.style.position = 'fixed';
+
+    // Get button position
+    const button = document.querySelector('.commentary-doc-button');
+    let x = 70; // Default: right of button
+    let y = 20; // Default: slightly below top
+
+    if (button) {
+      const buttonRect = button.getBoundingClientRect();
+      x = buttonRect.right + 10;
+      y = buttonRect.top;
+    }
+
+    // Temporarily append to measure dimensions
+    commentBubble.style.visibility = 'hidden';
+    document.body.appendChild(commentBubble);
+
+    // Create textarea with existing comment text
+    const textarea = document.createElement('textarea');
+    textarea.value = note.text;
+    textarea.className = 'commentary-textarea';
+    textarea.placeholder = 'Edit document comment...';
+
+    // Add keyboard shortcuts
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveComment(textarea.value);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideBubble();
+      }
+    });
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'commentary-buttons';
+
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.innerHTML = '💾 Save';
+    saveBtn.title = `Save changes (${shortcut})`;
+    saveBtn.className = 'commentary-btn';
+    saveBtn.onclick = () => saveComment(textarea.value);
+
+    const submitBtn = document.createElement('button');
+    const agentConfig = getAgentButtonConfig();
+    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+    submitBtn.title = agentConfig.tooltip;
+    submitBtn.className = 'commentary-btn commentary-btn-primary';
+    submitBtn.onclick = () => {
+      const text = textarea.value;
+      if (!text.trim()) {
+        return;
+      }
+      // Send atomic save-and-submit message with existing noteId
+      postMessage({
+        type: 'saveAndSubmitToAgent',
+        selection: currentSelection,
+        commentText: text.trim(),
+        isDocumentLevel: true,
+        noteId: note.id,  // Include noteId for editing existing comment
+      });
+      hideBubble();
+    };
+
+    buttonContainer.appendChild(saveBtn);
+    buttonContainer.appendChild(submitBtn);
+
+    commentBubble.appendChild(textarea);
+    commentBubble.appendChild(buttonContainer);
+
+    // Position with viewport bounds checking
+    const bubbleRect = commentBubble.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const padding = 10;
+
+    if (x + bubbleRect.width + padding > viewportWidth) {
+      x = viewportWidth - bubbleRect.width - padding;
+    }
+    if (x < padding) {
+      x = padding;
+    }
+    if (y + bubbleRect.height + padding > viewportHeight) {
+      y = viewportHeight - bubbleRect.height - padding;
+    }
+    if (y < padding) {
+      y = padding;
+    }
+
+    commentBubble.style.left = x + 'px';
+    commentBubble.style.top = y + 'px';
+    commentBubble.style.visibility = 'visible';
+
+    // Focus textarea and select all text
+    textarea.focus();
+    textarea.select();
+  }
+
+  /**
    * Handle messages from extension host
    */
   function handleHostMessage(event) {
@@ -779,6 +1069,31 @@ console.log('[OVERLAY.JS] Script is loading...');
 
       case 'clearAllHighlights':
         clearHighlights();
+        break;
+
+      case 'showEditBubble':
+        showEditBubble(message.note);
+        break;
+
+      case 'showEditBubbleForDocument':
+        showEditBubbleForDocumentComment(message.note);
+        break;
+
+      case 'showNewDocumentBubble':
+        // Set up for new document comment
+        isDocumentLevelComment = true;
+        currentSelection = {
+          quote: {
+            exact: '[Entire Document]',
+            prefix: '',
+            suffix: ''
+          },
+          position: {
+            start: 0,
+            end: document.body.textContent.length
+          }
+        };
+        showBubbleForDocument();
         break;
     }
   }
