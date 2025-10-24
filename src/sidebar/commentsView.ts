@@ -7,28 +7,40 @@ import * as os from 'os';
 import * as path from 'path';
 import { StorageManager } from '../storage';
 import { Note } from '../types';
+import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 
 export class CommentTreeItem extends vscode.TreeItem {
   constructor(
     public readonly note: Note,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
+    // Use larger label for better visibility
     super(note.text, collapsibleState);
 
     this.tooltip = this.buildTooltip();
     this.description = this.buildDescription();
-    this.contextValue = 'comment';
-    this.iconPath = new vscode.ThemeIcon('comment');
 
-    // Make clickable to reveal in preview
-    this.command = {
-      command: 'commentary.revealComment',
-      title: 'Reveal Comment',
-      arguments: [note.id],
-    };
+    // Different contextValue and icon for document-level comments
+    if (note.isDocumentLevel) {
+      this.contextValue = 'documentComment';
+      this.iconPath = new vscode.ThemeIcon('note', new vscode.ThemeColor('charts.blue'));
+    } else {
+      this.contextValue = 'comment';
+      this.iconPath = new vscode.ThemeIcon('comment', new vscode.ThemeColor('charts.yellow'));
+
+      // Make clickable to reveal in preview
+      this.command = {
+        command: 'commentary.revealComment',
+        title: 'Reveal Comment',
+        arguments: [note.id],
+      };
+    }
   }
 
   private buildDescription(): string {
+    if (this.note.isDocumentLevel) {
+      return '📄 Entire document';
+    }
     if (this.note.lines) {
       return `L${this.note.lines.start}–${this.note.lines.end}`;
     }
@@ -36,6 +48,17 @@ export class CommentTreeItem extends vscode.TreeItem {
   }
 
   private buildTooltip(): string {
+    if (this.note.isDocumentLevel) {
+      return [
+        `Comment: ${this.note.text}`,
+        '',
+        'Scope: Entire document',
+        `Created: ${new Date(this.note.createdAt).toLocaleString()}`,
+        '',
+        'Click edit icon to modify'
+      ].join('\n');
+    }
+
     const lines = [`Comment: ${this.note.text}`, '', `Selected: "${this.note.quote.exact}"`];
 
     if (this.note.lines) {
@@ -43,6 +66,7 @@ export class CommentTreeItem extends vscode.TreeItem {
     }
 
     lines.push(`Created: ${new Date(this.note.createdAt).toLocaleString()}`);
+    lines.push('', 'Click to reveal in preview, or use edit icon to modify');
 
     return lines.join('\n');
   }
@@ -95,7 +119,10 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(private storage: StorageManager) {}
+  constructor(
+    private storage: StorageManager,
+    private webviewProvider: MarkdownWebviewProvider
+  ) {}
 
   refresh(): void {
     console.log('[CommentsView] refresh() called');
@@ -161,18 +188,22 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   /**
    * Get all comments for the active editor
-   * When Commentary preview is open, it becomes the active editor,
-   * so we search through visible editors to find the markdown file
+   * Prioritizes Commentary preview if open, otherwise falls back to active text editor
    */
   async getActiveFileComments(): Promise<Note[]> {
-    // First try the active editor
+    // First check if there's an active Commentary document
+    const activeCommentaryUri = this.webviewProvider.getActiveDocumentUri();
+    if (activeCommentaryUri) {
+      return this.storage.getNotes(activeCommentaryUri);
+    }
+
+    // Fall back to checking active text editor
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor && activeEditor.document.languageId === 'markdown') {
       return this.storage.getNotes(activeEditor.document.uri.toString());
     }
 
-    // If active editor isn't markdown (e.g., Commentary preview is active),
-    // search through all visible editors for a markdown document
+    // If active editor isn't markdown, search through all visible editors
     const markdownEditor = vscode.window.visibleTextEditors.find(
       (editor) => editor.document.languageId === 'markdown'
     );
