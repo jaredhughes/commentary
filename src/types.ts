@@ -26,6 +26,7 @@ export interface Note {
   lines?: LineRange;
   text: string;
   createdAt: string;
+  isDocumentLevel?: boolean; // True if comment applies to entire document
 }
 
 export interface SerializedSelection {
@@ -43,7 +44,8 @@ export enum MessageType {
   RevealComment = 'revealComment',
   SendToAgent = 'sendToAgent',
   Ready = 'ready',
-  SelectionMade = 'selectionMade'
+  SelectionMade = 'selectionMade',
+  AddDocumentComment = 'addDocumentComment'
 }
 
 /**
@@ -65,6 +67,7 @@ export interface SaveCommentMessage extends BaseMessage {
   selection: SerializedSelection;
   commentText: string;
   documentUri?: string;
+  isDocumentLevel?: boolean;
 }
 
 export interface DeleteCommentMessage extends BaseMessage {
@@ -91,13 +94,18 @@ export interface SelectionMadeMessage extends BaseMessage {
   selection: SerializedSelection;
 }
 
+export interface AddDocumentCommentMessage extends BaseMessage {
+  type: MessageType.AddDocumentComment;
+}
+
 export type PreviewMessage =
   | SaveCommentMessage
   | DeleteCommentMessage
   | RevealCommentMessage
   | SendToAgentMessage
   | ReadyMessage
-  | SelectionMadeMessage;
+  | SelectionMadeMessage
+  | AddDocumentCommentMessage;
 
 export interface BaseHostMessage {
   type: HostMessageType;

@@ -82,6 +82,7 @@ export class OverlayHost {
         position: msg.selection.position,
         text: msg.commentText,
         createdAt: new Date().toISOString(),
+        isDocumentLevel: msg.isDocumentLevel || false,
       };
 
       console.log('Saving note:', note);
@@ -121,6 +122,14 @@ export class OverlayHost {
     // Handle ready message (preview loaded)
     this.messageHandler.on(MessageType.Ready, async () => {
       console.log('Preview ready message received');
+    });
+
+    // Handle add document comment (from floating button)
+    this.messageHandler.on(MessageType.AddDocumentComment, async (msg: PreviewMessage & { documentUri?: string }) => {
+      console.log('AddDocumentComment handler called');
+      // Pass the document URI to the command
+      const documentUri = msg.documentUri;
+      await vscode.commands.executeCommand('commentary.addDocumentComment', documentUri);
     });
   }
 
