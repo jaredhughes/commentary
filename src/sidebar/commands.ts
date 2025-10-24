@@ -8,6 +8,7 @@ import { OverlayHost } from '../preview/overlayHost';
 import { AgentClient } from '../agent/client';
 import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
+import { Note } from '../types';
 
 export class CommandManager {
   constructor(
@@ -20,7 +21,52 @@ export class CommandManager {
   ) {}
 
   registerCommands(): void {
-    // Reveal comment in preview
+    // Edit comment from sidebar (click behavior)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.editCommentFromSidebar', async (note: CommentTreeItem) => {
+        if (!note || !note.note) {
+          return;
+        }
+        const documentUri = note.note.file;
+
+        // Check if the document is already open in a webview panel
+        const existingPanel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
+
+        if (!existingPanel) {
+          // Document not open - open it first
+          const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(documentUri));
+          await this.webviewProvider.openMarkdown(doc);
+
+          // Wait a moment for the webview to initialize
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } else {
+          // Document already open - just reveal the panel without re-opening
+          existingPanel.reveal(vscode.ViewColumn.One, true); // preserveFocus = true to avoid scrolling
+        }
+
+        // Get the webview panel and show the edit bubble
+        const panel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
+        if (panel) {
+          // Use different message type for document-level comments
+          const messageType = note.note.isDocumentLevel ? 'showEditBubbleForDocument' : 'showEditBubble';
+          await panel.webview.postMessage({
+            type: messageType,
+            note: note.note,
+          });
+        }
+      })
+    );
+
+    // Open/focus document from sidebar (click on file item)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.openDocument', async (fileUri: string) => {
+        // Open the document in Commentary webview (rendered mode)
+        const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(fileUri));
+        await this.webviewProvider.openMarkdown(doc);
+      })
+    );
+
+    // Reveal comment in preview (legacy, still used for context menu)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.revealComment', async (noteId: string) => {
         await this.overlayHost.revealComment(noteId);
@@ -48,25 +94,33 @@ export class CommandManager {
       })
     );
 
-    // Delete all comments
+    // Delete all comments across all documents
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.deleteAllComments', async () => {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-          vscode.window.showWarningMessage('No active Markdown file');
+        // Get all notes across all documents
+        const allNotes = await this.storage.getAllNotes();
+        const totalComments = Array.from(allNotes.values()).reduce((sum, notes) => sum + notes.length, 0);
+
+        if (totalComments === 0) {
+          vscode.window.showInformationMessage('No comments to delete');
           return;
         }
 
         const confirm = await vscode.window.showWarningMessage(
-          'Delete all comments in this file?',
+          `Delete all ${totalComments} comment${totalComments === 1 ? '' : 's'} across all documents?`,
           { modal: true },
           'Delete All'
         );
 
         if (confirm === 'Delete All') {
-          await this.storage.deleteAllNotes(activeEditor.document.uri.toString());
+          // Delete notes for each file
+          for (const fileUri of allNotes.keys()) {
+            await this.storage.deleteAllNotes(fileUri);
+          }
+
           await this.overlayHost.clearAllHighlights();
           this.commentsView.refresh();
+          vscode.window.showInformationMessage(`Deleted ${totalComments} comment${totalComments === 1 ? '' : 's'}`);
         }
       })
     );
@@ -82,10 +136,16 @@ export class CommandManager {
       })
     );
 
-    // Send all comments to agent
+    // Send all comments to agent (across all documents)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendAllToAgent', async () => {
-        const notes = await this.commentsView.getActiveFileComments();
+        // Get all comments across all documents
+        const allNotes = await this.storage.getAllNotes();
+        const notes: Note[] = [];
+
+        for (const [fileUri, fileNotes] of allNotes.entries()) {
+          notes.push(...fileNotes);
+        }
 
         if (notes.length === 0) {
           vscode.window.showInformationMessage('No comments to send');
@@ -146,13 +206,13 @@ export class CommandManager {
       })
     );
 
-    // Toggle AI agent provider
+    // Configure AI agent (new unified command)
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleAgentProvider', async () => {
+      vscode.commands.registerCommand('commentary.configureAgent', async () => {
         const config = vscode.workspace.getConfiguration('commentary.agent');
         const currentProvider = config.get<string>('provider', 'cursor');
 
-        // Define available providers
+        // Step 1: Choose provider
         interface ProviderOption {
           label: string;
           value: string;
@@ -161,55 +221,166 @@ export class CommandManager {
 
         const providers: ProviderOption[] = [
           {
-            label: '$(circuit-board) Claude Code',
+            label: '$(sparkle) Claude API',
             value: 'claude',
-            description: 'Direct CLI integration with Claude Code',
+            description: 'Automatic document editing via Anthropic API',
           },
           {
-            label: '$(edit) Cursor',
+            label: '$(comment-discussion) Cursor',
             value: 'cursor',
-            description: 'Cursor AI agent via cursor-agent CLI',
+            description: 'Manual chat workflow (no additional config needed)',
           },
           {
             label: '$(globe) OpenAI',
             value: 'openai',
-            description: 'OpenAI API (requires API key)',
+            description: 'OpenAI API integration',
           },
           {
             label: '$(tools) Custom',
             value: 'custom',
-            description: 'Custom endpoint (requires configuration)',
+            description: 'Custom API endpoint',
           },
         ];
 
-        // Mark current provider
         const items = providers.map((p) => ({
           ...p,
           label: p.value === currentProvider ? `${p.label} $(check)` : p.label,
         }));
 
         const selected = await vscode.window.showQuickPick(items, {
-          placeHolder: `Current: ${currentProvider} - Select a new AI agent provider`,
-          title: 'Commentary: AI Agent Provider',
+          placeHolder: `Current: ${currentProvider} - Select AI agent provider`,
+          title: 'Commentary: Configure AI Agent',
         });
 
-        if (selected) {
-          const newProvider = selected.value;
+        if (!selected) {
+          return;
+        }
 
-          // Update configuration (workspace level for portability)
-          await config.update('provider', newProvider, vscode.ConfigurationTarget.Workspace);
+        const newProvider = selected.value;
 
-          // Show confirmation with helpful message
-          let message = `AI agent provider switched to: ${newProvider}`;
+        // Step 2: Provider-specific configuration
+        if (newProvider === 'claude') {
+          // Check if API key already exists
+          const existingKey = config.get<string>('apiKey') || process.env.ANTHROPIC_API_KEY;
 
-          if (newProvider === 'openai' && !config.get<string>('apiKey')) {
-            message += ' (API key required - configure in settings)';
-          } else if (newProvider === 'custom' && !config.get<string>('endpoint')) {
-            message += ' (endpoint required - configure in settings)';
+          if (existingKey) {
+            const action = await vscode.window.showInformationMessage(
+              `Claude API key is already configured. Update it?`,
+              'Keep Current',
+              'Update Key',
+              'Remove Key'
+            );
+
+            if (action === 'Remove Key') {
+              await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage('Claude API key removed');
+              return;
+            } else if (action !== 'Update Key') {
+              return;
+            }
           }
 
-          vscode.window.showInformationMessage(message);
+          // Prompt for API key
+          const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Anthropic API key (starts with sk-ant-)',
+            placeHolder: 'sk-ant-api03-...',
+            password: true,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'API key cannot be empty';
+              }
+              if (!value.startsWith('sk-ant-')) {
+                return 'Anthropic API keys start with sk-ant-';
+              }
+              return null;
+            }
+          });
+
+          if (!apiKey) {
+            return;
+          }
+
+          // Save API key (global so it works across workspaces)
+          await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+          await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+
+          vscode.window.showInformationMessage(
+            '✅ Claude API configured! Comments will now be sent directly to Claude for automatic document editing.'
+          );
+
+        } else if (newProvider === 'cursor') {
+          // Cursor requires no additional config
+          await config.update('provider', 'cursor', vscode.ConfigurationTarget.Workspace);
+
+          vscode.window.showInformationMessage(
+            '✅ Cursor configured! Comments will open in Cursor chat (requires manual paste).'
+          );
+
+        } else if (newProvider === 'openai') {
+          // Prompt for OpenAI API key
+          const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your OpenAI API key',
+            placeHolder: 'sk-...',
+            password: true,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'API key cannot be empty';
+              }
+              return null;
+            }
+          });
+
+          if (!apiKey) {
+            return;
+          }
+
+          await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+          await config.update('provider', 'openai', vscode.ConfigurationTarget.Workspace);
+
+          vscode.window.showInformationMessage(
+            '✅ OpenAI configured! (Note: Full OpenAI integration coming soon)'
+          );
+
+        } else if (newProvider === 'custom') {
+          // Prompt for custom endpoint
+          const endpoint = await vscode.window.showInputBox({
+            prompt: 'Enter custom API endpoint URL',
+            placeHolder: 'https://api.example.com/v1/chat',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'Endpoint cannot be empty';
+              }
+              try {
+                new URL(value);
+                return null;
+              } catch {
+                return 'Invalid URL';
+              }
+            }
+          });
+
+          if (!endpoint) {
+            return;
+          }
+
+          await config.update('endpoint', endpoint, vscode.ConfigurationTarget.Global);
+          await config.update('provider', 'custom', vscode.ConfigurationTarget.Workspace);
+
+          vscode.window.showInformationMessage(
+            '✅ Custom endpoint configured!'
+          );
         }
+      })
+    );
+
+    // Toggle AI agent provider (legacy - kept for backwards compatibility)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.toggleAgentProvider', async () => {
+        // Redirect to new configure command
+        await vscode.commands.executeCommand('commentary.configureAgent');
       })
     );
 
@@ -392,18 +563,18 @@ export class CommandManager {
           { label: 'Sakura Pink', value: 'sakura-pink', description: 'Soft pink accents', detail: 'Sakura' },
           { label: 'Sakura Earthly', value: 'sakura-earthly', description: 'Natural earth tones', detail: 'Sakura' },
 
-          // Pico CSS
-          { label: 'Pico Amber', value: 'pico-amber', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Blue', value: 'pico-blue', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Cyan', value: 'pico-cyan', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Green', value: 'pico-green', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Grey', value: 'pico-grey', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Pink', value: 'pico-pink', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Purple', value: 'pico-purple', description: 'Auto light/dark switching', detail: 'Pico CSS' },
-          { label: 'Pico Red', value: 'pico-red', description: 'Auto light/dark switching', detail: 'Pico CSS' },
+          // Pico CSS (auto-adapts to system light/dark mode)
+          { label: 'Pico Amber', value: 'pico-amber', description: 'Professional with amber accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Blue', value: 'pico-blue', description: 'Professional with blue accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Cyan', value: 'pico-cyan', description: 'Professional with cyan accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Green', value: 'pico-green', description: 'Professional with green accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Grey', value: 'pico-grey', description: 'Professional neutral grey (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Pink', value: 'pico-pink', description: 'Professional with pink accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Purple', value: 'pico-purple', description: 'Professional with purple accents (adapts to system theme)', detail: 'Pico CSS' },
+          { label: 'Pico Red', value: 'pico-red', description: 'Professional with red accents (adapts to system theme)', detail: 'Pico CSS' },
 
-          // Simple.css
-          { label: 'Simple', value: 'simple', description: 'Minimalist, auto dark/light switching', detail: 'Simple.css' },
+          // Simple.css (auto-adapts to system light/dark mode)
+          { label: 'Simple', value: 'simple', description: 'Minimalist and clean (adapts to system theme)', detail: 'Simple.css' },
 
           // Matcha
           { label: 'Matcha', value: 'matcha', description: 'Code-focused with excellent syntax highlighting', detail: 'Matcha' }
@@ -430,50 +601,6 @@ export class CommandManager {
           await this.webviewProvider.refreshAllWebviews();
 
           vscode.window.showInformationMessage(`Theme switched to: ${selected.label.replace(' $(check)', '')}`);
-        }
-      })
-    );
-
-    // Toggle between light/dark theme variants
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleDarkLight', async () => {
-        const config = vscode.workspace.getConfiguration('commentary.theme');
-        const currentTheme = config.get<string>('name', 'github-light');
-
-        // Define theme pairs (light -> dark, dark -> light)
-        const themePairs: Record<string, string> = {
-          'github-light': 'github-dark',
-          'github-dark': 'github-light',
-          'water-light': 'water-dark',
-          'water-dark': 'water-light',
-          'sakura-light': 'sakura-dark',
-          'sakura-dark': 'sakura-light',
-          'sakura-vader': 'sakura-dark', // vader is dark, toggle to default dark
-          'sakura-pink': 'sakura-light', // pink is light, toggle to default light
-          'sakura-earthly': 'sakura-light', // earthly is light, toggle to default light
-        };
-
-        // Auto-switching themes don't need toggle
-        const autoSwitchingThemes = [
-          'pico-amber', 'pico-blue', 'pico-cyan', 'pico-green',
-          'pico-grey', 'pico-pink', 'pico-purple', 'pico-red',
-          'simple', 'matcha'
-        ];
-
-        if (autoSwitchingThemes.includes(currentTheme)) {
-          vscode.window.showInformationMessage(
-            `${currentTheme} automatically switches between light/dark based on system preferences.`
-          );
-          return;
-        }
-
-        const newTheme = themePairs[currentTheme];
-        if (newTheme) {
-          await config.update('name', newTheme, vscode.ConfigurationTarget.Workspace);
-          await this.webviewProvider.refreshAllWebviews();
-          vscode.window.showInformationMessage(`Theme switched to: ${newTheme}`);
-        } else {
-          vscode.window.showWarningMessage(`No light/dark variant available for: ${currentTheme}`);
         }
       })
     );
