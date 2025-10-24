@@ -41,34 +41,18 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
-   * Handle agent submission - copies to clipboard for Cursor, sends to agent for others
+   * Handle agent submission - sends to extension which handles Cursor chat opening
    */
   async function handleAgentSubmit(commentText, selection, isDocumentLevel, noteId) {
-    const provider = window.commentaryAgentProvider || 'cursor';
-    const isCursor = provider === 'cursor';
-
-    if (isCursor) {
-      // For Cursor: Just copy to clipboard without saving
-      // Build a simple prompt with the comment
-      const prompt = commentText;
-
-      try {
-        await navigator.clipboard.writeText(prompt);
-        // Show brief confirmation in console (user will see status bar message from extension)
-        console.log('[OVERLAY] Comment copied to clipboard for Cursor');
-      } catch (err) {
-        console.error('[OVERLAY] Failed to copy to clipboard:', err);
-      }
-    } else {
-      // For other providers: Send to agent (saves and sends)
-      postMessage({
-        type: 'saveAndSubmitToAgent',
-        selection: selection,
-        commentText: commentText,
-        isDocumentLevel: isDocumentLevel,
-        noteId: noteId
-      });
-    }
+    // Always send to extension - it will handle provider-specific logic
+    // (including opening Cursor chat view and copying to clipboard)
+    postMessage({
+      type: 'saveAndSubmitToAgent',
+      selection: selection,
+      commentText: commentText,
+      isDocumentLevel: isDocumentLevel,
+      noteId: noteId
+    });
   }
 
   /**
@@ -117,8 +101,8 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Make headings and paragraphs contenteditable for quick text fixes
    */
   function makeEditableElements() {
-    // Find all headings and paragraphs in the main content
-    const editableSelector = 'h1, h2, h3, h4, h5, h6, p';
+    // Find all headings, paragraphs, and list items in the main content
+    const editableSelector = 'h1, h2, h3, h4, h5, h6, p, li';
     const elements = document.querySelectorAll(editableSelector);
 
     elements.forEach((element) => {

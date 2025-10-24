@@ -63,7 +63,7 @@
       },
       {
         "command": "commentary.sendAllToAgent",
-        "title": "Copy All for Agent",
+        "title": "Copy all for agent",
         "category": "Commentary",
         "icon": "$(clippy)"
       },

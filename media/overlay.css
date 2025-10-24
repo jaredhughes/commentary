@@ -4,18 +4,18 @@
  */
 
 
-/* Comment highlights - deep translucent blue */
+/* Comment highlights - yellow/gold based */
 .commentary-highlight {
-  background-color: rgba(30, 100, 200, 0.25);
-  border-bottom: 1px solid rgba(30, 100, 200, 0.5);
+  background-color: rgba(255, 220, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 220, 0, 0.5);
   color: inherit;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .commentary-highlight:hover {
-  background-color: rgba(30, 100, 200, 0.35);
-  border-bottom-color: rgba(30, 100, 200, 0.65);
+  background-color: rgba(255, 220, 0, 0.35);
+  border-bottom-color: rgba(255, 220, 0, 0.65);
   color: inherit;
 }
 
@@ -29,25 +29,25 @@
 }
 
 .commentary-active-highlight {
-  background-color: rgba(30, 100, 200, 0.3);
-  border-bottom: 1px solid rgba(30, 100, 200, 0.55);
+  background-color: rgba(255, 220, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 220, 0, 0.55);
   color: inherit;
   pointer-events: none;
 }
 
 .commentary-highlight-focus {
-  background-color: rgba(30, 100, 200, 0.4) !important;
-  border-bottom-color: rgba(30, 100, 200, 0.75) !important;
+  background-color: rgba(255, 220, 0, 0.4) !important;
+  border-bottom-color: rgba(255, 220, 0, 0.75) !important;
   color: inherit !important;
   animation: highlight-pulse 0.5s ease-in-out;
 }
 
 @keyframes highlight-pulse {
   0%, 100% {
-    background-color: rgba(30, 100, 200, 0.4);
+    background-color: rgba(255, 220, 0, 0.4);
   }
   50% {
-    background-color: rgba(30, 100, 200, 0.55);
+    background-color: rgba(255, 220, 0, 0.55);
   }
 }
 
@@ -170,29 +170,29 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Dark theme adjustments - deep blue works well on dark backgrounds */
+/* Dark theme adjustments - yellow/gold works well on dark backgrounds */
 @media (prefers-color-scheme: dark) {
   .commentary-highlight {
-    background-color: rgba(30, 100, 200, 0.2);
-    border-bottom-color: rgba(30, 100, 200, 0.45);
+    background-color: rgba(255, 220, 0, 0.2);
+    border-bottom-color: rgba(255, 220, 0, 0.45);
     color: inherit;
   }
 
   .commentary-highlight:hover {
-    background-color: rgba(30, 100, 200, 0.3);
-    border-bottom-color: rgba(30, 100, 200, 0.6);
+    background-color: rgba(255, 220, 0, 0.3);
+    border-bottom-color: rgba(255, 220, 0, 0.6);
     color: inherit;
   }
 
   .commentary-active-highlight {
-    background-color: rgba(30, 100, 200, 0.25);
-    border-bottom: 1px solid rgba(30, 100, 200, 0.5);
+    background-color: rgba(255, 220, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 220, 0, 0.5);
     color: inherit;
   }
 
   .commentary-highlight-focus {
-    background-color: rgba(30, 100, 200, 0.35) !important;
-    border-bottom-color: rgba(30, 100, 200, 0.7) !important;
+    background-color: rgba(255, 220, 0, 0.35) !important;
+    border-bottom-color: rgba(255, 220, 0, 0.7) !important;
     color: inherit !important;
   }
 }
@@ -206,11 +206,11 @@
   background-color: rgba(173, 214, 255, 0.4);
 }
 
-/* Document-level comment button (floating in top right) */
+/* Document-level comment button (floating in top left) */
 .commentary-doc-button {
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 9998; /* Below bubble but above content */
   width: 40px;
   height: 40px;
@@ -246,17 +246,4 @@
 /* Contenteditable elements */
 [contenteditable="true"] {
   outline: none;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-  border-radius: 2px;
-  padding: 2px;
-  margin: -2px;
-}
-
-[contenteditable="true"]:hover {
-  background-color: rgba(100, 150, 255, 0.03);
-}
-
-[contenteditable="true"]:focus {
-  background-color: rgba(100, 150, 255, 0.06);
-  box-shadow: 0 0 0 1px rgba(100, 150, 255, 0.2);
 }
