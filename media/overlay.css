@@ -206,11 +206,11 @@
   background-color: rgba(173, 214, 255, 0.4);
 }
 
-/* Document-level comment button (floating in top left) */
+/* Document-level comment button (floating in top right) */
 .commentary-doc-button {
   position: fixed;
   top: 16px;
-  left: 16px;
+  right: 16px;
   z-index: 9998; /* Below bubble but above content */
   width: 40px;
   height: 40px;
