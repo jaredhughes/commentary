@@ -1006,14 +1006,6 @@ console.log('[OVERLAY.JS] Script is loading...');
       buttonContainer.appendChild(deleteBtn);
     }
 
-    const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save changes (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => saveComment(textarea.value);
-
     const submitBtn = document.createElement('button');
     const agentConfig = getAgentButtonConfig();
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
@@ -1029,8 +1021,16 @@ console.log('[OVERLAY.JS] Script is loading...');
       hideBubble();
     };
 
-    buttonContainer.appendChild(saveBtn);
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.innerHTML = '💾 Save';
+    saveBtn.title = `Save changes (${shortcut})`;
+    saveBtn.className = 'commentary-btn';
+    saveBtn.onclick = () => saveComment(textarea.value);
+
     buttonContainer.appendChild(submitBtn);
+    buttonContainer.appendChild(saveBtn);
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);

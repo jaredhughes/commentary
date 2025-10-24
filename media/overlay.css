@@ -113,14 +113,13 @@
 .commentary-buttons {
   display: flex;
   gap: 8px;
-  justify-content: space-between;
   padding: 4px 0 0 0;
   margin-top: 4px;
   border-top: 1px solid #21262d;
 }
 
-.commentary-buttons > :not(:first-child) {
-  margin-left: auto;
+.commentary-buttons > .commentary-btn-danger {
+  margin-right: auto;
 }
 
 .commentary-btn {
@@ -144,11 +143,11 @@
 }
 
 .commentary-btn:hover {
-  color: rgba(255, 255, 255, 1.0);
+  background: #1a1f26;
 }
 
 .commentary-btn:active {
-  color: rgba(255, 255, 255, 0.8);
+  background: #0d1117;
   transition: none;
 }
 
@@ -159,11 +158,11 @@
 }
 
 .commentary-btn-primary:hover {
-  color: rgba(255, 255, 255, 1.0);
+  background: #2ea043;
 }
 
 .commentary-btn-primary:active {
-  color: rgba(255, 255, 255, 0.8);
+  background: #1f6e2e;
 }
 
 .commentary-btn-danger {
@@ -173,11 +172,11 @@
 }
 
 .commentary-btn-danger:hover {
-  color: rgba(255, 255, 255, 1.0);
+  background: #e5534b;
 }
 
 .commentary-btn-danger:active {
-  color: rgba(255, 255, 255, 0.8);
+  background: #c92a2a;
 }
 
 /* Dark theme adjustments - yellow/gold works well on dark backgrounds */
@@ -253,7 +252,20 @@
 }
 
 
-/* Contenteditable elements */
-[contenteditable="true"] {
-  outline: none;
+/* Contenteditable elements - remove all browser default styling */
+[contenteditable="true"],
+[contenteditable="plaintext-only"] {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  border: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+[contenteditable="true"]:focus,
+[contenteditable="plaintext-only"]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  border: none !important;
 }
