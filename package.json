@@ -380,6 +380,11 @@
           "type": "boolean",
           "default": true,
           "description": "Use interactive mode for Cursor CLI (only used when provider is 'cursor')"
+        },
+        "commentary.agent.claudeCommand": {
+          "type": "string",
+          "default": "claude",
+          "description": "Command to invoke Claude Code in terminal (e.g. 'claude', 'claude-code', or full path)"
         }
       }
     }

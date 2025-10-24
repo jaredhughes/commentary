@@ -150,7 +150,10 @@ export class AgentClient {
    */
   private async sendViaClaudeCLI(prompt: string, request: AgentRequest): Promise<boolean> {
     try {
-      // Check if claude CLI is available
+      // Get configured Claude command
+      const config = vscode.workspace.getConfiguration('commentary.agent');
+      const claudeCommand = config.get<string>('claudeCommand', 'claude');
+
       const terminal = vscode.window.createTerminal({
         name: 'Commentary → Claude',
         hideFromUser: false,
@@ -175,9 +178,9 @@ export class AgentClient {
 
       fs.writeFileSync(tempPromptPath, prompt);
 
-      // Execute: cat prompt.md | claude --output-file original.md
+      // Execute: cat prompt.md | <claude-command> --output-file original.md
       // This will send the prompt to Claude and save the response back to the original file
-      const command = `cat "${tempPromptPath}" | claude --output-file "${filePath}"`;
+      const command = `cat "${tempPromptPath}" | ${claudeCommand} --output-file "${filePath}"`;
 
       terminal.sendText(command);
 

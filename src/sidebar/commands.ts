@@ -254,54 +254,108 @@ export class CommandManager {
 
         // Step 2: Provider-specific configuration
         if (newProvider === 'claude') {
-          // Check if API key already exists
-          const existingKey = config.get<string>('apiKey') || process.env.ANTHROPIC_API_KEY;
-
-          if (existingKey) {
-            const action = await vscode.window.showInformationMessage(
-              `Claude API key is already configured. Update it?`,
-              'Keep Current',
-              'Update Key',
-              'Remove Key'
-            );
-
-            if (action === 'Remove Key') {
-              await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
-              vscode.window.showInformationMessage('Claude API key removed');
-              return;
-            } else if (action !== 'Update Key') {
-              return;
+          // Show submenu for Claude configuration method
+          const claudeMethod = await vscode.window.showQuickPick([
+            {
+              label: '$(terminal) Claude CLI',
+              value: 'cli',
+              description: 'Send prompts via terminal command',
+              detail: 'Opens VS Code terminal and pipes prompts to claude command'
+            },
+            {
+              label: '$(key) Claude API',
+              value: 'api',
+              description: 'Direct API integration',
+              detail: 'Requires Anthropic API key for automatic editing'
             }
-          }
-
-          // Prompt for API key
-          const apiKey = await vscode.window.showInputBox({
-            prompt: 'Enter your Anthropic API key (starts with sk-ant-)',
-            placeHolder: 'sk-ant-api03-...',
-            password: true,
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-              if (!value || value.trim().length === 0) {
-                return 'API key cannot be empty';
-              }
-              if (!value.startsWith('sk-ant-')) {
-                return 'Anthropic API keys start with sk-ant-';
-              }
-              return null;
-            }
+          ], {
+            placeHolder: 'How do you want to use Claude?',
+            title: 'Commentary: Configure Claude',
           });
 
-          if (!apiKey) {
+          if (!claudeMethod) {
             return;
           }
 
-          // Save API key (global so it works across workspaces)
-          await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-          await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+          if (claudeMethod.value === 'cli') {
+            // Configure Claude CLI command
+            const currentCommand = config.get<string>('claudeCommand', 'claude');
 
-          vscode.window.showInformationMessage(
-            '✅ Claude API configured! Comments will now be sent directly to Claude for automatic document editing.'
-          );
+            const command = await vscode.window.showInputBox({
+              prompt: 'Enter the command to invoke Claude Code',
+              placeHolder: 'claude',
+              value: currentCommand,
+              ignoreFocusOut: true,
+              validateInput: (value) => {
+                if (!value || value.trim().length === 0) {
+                  return 'Command cannot be empty';
+                }
+                return null;
+              }
+            });
+
+            if (!command) {
+              return;
+            }
+
+            // Save command and set provider
+            await config.update('claudeCommand', command, vscode.ConfigurationTarget.Global);
+            await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+
+            vscode.window.showInformationMessage(
+              `✅ Claude CLI configured! Command: "${command}"\nComments will be sent via terminal.`
+            );
+
+          } else if (claudeMethod.value === 'api') {
+            // Configure Claude API key
+            const existingKey = config.get<string>('apiKey') || process.env.ANTHROPIC_API_KEY;
+
+            if (existingKey) {
+              const action = await vscode.window.showInformationMessage(
+                `Claude API key is already configured. Update it?`,
+                'Keep Current',
+                'Update Key',
+                'Remove Key'
+              );
+
+              if (action === 'Remove Key') {
+                await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('Claude API key removed');
+                return;
+              } else if (action !== 'Update Key') {
+                return;
+              }
+            }
+
+            // Prompt for API key
+            const apiKey = await vscode.window.showInputBox({
+              prompt: 'Enter your Anthropic API key (starts with sk-ant-)',
+              placeHolder: 'sk-ant-api03-...',
+              password: true,
+              ignoreFocusOut: true,
+              validateInput: (value) => {
+                if (!value || value.trim().length === 0) {
+                  return 'API key cannot be empty';
+                }
+                if (!value.startsWith('sk-ant-')) {
+                  return 'Anthropic API keys start with sk-ant-';
+                }
+                return null;
+              }
+            });
+
+            if (!apiKey) {
+              return;
+            }
+
+            // Save API key (global so it works across workspaces)
+            await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+            await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+
+            vscode.window.showInformationMessage(
+              '✅ Claude API configured! Comments will now be sent directly to Claude for automatic document editing.'
+            );
+          }
 
         } else if (newProvider === 'cursor') {
           // Cursor requires no additional config
