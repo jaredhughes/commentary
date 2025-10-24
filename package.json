@@ -394,7 +394,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts --max-warnings 100",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@lowlighter/matcha": "^3.0.1",
@@ -408,6 +409,7 @@
     "eslint": "^8.x",
     "github-markdown-css": "^5.8.1",
     "glob": "^10.3.10",
+    "husky": "^9.1.7",
     "mocha": "^10.2.0",
     "sakura.css": "^1.5.1",
     "simpledotcss": "^2.3.7",
