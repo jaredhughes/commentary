@@ -6,3 +6,6 @@ node_modules
 .DS_Store
 .vscode/settings.json
 .comments/
+
+# Generated theme files (rebuilt from node_modules during compile)
+media/themes/*.css
