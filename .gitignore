@@ -9,3 +9,8 @@ node_modules
 
 # Generated theme files (rebuilt from node_modules during compile)
 media/themes/*.css
+
+# Code coverage reports
+coverage/
+.nyc_output/
+*.lcov

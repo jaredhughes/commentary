@@ -395,6 +395,8 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts --max-warnings 100",
     "test": "node ./out/test/runTest.js",
+    "test:coverage": "c8 npm test",
+    "coverage": "npm run test:coverage",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -406,6 +408,7 @@
     "@typescript-eslint/eslint-plugin": "^6.x",
     "@typescript-eslint/parser": "^6.x",
     "@vscode/test-electron": "^2.3.8",
+    "c8": "^10.1.3",
     "eslint": "^8.x",
     "github-markdown-css": "^5.8.1",
     "glob": "^10.3.10",
