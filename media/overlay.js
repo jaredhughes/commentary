@@ -143,25 +143,32 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // If bubble is open and user clicked outside, close it
-    if (commentBubble) {
-      console.log('[OVERLAY] Bubble is open, user clicked outside - hiding bubble');
-      hideBubble();
-      return;
-    }
-
+    // Check for selection first
     const selection = window.getSelection();
-    console.log('[OVERLAY] Selection collapsed:', selection?.isCollapsed);
+    const hasSelection = selection && !selection.isCollapsed;
+    const text = hasSelection ? selection.toString().trim() : '';
+    const hasValidSelection = hasSelection && text.length > 0;
+
+    console.log('[OVERLAY] Has valid selection:', hasValidSelection);
+
+    // If bubble is open and user clicked outside
+    if (commentBubble) {
+      console.log('[OVERLAY] Bubble is open, user clicked outside');
+      hideBubble();
+
+      // If no new selection, we're done
+      if (!hasValidSelection) {
+        console.log('[OVERLAY] No new selection, bubble closed');
+        return;
+      }
+
+      // Fall through to create new selection with bubble
+      console.log('[OVERLAY] New selection detected, will create new bubble');
+    }
 
     // Only show new bubble if there's a valid text selection
-    if (!selection || selection.isCollapsed) {
+    if (!hasValidSelection) {
       console.log('[OVERLAY] No selection and no bubble to show');
-      return;
-    }
-
-    const text = selection.toString().trim();
-    console.log('[OVERLAY] Selected text:', text);
-    if (!text || text.length === 0) {
       return;
     }
 
