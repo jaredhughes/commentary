@@ -296,7 +296,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       padding: 72px 32px 32px 32px;
     }
     #markdown-content {
-      max-width: none;
+      max-width: 900px;
       width: 100%;
       margin: 0 auto;
     }
