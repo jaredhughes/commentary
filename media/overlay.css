@@ -4,17 +4,19 @@
  */
 
 
-/* Comment highlights */
+/* Comment highlights - yellow/gold for high visibility */
 .commentary-highlight {
-  background-color: rgba(255, 212, 0, 0.3);
-  border-bottom: 2px solid rgba(255, 212, 0, 0.6);
+  background-color: rgba(255, 220, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 220, 0, 0.5);
+  color: inherit;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .commentary-highlight:hover {
-  background-color: rgba(255, 212, 0, 0.5);
-  border-bottom-color: rgba(255, 212, 0, 0.8);
+  background-color: rgba(255, 220, 0, 0.35);
+  border-bottom-color: rgba(255, 220, 0, 0.65);
+  color: inherit;
 }
 
 /* Active highlight while bubble is open - positioned divs */
@@ -27,23 +29,25 @@
 }
 
 .commentary-active-highlight {
-  background-color: rgba(255, 212, 0, 0.4);
-  border-bottom: 2px solid rgba(255, 212, 0, 0.7);
+  background-color: rgba(255, 220, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 220, 0, 0.55);
+  color: inherit;
   pointer-events: none;
 }
 
 .commentary-highlight-focus {
-  background-color: rgba(255, 212, 0, 0.6) !important;
-  border-bottom-color: rgba(255, 212, 0, 1) !important;
+  background-color: rgba(255, 220, 0, 0.4) !important;
+  border-bottom-color: rgba(255, 220, 0, 0.75) !important;
+  color: inherit !important;
   animation: highlight-pulse 0.5s ease-in-out;
 }
 
 @keyframes highlight-pulse {
   0%, 100% {
-    background-color: rgba(255, 212, 0, 0.6);
+    background-color: rgba(255, 220, 0, 0.4);
   }
   50% {
-    background-color: rgba(255, 212, 0, 0.9);
+    background-color: rgba(255, 220, 0, 0.55);
   }
 }
 
@@ -57,7 +61,7 @@
   border: 1px solid #30363d;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(1, 4, 9, 0.8);
-  padding: 8px;
+  padding: 8px 8px 16px 8px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
   font-size: 14px;
   color: #c9d1d9;
@@ -110,8 +114,8 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  padding: 8px 0 0 0;
-  margin-top: 8px;
+  padding: 4px 0 0 0;
+  margin-top: 4px;
   border-top: 1px solid #21262d;
 }
 
@@ -120,59 +124,76 @@
   border: 1px solid rgba(240, 246, 252, 0.1);
   border-radius: 6px;
   background: #21262d;
-  color: #c9d1d9;
+  color: rgba(255, 255, 255, 0.8);
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: color 0.2s ease;
   outline: none;
 }
 
 .commentary-btn:hover {
-  background: #30363d;
-  border-color: #8b949e;
+  color: rgba(255, 255, 255, 1.0);
 }
 
 .commentary-btn:active {
-  background: #21262d;
+  color: rgba(255, 255, 255, 0.8);
   transition: none;
 }
 
 .commentary-btn-primary {
   background: #238636;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
   border-color: rgba(240, 246, 252, 0.1);
 }
 
 .commentary-btn-primary:hover {
-  background: #2ea043;
+  color: rgba(255, 255, 255, 1.0);
 }
 
 .commentary-btn-primary:active {
-  background: #238636;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-/* Dark theme adjustments */
+.commentary-btn-danger {
+  background: #da3633;
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(240, 246, 252, 0.1);
+}
+
+.commentary-btn-danger:hover {
+  color: rgba(255, 255, 255, 1.0);
+}
+
+.commentary-btn-danger:active {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Dark theme adjustments - yellow/gold works well on dark backgrounds */
 @media (prefers-color-scheme: dark) {
   .commentary-highlight {
-    background-color: rgba(255, 212, 0, 0.2);
-    border-bottom-color: rgba(255, 212, 0, 0.4);
+    background-color: rgba(255, 220, 0, 0.2);
+    border-bottom-color: rgba(255, 220, 0, 0.45);
+    color: inherit;
   }
 
   .commentary-highlight:hover {
-    background-color: rgba(255, 212, 0, 0.35);
-    border-bottom-color: rgba(255, 212, 0, 0.6);
+    background-color: rgba(255, 220, 0, 0.3);
+    border-bottom-color: rgba(255, 220, 0, 0.6);
+    color: inherit;
   }
 
   .commentary-active-highlight {
-    background-color: rgba(255, 212, 0, 0.3);
-    border-bottom: 2px solid rgba(255, 212, 0, 0.5);
+    background-color: rgba(255, 220, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 220, 0, 0.5);
+    color: inherit;
   }
 
   .commentary-highlight-focus {
-    background-color: rgba(255, 212, 0, 0.45) !important;
-    border-bottom-color: rgba(255, 212, 0, 0.8) !important;
+    background-color: rgba(255, 220, 0, 0.35) !important;
+    border-bottom-color: rgba(255, 220, 0, 0.7) !important;
+    color: inherit !important;
   }
 }
 
@@ -183,5 +204,41 @@
 
 ::-moz-selection {
   background-color: rgba(173, 214, 255, 0.4);
+}
+
+/* Document-level comment button (floating in top left) */
+.commentary-doc-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 9998; /* Below bubble but above content */
+  width: 40px;
+  height: 40px;
+  border: 2px solid #1e3a5f;
+  border-radius: 50%;
+  background: #0d1b2a;
+  color: #a8c5e8;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(13, 27, 42, 0.8);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  outline: none;
+}
+
+.commentary-doc-button:hover {
+  background: #1b3a5c;
+  border-color: #2a5a8f;
+  box-shadow: 0 6px 16px rgba(26, 58, 92, 0.9);
+  transform: scale(1.05);
+}
+
+.commentary-doc-button:active {
+  background: #0f2439;
+  transform: scale(0.98);
 }
 
