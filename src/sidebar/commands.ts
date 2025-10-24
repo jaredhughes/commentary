@@ -66,12 +66,6 @@ export class CommandManager {
       })
     );
 
-    // Reveal comment in preview (legacy, still used for context menu)
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.revealComment', async (noteId: string) => {
-        await this.overlayHost.revealComment(noteId);
-      })
-    );
 
     // Delete specific comment
     this.context.subscriptions.push(

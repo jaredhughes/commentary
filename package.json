@@ -80,12 +80,6 @@
         "icon": "$(go-to-file)"
       },
       {
-        "command": "commentary.revealComment",
-        "title": "Reveal",
-        "category": "Commentary",
-        "icon": "$(eye)"
-      },
-      {
         "command": "commentary.refreshComments",
         "title": "Refresh",
         "category": "Commentary",
@@ -235,10 +229,6 @@
           "when": "false"
         },
         {
-          "command": "commentary.revealComment",
-          "when": "false"
-        },
-        {
           "command": "commentary.refreshComments",
           "when": "false"
         },
@@ -279,19 +269,14 @@
       ],
       "view/item/context": [
         {
-          "command": "commentary.revealComment",
-          "when": "view == commentary.commentsView && viewItem == comment",
-          "group": "inline@1"
-        },
-        {
           "command": "commentary.sendToAgent",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
-          "group": "inline@2"
+          "group": "inline@1"
         },
         {
           "command": "commentary.deleteComment",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
-          "group": "inline@3"
+          "group": "inline@2"
         }
       ]
     },
