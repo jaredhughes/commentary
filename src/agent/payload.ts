@@ -145,6 +145,18 @@ export class PayloadBuilder {
   }
 
   /**
+   * Get absolute file path from URI
+   */
+  private static getAbsolutePath(fileUri: string): string {
+    try {
+      const uri = vscode.Uri.parse(fileUri);
+      return uri.fsPath;
+    } catch {
+      return fileUri;
+    }
+  }
+
+  /**
    * Format a request as a readable prompt for the AI agent
    */
   static formatAsPrompt(request: AgentRequest): string {
@@ -153,46 +165,66 @@ export class PayloadBuilder {
     for (const ctx of request.contexts) {
       const filename = this.getFilename(ctx.note.file);
       const filepath = this.getRelativePath(ctx.note.file);
+      const absolutePath = this.getAbsolutePath(ctx.note.file);
 
       lines.push('---');
       lines.push(`**File:** \`${filepath}\``);
+      lines.push(`**Absolute Path:** \`${absolutePath}\``);
 
-      // Add line number if available
-      if (ctx.note.lines) {
-        if (ctx.note.lines.start === ctx.note.lines.end) {
-          lines.push(`**Line:** ${ctx.note.lines.start}`);
-        } else {
-          lines.push(`**Lines:** ${ctx.note.lines.start}–${ctx.note.lines.end}`);
+      // Document-level comment handling
+      if (ctx.note.isDocumentLevel) {
+        lines.push('**Scope:** Entire document');
+        lines.push('');
+        lines.push(`**Comment:** ${ctx.note.text}`);
+        lines.push('');
+
+        // For document-level comments, include the full document
+        if (ctx.fullDocument) {
+          lines.push('**Full Document:**');
+          lines.push('```markdown');
+          lines.push(ctx.fullDocument);
+          lines.push('```');
+          lines.push('');
         }
       } else {
-        lines.push(`**Position:** ${ctx.note.position.start}–${ctx.note.position.end}`);
-      }
-
-      lines.push('');
-      lines.push(`**Comment:** ${ctx.note.text}`);
-      lines.push('');
-      lines.push('**Selected text:**');
-      lines.push(`"${ctx.note.quote.exact}"`);
-      lines.push('');
-
-      if (ctx.contextBefore || ctx.contextAfter) {
-        lines.push('**Context:**');
-        lines.push('');
-        if (ctx.contextBefore) {
-          lines.push('```markdown');
-          lines.push(ctx.contextBefore.trim());
-          lines.push('```');
-          lines.push('');
+        // Regular text-selection comment
+        // Add line number if available
+        if (ctx.note.lines) {
+          if (ctx.note.lines.start === ctx.note.lines.end) {
+            lines.push(`**Line:** ${ctx.note.lines.start}`);
+          } else {
+            lines.push(`**Lines:** ${ctx.note.lines.start}–${ctx.note.lines.end}`);
+          }
+        } else {
+          lines.push(`**Position:** ${ctx.note.position.start}–${ctx.note.position.end}`);
         }
 
-        lines.push('**[Selected text appears here]**');
+        lines.push('');
+        lines.push(`**Comment:** ${ctx.note.text}`);
+        lines.push('');
+        lines.push('**Selected text:**');
+        lines.push(`"${ctx.note.quote.exact}"`);
         lines.push('');
 
-        if (ctx.contextAfter) {
-          lines.push('```markdown');
-          lines.push(ctx.contextAfter.trim());
-          lines.push('```');
+        if (ctx.contextBefore || ctx.contextAfter) {
+          lines.push('**Context:**');
           lines.push('');
+          if (ctx.contextBefore) {
+            lines.push('```markdown');
+            lines.push(ctx.contextBefore.trim());
+            lines.push('```');
+            lines.push('');
+          }
+
+          lines.push('**[Selected text appears here]**');
+          lines.push('');
+
+          if (ctx.contextAfter) {
+            lines.push('```markdown');
+            lines.push(ctx.contextAfter.trim());
+            lines.push('```');
+            lines.push('');
+          }
         }
       }
 
