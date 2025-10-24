@@ -27,14 +27,14 @@ export class CommentTreeItem extends vscode.TreeItem {
     } else {
       this.contextValue = 'comment';
       this.iconPath = new vscode.ThemeIcon('comment', new vscode.ThemeColor('charts.yellow'));
-
-      // Make clickable to reveal in preview
-      this.command = {
-        command: 'commentary.revealComment',
-        title: 'Reveal Comment',
-        arguments: [note.id],
-      };
     }
+
+    // Make clickable to edit (works for both regular and document-level comments)
+    this.command = {
+      command: 'commentary.editCommentFromSidebar',
+      title: 'Edit Comment',
+      arguments: [note],
+    };
   }
 
   private buildDescription(): string {
@@ -55,7 +55,7 @@ export class CommentTreeItem extends vscode.TreeItem {
         'Scope: Entire document',
         `Created: ${new Date(this.note.createdAt).toLocaleString()}`,
         '',
-        'Click edit icon to modify'
+        'Click to edit'
       ].join('\n');
     }
 
@@ -66,7 +66,7 @@ export class CommentTreeItem extends vscode.TreeItem {
     }
 
     lines.push(`Created: ${new Date(this.note.createdAt).toLocaleString()}`);
-    lines.push('', 'Click to reveal in preview, or use edit icon to modify');
+    lines.push('', 'Click to edit');
 
     return lines.join('\n');
   }
@@ -80,10 +80,25 @@ export class FileTreeItem extends vscode.TreeItem {
   ) {
     super(formatFilePathForDisplay(fileUri), collapsibleState);
 
-    this.tooltip = `${noteCount} comment(s)`;
-    this.description = `${noteCount} comment(s)`;
+    // Update tooltip and description based on comment count
+    if (noteCount === 0) {
+      this.tooltip = 'No comments yet';
+      this.description = '';
+      this.iconPath = new vscode.ThemeIcon('file', new vscode.ThemeColor('disabledForeground'));
+    } else {
+      this.tooltip = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
+      this.description = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
+      this.iconPath = new vscode.ThemeIcon('file');
+    }
+
     this.contextValue = 'file';
-    this.iconPath = new vscode.ThemeIcon('file');
+
+    // Make clickable to open/focus document
+    this.command = {
+      command: 'commentary.openDocument',
+      title: 'Open Document',
+      arguments: [fileUri],
+    };
   }
 }
 
@@ -128,6 +143,15 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     console.log('[CommentsView] refresh() called');
     this._onDidChangeTreeData.fire();
     console.log('[CommentsView] _onDidChangeTreeData fired');
+
+    // Update context for button visibility (fire and forget)
+    this.updateContext();
+  }
+
+  private async updateContext(): Promise<void> {
+    const allNotes = await this.storage.getAllNotes();
+    const hasComments = Array.from(allNotes.values()).some(notes => notes.length > 0);
+    await vscode.commands.executeCommand('setContext', 'commentary.hasComments', hasComments);
   }
 
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -156,18 +180,41 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   private async getFileItems(): Promise<FileTreeItem[]> {
     console.log('[CommentsView] getFileItems called');
-    const allNotes = await this.storage.getAllNotes();
-    console.log('[CommentsView] getAllNotes returned:', allNotes.size, 'files');
     const items: FileTreeItem[] = [];
 
+    // Find all markdown files in workspace
+    const workspaceFiles = await vscode.workspace.findFiles('**/*.md', '**/node_modules/**');
+    console.log('[CommentsView] Found', workspaceFiles.length, 'markdown files in workspace');
+
+    // Get all notes to check which files have comments
+    const allNotes = await this.storage.getAllNotes();
+    console.log('[CommentsView] getAllNotes returned:', allNotes.size, 'files with notes');
+
+    // Create a map of file URIs to comment counts
+    const fileCommentCounts = new Map<string, number>();
     for (const [fileUri, notes] of allNotes.entries()) {
-      console.log('[CommentsView] File:', fileUri, 'has', notes.length, 'notes');
-      if (notes.length > 0) {
-        items.push(
-          new FileTreeItem(fileUri, notes.length, vscode.TreeItemCollapsibleState.Expanded)
-        );
-      }
+      fileCommentCounts.set(fileUri, notes.length);
     }
+
+    // Create items for all markdown files
+    for (const fileUri of workspaceFiles) {
+      const uriString = fileUri.toString();
+      const commentCount = fileCommentCounts.get(uriString) || 0;
+
+      // Files with comments are expanded, files without are collapsed
+      const collapsibleState = commentCount > 0
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.None;
+
+      items.push(new FileTreeItem(uriString, commentCount, collapsibleState));
+    }
+
+    // Sort: files with comments first, then alphabetically
+    items.sort((a, b) => {
+      if (a.noteCount > 0 && b.noteCount === 0) return -1;
+      if (a.noteCount === 0 && b.noteCount > 0) return 1;
+      return a.label!.toString().localeCompare(b.label!.toString());
+    });
 
     console.log('[CommentsView] Returning', items.length, 'file items');
     return items;
