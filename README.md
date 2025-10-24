@@ -4,81 +4,172 @@
 
 ## Overview
 
-Commentary brings Google Docs-style commenting to rendered Markdown inside VS Code. It keeps you in a doc-first flow: read exactly what your readers will see, select text, add a comment, and keep writing. Comments live outside your files, can be themed to match your docs site, and can be shipped to an AI agent to draft improvements—all without leaving your editor or opening a PR.
+Commentary brings Google Docs-style commenting to rendered Markdown inside VS Code. It keeps you in a doc-first flow: read exactly what your readers will see, select text or comment on the entire document, and keep writing. Comments live outside your files, can be themed with 19 beautiful CSS styles, and can be shipped to an AI agent to draft improvements—all without leaving your editor or opening a PR.
 
 ## Features
 
 ### 📝 Google Docs-Style Commenting
 
-- Select text in the rendered Markdown preview
-- Add comments via a floating bubble
-- Comments appear as highlights with tooltips
-- Click highlights to jump to comments in the sidebar
+- **Text selection comments**: Select text in the rendered preview to add targeted feedback
+- **Document-level comments**: Comment on the entire document via floating button or command palette
+- **Inline editing**: Edit any comment directly from the sidebar with validation
+- **Floating bubble interface**: Type comments in a modal that follows text on scroll
+- **Keyboard shortcuts**: `Cmd+Enter` / `Ctrl+Enter` to save, `Esc` to cancel
+- **Visual highlights**: Yellow highlights for text selections, blue note icons for document comments
+- **Smart positioning**: Comment bubble stays within viewport bounds and follows content when scrolling
 
-### 🎨 Themeable Preview
+### 🎨 Beautiful Themes (19 Total)
 
-- **Default:** GitHub Markdown CSS (MIT license)
-- **Built-in themes:** GitHub Light/Dark, Primer, Tokyo Night, mdBook
-- **Custom CSS:** Bring your own stylesheet
+Commentary includes professionally designed CSS themes sourced from popular open-source projects:
+
+**GitHub** (2 themes)
+- `github-light` — Official GitHub markdown styling
+- `github-dark` — Official GitHub dark mode
+
+**Water.css** (2 themes)
+- `water-light` — Modern, clean, excellent contrast
+- `water-dark` — Modern dark mode
+
+**Sakura** (5 themes)
+- `sakura-light` — Elegant default light
+- `sakura-dark` — Elegant dark mode
+- `sakura-vader` — Dark with personality
+- `sakura-pink` — Soft pink accents
+- `sakura-earthly` — Natural earth tones
+
+**Pico CSS** (8 themes)
+- `pico-amber`, `pico-blue`, `pico-cyan`, `pico-green`
+- `pico-grey`, `pico-pink`, `pico-purple`, `pico-red`
+- All auto-switch between light/dark based on system preference
+
+**Simple.css** (1 theme)
+- `simple` — Minimalist, auto dark/light switching
+
+**Matcha** (1 theme)
+- `matcha` — Code-focused with excellent syntax highlighting
+
+**Theme Management:**
+- Quick theme switcher via command palette
+- Custom CSS support (bring your own stylesheet)
+- Themes automatically respect system dark/light preference (where supported)
 
 ### 💾 Flexible Storage
 
 - **Workspace mode (default):** Comments stored in VS Code workspace state (git-ignored)
 - **Sidecar mode:** Comments stored in `.comments/` folder as JSON (shareable via git)
 
-### 🤖 AI Agent Integration
+### 🤖 Enhanced AI Agent Integration
 
-- Send individual or all comments to your AI agent
-- Supports Claude Code, Cursor, OpenAI, or custom endpoints
-- Agent receives comment + context (configurable lines before/after)
-- **Claude Code** & **Cursor**: Direct CLI integration (sends to terminal automatically)
-- **Fallback**: Copies formatted prompt to clipboard and output panel
+Send comments to your AI agent with comprehensive context:
+
+**Supported Providers:**
+- **Cursor** (default) — Attempts to open Cursor chat automatically
+- **Claude Code** — Direct CLI integration with `claude --output-file`
+- **OpenAI** — API integration
+- **Custom** — Configure your own endpoint
+
+**Context Sent to Agent:**
+- **Relative path** — Workspace-relative file path (e.g., `docs/readme.md`)
+- **Absolute path** — Full filesystem path for direct file access
+- **Line numbers** — Precise location of commented text
+- **Surrounding context** — Configurable lines before/after (default: 6 lines)
+- **Full document** — For document-level comments, entire file content is included
+
+**Agent Provider Switching:**
+- Toggle between providers via command palette: `Commentary: Toggle AI Agent Provider`
+- Quick pick menu shows current provider with checkmark
+- Validates configuration (warns about missing API keys/endpoints)
 
 ### 📍 Smart Anchoring
 
 3-layer fallback strategy ensures comments survive document edits:
 
-1. **TextQuoteSelector** — Content-based anchoring with exact quote + prefix/suffix
+1. **TextQuoteSelector** — Content-based anchoring with exact quote + prefix/suffix (100 chars)
 2. **TextPositionSelector** — Character offset for fast recovery
 3. **Nearest heading + fuzzy search** — Tolerant fallback for minor edits
+
+---
 
 ## Installation
 
 ### From Source
 
-1. Clone this repository
-2. `npm install`
-3. Press `F5` in VS Code to launch the extension in debug mode
-4. Open a Markdown file and view the preview
+```bash
+git clone https://github.com/jaredhughes/commentary
+cd commentary
+npm install
+npm run compile
+```
+
+Press `F5` in VS Code to launch the Extension Development Host.
 
 ### From Marketplace
 
 *(Coming soon)*
 
+---
+
 ## Usage
 
-### Basic Workflow
+### Creating Comments
 
+**Text Selection Comments:**
 1. Open a Markdown file in VS Code
 2. Open the Markdown preview (`Cmd+K V` or `Ctrl+K V`)
 3. Select text in the preview
-4. Type your comment in the bubble and click **Save**
-5. View all comments in the **Commentary** sidebar
-6. Click a comment to jump to its location in the preview
+4. Type your comment in the bubble
+5. Click **Save** or press `Cmd+Enter` / `Ctrl+Enter`
 
-### Sidebar Actions
+**Document-Level Comments:**
+- Click the floating 📄 button in the top-left corner of the preview, OR
+- Click the 📝 note icon in the Commentary sidebar toolbar, OR
+- Open command palette: `Commentary: Add Document-Level Comment`
 
-- **Send All to Agent** — Send all comments to your AI agent
-- **Export** — Export comments as JSON
-- **Import** — Import comments from JSON
-- **Refresh** — Reload comments
-- **Delete All** — Clear all comments (with confirmation)
+### Managing Comments
 
-### Per-Comment Actions
+**Edit Comments:**
+- Click the ✏️ pencil icon next to any comment in the sidebar
+- Modify the text and press Enter
+- Validation prevents saving empty comments
 
-- **Reveal** — Scroll to comment in preview
-- **Send to Agent** — Send single comment to AI agent
-- **Delete** — Remove comment
+**Delete Comments:**
+- Click the 🗑️ trash icon next to a comment to delete one
+- Click the trash icon in the sidebar toolbar to delete all (with confirmation)
+
+**Reveal Comments:**
+- Click any comment in the sidebar to scroll to its location in the preview
+- Highlight briefly pulses for 2 seconds
+
+**Export/Import:**
+- Export all comments as JSON for backup or sharing
+- Import previously exported comments
+
+### Switching Themes
+
+**Via Command Palette:**
+1. Press `Cmd+Shift+P` / `Ctrl+Shift+P`
+2. Type `Commentary: Select Theme`
+3. Choose from 19 available themes
+
+**Via Settings:**
+- Open Settings (`Cmd+,` / `Ctrl+,`)
+- Search for `commentary.theme.name`
+- Select from dropdown
+
+### Sending to AI Agent
+
+**Single Comment:**
+- Click the 📤 send icon next to any comment
+
+**All Comments:**
+- Click the send icon in the sidebar toolbar
+
+**Provider Options:**
+- **Cursor**: Copies to clipboard and attempts to open Cursor chat (`Cmd+L`)
+- **Claude Code**: Pipes directly to `claude` CLI with `--output-file`
+- **OpenAI/Custom**: Copies formatted prompt to clipboard
+
+---
 
 ## Configuration
 
@@ -94,7 +185,12 @@ Access settings via `Preferences: Open Settings (UI)` and search for "commentary
 }
 ```
 
-**Available themes:** `github-light`, `github-dark`, `primer-light`, `primer-dark`, `tokyo-night`, `mdbook`
+**Available themes:**
+- `github-light`, `github-dark`
+- `water-light`, `water-dark`
+- `sakura-light`, `sakura-dark`, `sakura-vader`, `sakura-pink`, `sakura-earthly`
+- `pico-amber`, `pico-blue`, `pico-cyan`, `pico-green`, `pico-grey`, `pico-pink`, `pico-purple`, `pico-red`
+- `simple`, `matcha`
 
 ### Storage Settings
 
@@ -104,14 +200,16 @@ Access settings via `Preferences: Open Settings (UI)` and search for "commentary
 }
 ```
 
-**Options:** `workspace` (default, git-ignored) or `sidecar` (`.comments/` folder, shareable)
+**Options:**
+- `workspace` — Store in VS Code workspace state (not tracked by git)
+- `sidecar` — Store in `.comments/` folder as JSON (shareable)
 
 ### AI Agent Settings
 
 ```json
 {
   "commentary.agent.enabled": true,
-  "commentary.agent.provider": "claude",
+  "commentary.agent.provider": "cursor",
   "commentary.agent.apiKey": "",
   "commentary.agent.endpoint": "",
   "commentary.agent.model": "claude-3-5-sonnet-20241022",
@@ -121,7 +219,11 @@ Access settings via `Preferences: Open Settings (UI)` and search for "commentary
 }
 ```
 
-**Providers:** `claude`, `cursor`, `openai`, `custom`
+**Providers:**
+- `cursor` (default) — Cursor AI integration
+- `claude` — Claude Code CLI
+- `openai` — OpenAI API
+- `custom` — Custom endpoint
 
 **Cursor-Specific Settings:**
 - `cursorCliPath`: Path to cursor-agent CLI executable (default: `cursor-agent`)
@@ -131,44 +233,25 @@ Access settings via `Preferences: Open Settings (UI)` and search for "commentary
 - Automatically uses `claude --output-file` to pipe comments to Claude CLI
 - Responses are written back to the original Markdown file
 
-**Cursor Integration:**
-- Automatically uses `cursor-agent` CLI to send comments
-- Interactive mode: Opens conversational session in terminal
-- Non-interactive mode: Runs prompt and exits (for automation)
+---
 
-## Getting Started with Cursor
+## Commands
 
-To use Commentary with Cursor's AI agent:
+All commands accessible via `Cmd+Shift+P` / `Ctrl+Shift+P`:
 
-1. **Install Cursor CLI**
-   ```bash
-   curl https://cursor.com/install -fsS | bash
-   ```
+| Command | Description |
+|---------|-------------|
+| `Commentary: Open with Commentary` | Open Markdown file in Commentary preview |
+| `Commentary: Add Document-Level Comment` | Comment on entire document |
+| `Commentary: Toggle AI Agent Provider` | Switch between Cursor, Claude, OpenAI, Custom |
+| `Commentary: Select Theme` | Choose from 19 available themes |
+| `Commentary: Send All to Agent` | Send all comments to AI agent |
+| `Commentary: Show Comments Sidebar` | Open Commentary sidebar panel |
+| `Commentary: Delete All` | Clear all comments (with confirmation) |
+| `Commentary: Export` | Export comments as JSON |
+| `Commentary: Import` | Import comments from JSON |
 
-2. **Configure Commentary to use Cursor**
-   - Open VS Code Settings (`Cmd+,` or `Ctrl+,`)
-   - Search for "commentary agent provider"
-   - Select `cursor` from the dropdown
-
-3. **Send Comments to Cursor**
-   - Add comments to your Markdown files using Commentary
-   - Click the "Send to Agent" button (or use "Send All to Agent")
-   - Commentary will open a terminal and pipe your comments to `cursor-agent`
-   - Review Cursor's suggestions and apply changes as needed
-
-4. **Optional: Customize Cursor CLI Path**
-   - If cursor-agent is not in your PATH, set `commentary.agent.cursorCliPath` to the full path
-   - Example: `/usr/local/bin/cursor-agent`
-
-5. **Optional: Configure Interactive Mode**
-   - Set `commentary.agent.cursorInteractive` to `false` for automation workflows
-   - Interactive mode (default) allows conversational follow-up in the terminal
-
-6. **Cursor CLI Permissions**
-   - The repository includes `cli-config.json` with safe default permissions
-   - Cursor Agent can read source files and documentation
-   - Cursor Agent can write to documentation files (*.md)
-   - Destructive operations (rm, sudo, git push) are blocked
+---
 
 ## Architecture
 
@@ -185,24 +268,37 @@ commentary/
 ├── media/
 │   ├── overlay.js             # Preview script (selection, bubble, highlights)
 │   ├── overlay.css            # Highlight + bubble styles
-│   └── themes/                # Built-in CSS themes
+│   └── themes/                # CSS themes (generated from node_modules)
+├── scripts/
+│   └── copy-themes.js         # Build script to extract themes from NPM
 └── docs/
     └── readme.md              # Full specification
 ```
+
+**Theme Management:**
+- Themes installed via NPM: `github-markdown-css`, `water.css`, `sakura.css`, `@picocss/pico`, `simpledotcss`, `@lowlighter/matcha`
+- Build script (`copy-themes.js`) extracts CSS from `node_modules` to `media/themes/`
+- Themes are bundled in `.vsix` package (users don't need NPM)
+
+---
 
 ## Development
 
 ### Build
 
 ```bash
-npm install
-npm run compile
+npm install              # Install dependencies + theme packages
+npm run compile          # Copy themes from NPM + compile TypeScript
 ```
+
+**Build process:**
+1. `npm run copy-themes` — Extracts CSS from NPM packages to `media/themes/`
+2. `tsc -p ./` — Compiles TypeScript
 
 ### Watch Mode
 
 ```bash
-npm run watch
+npm run watch            # Auto-recompile on file changes
 ```
 
 ### Run Extension
@@ -216,56 +312,55 @@ Set breakpoints in TypeScript source files. The debugger will attach automatical
 ### Testing
 
 ```bash
-# Run all tests
-npm test
-
-# Compile and lint before testing
-npm run pretest
-
-# Lint only
-npm run lint
+npm test                 # Run all tests
+npm run lint             # ESLint + TypeScript checking
 ```
 
 **Test Coverage:**
-- **Extension Tests** (`src/test/suite/extension.test.ts`)
-  - Extension activation and commands
-  - Package.json metadata validation
-  - Cursor provider configuration
-- **Agent Tests** (`src/test/suite/agent.test.ts`)
-  - Provider display names (claude, cursor, openai, custom)
-  - Single and multiple comment handling
-  - Payload building and formatting
-  - End-to-end workflows for all providers
-- **Configuration Tests** (`src/test/suite/configuration.test.ts`)
-  - All agent provider configurations
-  - Cursor-specific settings (cursorCliPath, cursorInteractive)
-  - Theme and storage configurations
-  - Configuration interactions and edge cases
-- **Storage Tests** (`src/test/suite/extension.test.ts`)
-  - Save and retrieve notes
-  - Delete notes
-  - Export and import functionality
+- Extension activation and commands
+- Agent payload building and formatting
+- All AI provider configurations
+- Storage operations (save, retrieve, delete, export, import)
+- Theme and configuration management
 
-**Running Tests in VS Code:**
-1. Press `F5` to launch Extension Development Host
-2. Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`)
-3. Select "Developer: Reload Window" to activate the extension
-4. Tests will run automatically in the test environment
+---
 
 ## Contributing
 
 Contributions welcome! Please open an issue first to discuss changes.
 
+**Development workflow:**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `npm test`
+5. Submit a pull request
+
+---
+
 ## License
 
-MIT
+MIT License - Copyright (c) 2025 Jared Hughes
+
+See [LICENSE](LICENSE) file for details.
+
+---
 
 ## Credits
 
-Built with:
-- VS Code Extension API
-- Markdown preview scripts
-- GitHub Markdown CSS inspiration (MIT)
+**Built with:**
+- [VS Code Extension API](https://code.visualstudio.com/api)
+- [github-markdown-css](https://github.com/sindresorhus/github-markdown-css) (MIT)
+- [Water.css](https://github.com/kognise/water.css) (MIT)
+- [Sakura.css](https://github.com/oxalorg/sakura) (MIT)
+- [Pico CSS](https://github.com/picocss/pico) (MIT)
+- [Simple.css](https://github.com/kevquirk/simple.css) (MIT)
+- [Matcha CSS](https://github.com/lowlighter/matcha) (MIT)
+
+**Special thanks:**
+- markdown-it ecosystem for Markdown rendering
+- VS Code webview API for preview integration
+- Open source CSS framework maintainers
 
 ---
 
