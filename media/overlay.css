@@ -113,10 +113,14 @@
 .commentary-buttons {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 4px 0 0 0;
   margin-top: 4px;
   border-top: 1px solid #21262d;
+}
+
+.commentary-buttons > :not(:first-child) {
+  margin-left: auto;
 }
 
 .commentary-btn {
