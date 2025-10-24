@@ -63,9 +63,9 @@
       },
       {
         "command": "commentary.sendAllToAgent",
-        "title": "Send All to Agent",
+        "title": "Copy All for Agent",
         "category": "Commentary",
-        "icon": "$(send)"
+        "icon": "$(clippy)"
       },
       {
         "command": "commentary.exportComments",
