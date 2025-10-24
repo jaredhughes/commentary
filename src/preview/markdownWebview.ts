@@ -7,6 +7,7 @@ import * as path from 'path';
 import MarkdownIt from 'markdown-it';
 import markdownItAnchor from 'markdown-it-anchor';
 import markdownItTaskLists from 'markdown-it-task-lists';
+import hljs from 'highlight.js';
 import { StorageManager } from '../storage';
 import { OverlayHost } from './overlayHost';
 import { PreviewMessage } from '../types';
@@ -21,12 +22,26 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     private storage: StorageManager,
     private overlayHost: OverlayHost
   ) {
-    // Configure markdown-it with GitHub-flavored markdown
+    // Configure markdown-it with GitHub-flavored markdown and syntax highlighting
     this.md = new MarkdownIt({
       html: true,
       linkify: true,
       typographer: true,
       breaks: true,
+      highlight: (str, lang) => {
+        // If language is specified and supported, use highlight.js
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            return '<pre class="hljs"><code>' +
+              hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+              '</code></pre>';
+          } catch (err) {
+            console.error('Highlight.js error:', err);
+          }
+        }
+        // No language specified or not supported - use plain text
+        return '<pre class="hljs"><code>' + this.md.utils.escapeHtml(str) + '</code></pre>';
+      }
     })
       .use(markdownItAnchor, {
         permalink: markdownItAnchor.permalink.headerLink(),
@@ -246,6 +261,14 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );
 
+    // Determine if theme is dark for syntax highlighting
+    // Simple theme looks better with dark syntax highlighting
+    const isDarkTheme = themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple';
+    const highlightTheme = isDarkTheme ? 'highlight-dark.css' : 'highlight-light.css';
+    const highlightUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', highlightTheme)
+    );
+
     // Generate nonce for security
     const nonce = this.getNonce();
 
@@ -257,46 +280,57 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
   <title>Commentary</title>
 
-  <!-- Theme CSS -->
+  <!-- Minimal reset + base styles -->
+  <style nonce="${nonce}">
+    /* Reset browser defaults */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    html {
+      font-size: 14px !important;
+    }
+    /* Reset link colors - let themes control everything */
+    a, a:link, a:visited, a:hover, a:active {
+      color: inherit;
+      text-decoration: inherit;
+    }
+
+    /* Layout rules */
+    body {
+      padding: 32px;
+    }
+    #markdown-content {
+      max-width: none;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Scale down code blocks */
+    code, pre, pre code {
+      font-size: 0.85em;
+    }
+    @media (max-width: 768px) {
+      body { padding: 20px; }
+    }
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+    }
+  </style>
+
+  <!-- Theme CSS (loads after base styles to take priority) -->
   <link rel="stylesheet" href="${themeUri}">
+
+  <!-- Syntax Highlighting CSS -->
+  <link rel="stylesheet" href="${highlightUri}">
 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
-
-  <style nonce="${nonce}">
-    * {
-      box-sizing: border-box;
-    }
-    html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow-y: scroll;
-    }
-    body {
-      margin: 0;
-      padding: 32px;
-      width: 100%;
-      min-height: 100vh;
-    }
-    #markdown-content {
-      max-width: 900px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    /* Responsive padding */
-    @media (max-width: 768px) {
-      body {
-        padding: 20px;
-      }
-    }
-    @media (max-width: 480px) {
-      body {
-        padding: 16px;
-      }
-    }
-  </style>
 </head>
 <body>
   <div id="markdown-content">
@@ -318,6 +352,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
       // Store document URI for context
       window.commentaryDocumentUri = '${document.uri.toString()}';
+
+      // Store agent provider for dynamic UI
+      window.commentaryAgentProvider = '${config.get<string>('agent.provider', 'cursor')}';
     })();
   </script>
 </body>
