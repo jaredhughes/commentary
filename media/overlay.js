@@ -82,6 +82,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     createDocumentCommentButton();
     console.log('[OVERLAY.JS] Document comment button created');
 
+    // Make headings and paragraphs editable
+    makeEditableElements();
+    console.log('[OVERLAY.JS] Made headings and paragraphs editable');
+
     // Listen for mouseup to detect selections
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
@@ -93,6 +97,68 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Notify extension that preview is ready
     postMessage({ type: 'ready' });
     console.log('[OVERLAY.JS] Ready message sent');
+  }
+
+  /**
+   * Make headings and paragraphs contenteditable for quick text fixes
+   */
+  function makeEditableElements() {
+    // Find all headings and paragraphs in the main content
+    const editableSelector = 'h1, h2, h3, h4, h5, h6, p';
+    const elements = document.querySelectorAll(editableSelector);
+
+    elements.forEach((element) => {
+      // Skip if inside a blockquote, code, pre, or other special containers
+      if (element.closest('pre, code, blockquote, table')) {
+        return;
+      }
+
+      // Make contenteditable
+      element.setAttribute('contenteditable', 'true');
+      element.style.cursor = 'text';
+
+      // Store original text for comparison
+      let originalText = element.textContent;
+
+      // Handle editing
+      element.addEventListener('focus', () => {
+        console.log('[OVERLAY] Element focused for editing');
+        originalText = element.textContent;
+      });
+
+      element.addEventListener('blur', () => {
+        const newText = element.textContent;
+        console.log('[OVERLAY] Element blur - checking for changes');
+
+        // Only update if text actually changed
+        if (newText !== originalText && newText.trim() !== '') {
+          console.log('[OVERLAY] Text changed from:', originalText, 'to:', newText);
+          updateDocumentText(element, originalText, newText);
+        }
+      });
+
+      // Prevent Enter from creating new lines (keep it simple)
+      element.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          element.blur(); // Finish editing
+        }
+      });
+    });
+  }
+
+  /**
+   * Update the markdown document with edited text
+   */
+  function updateDocumentText(element, oldText, newText) {
+    console.log('[OVERLAY] Sending document update request');
+
+    // Send message to extension to update the file
+    postMessage({
+      type: 'updateDocumentText',
+      oldText: oldText.trim(),
+      newText: newText.trim(),
+    });
   }
 
   /**

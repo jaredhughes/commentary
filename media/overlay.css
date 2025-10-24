@@ -242,3 +242,21 @@
   transform: scale(0.98);
 }
 
+
+/* Contenteditable elements */
+[contenteditable="true"] {
+  outline: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 2px;
+  padding: 2px;
+  margin: -2px;
+}
+
+[contenteditable="true"]:hover {
+  background-color: rgba(100, 150, 255, 0.03);
+}
+
+[contenteditable="true"]:focus {
+  background-color: rgba(100, 150, 255, 0.06);
+  box-shadow: 0 0 0 1px rgba(100, 150, 255, 0.2);
+}
