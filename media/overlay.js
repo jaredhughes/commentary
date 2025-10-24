@@ -25,18 +25,13 @@ console.log('[OVERLAY.JS] Script is loading...');
   let editingNoteId = null; // Track which note is being edited (null for new comments)
 
   /**
-   * Get agent button text and icon based on provider
+   * Get agent button text and icon
    */
   function getAgentButtonConfig() {
-    const provider = window.commentaryAgentProvider || 'cursor';
-    const isCursor = provider === 'cursor';
-
     return {
-      icon: isCursor ? '📋' : '➤',
-      text: isCursor ? 'Copy for agent' : 'Send to agent',
-      tooltip: isCursor
-        ? 'Copy comment to clipboard for pasting into Cursor'
-        : 'Send comment to AI agent for automatic processing'
+      icon: '➤',
+      text: 'Send to agent',
+      tooltip: 'Send comment to AI agent (opens Cursor chat or calls Claude API)'
     };
   }
 
@@ -98,7 +93,7 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
-   * Make headings and paragraphs contenteditable for quick text fixes
+   * Make headings and paragraphs editable on double-click
    */
   function makeEditableElements() {
     // Find all headings, paragraphs, and list items in the main content
@@ -111,24 +106,44 @@ console.log('[OVERLAY.JS] Script is loading...');
         return;
       }
 
-      // Make contenteditable with plaintext-only to prevent HTML formatting
-      element.setAttribute('contenteditable', 'plaintext-only');
-      element.style.cursor = 'text';
-
       // Store original text for comparison (normalize it)
       let originalText = element.textContent.replace(/\s+/g, ' ').trim();
+      let isEditing = false;
 
-      // Handle editing
-      element.addEventListener('focus', () => {
-        console.log('[OVERLAY] Element focused for editing');
-        // Re-capture and normalize on focus in case content changed
+      // Enable editing on double-click
+      element.addEventListener('dblclick', () => {
+        if (isEditing) return;
+
+        console.log('[OVERLAY] Element double-clicked, enabling edit mode');
+        isEditing = true;
+
+        // Make contenteditable
+        element.setAttribute('contenteditable', 'plaintext-only');
+        element.focus();
+
+        // Select all text for easy replacement
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        // Re-capture original text
         originalText = element.textContent.replace(/\s+/g, ' ').trim();
       });
 
+      // Handle blur - save changes and disable editing
       element.addEventListener('blur', () => {
+        if (!isEditing) return;
+
+        console.log('[OVERLAY] Element blur - checking for changes');
+        isEditing = false;
+
+        // Remove contenteditable
+        element.removeAttribute('contenteditable');
+
         // Normalize text - remove any extra whitespace/newlines that may have been added
         const newText = element.textContent.replace(/\s+/g, ' ').trim();
-        console.log('[OVERLAY] Element blur - checking for changes');
 
         // Only update if text actually changed
         if (newText !== originalText && newText.trim() !== '') {
@@ -142,14 +157,23 @@ console.log('[OVERLAY.JS] Script is loading...');
 
       // Prevent Enter from creating new lines (keep it simple)
       element.addEventListener('keydown', (e) => {
+        if (!isEditing) return;
+
         if (e.key === 'Enter') {
           e.preventDefault();
           element.blur(); // Finish editing
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          // Cancel editing - restore original text
+          element.textContent = originalText;
+          element.blur();
         }
       });
 
       // Prevent paste from bringing in HTML - paste as plain text only
       element.addEventListener('paste', (e) => {
+        if (!isEditing) return;
+
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
         document.execCommand('insertText', false, text);
@@ -987,25 +1011,6 @@ console.log('[OVERLAY.JS] Script is loading...');
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
 
-    // Delete button (only for existing comments with noteId)
-    if (editingNoteId) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️';
-      deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
-      deleteBtn.onclick = () => {
-        if (confirm('Delete this comment?')) {
-          postMessage({
-            type: 'deleteComment',
-            noteId: editingNoteId,
-            documentUri: window.commentaryDocumentUri
-          });
-          hideBubble();
-        }
-      };
-      buttonContainer.appendChild(deleteBtn);
-    }
-
     const submitBtn = document.createElement('button');
     const agentConfig = getAgentButtonConfig();
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
@@ -1031,6 +1036,25 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     buttonContainer.appendChild(submitBtn);
     buttonContainer.appendChild(saveBtn);
+
+    // Delete button (only for existing comments with noteId) - append last (right side)
+    if (editingNoteId) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.title = 'Delete this comment';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
+      deleteBtn.onclick = () => {
+        if (confirm('Delete this comment?')) {
+          postMessage({
+            type: 'deleteComment',
+            noteId: editingNoteId,
+            documentUri: window.commentaryDocumentUri
+          });
+          hideBubble();
+        }
+      };
+      buttonContainer.appendChild(deleteBtn);
+    }
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
@@ -1109,7 +1133,33 @@ console.log('[OVERLAY.JS] Script is loading...');
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
 
-    // Delete button (only for existing comments with noteId)
+    const submitBtn = document.createElement('button');
+    const agentConfig = getAgentButtonConfig();
+    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+    submitBtn.title = agentConfig.tooltip;
+    submitBtn.className = 'commentary-btn commentary-btn-primary';
+    submitBtn.onclick = async () => {
+      const text = textarea.value;
+      if (!text.trim()) {
+        return;
+      }
+      // Handle submission based on provider (includes noteId for editing)
+      await handleAgentSubmit(text.trim(), currentSelection, true, note.id);
+      hideBubble();
+    };
+
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.innerHTML = '💾 Save';
+    saveBtn.title = `Save changes (${shortcut})`;
+    saveBtn.className = 'commentary-btn';
+    saveBtn.onclick = () => saveComment(textarea.value);
+
+    buttonContainer.appendChild(submitBtn);
+    buttonContainer.appendChild(saveBtn);
+
+    // Delete button (only for existing comments with noteId) - append last (right side)
     if (editingNoteId) {
       const deleteBtn = document.createElement('button');
       deleteBtn.innerHTML = '🗑️';
@@ -1127,32 +1177,6 @@ console.log('[OVERLAY.JS] Script is loading...');
       };
       buttonContainer.appendChild(deleteBtn);
     }
-
-    const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save changes (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => saveComment(textarea.value);
-
-    const submitBtn = document.createElement('button');
-    const agentConfig = getAgentButtonConfig();
-    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
-    submitBtn.title = agentConfig.tooltip;
-    submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = async () => {
-      const text = textarea.value;
-      if (!text.trim()) {
-        return;
-      }
-      // Handle submission based on provider (includes noteId for editing)
-      await handleAgentSubmit(text.trim(), currentSelection, true, note.id);
-      hideBubble();
-    };
-
-    buttonContainer.appendChild(saveBtn);
-    buttonContainer.appendChild(submitBtn);
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
