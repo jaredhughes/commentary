@@ -90,6 +90,20 @@ console.log('[OVERLAY.JS] Script is loading...');
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
 
+    // Listen for Cmd+S to blur contenteditable before save (so edit gets applied)
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        // If focus is on contenteditable, blur it first to trigger save
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.getAttribute('contenteditable') === 'plaintext-only') {
+          console.log('[OVERLAY] Cmd+S pressed, blurring contenteditable element');
+          activeElement.blur();
+          // The blur will trigger our edit, and the native save will happen after
+        }
+      }
+    });
+    console.log('[OVERLAY.JS] Cmd+S listener added');
+
     // Listen for messages from extension
     window.addEventListener('message', handleHostMessage);
     console.log('[OVERLAY.JS] message listener added');
@@ -113,27 +127,32 @@ console.log('[OVERLAY.JS] Script is loading...');
         return;
       }
 
-      // Make contenteditable
-      element.setAttribute('contenteditable', 'true');
+      // Make contenteditable with plaintext-only to prevent HTML formatting
+      element.setAttribute('contenteditable', 'plaintext-only');
       element.style.cursor = 'text';
 
-      // Store original text for comparison
-      let originalText = element.textContent;
+      // Store original text for comparison (normalize it)
+      let originalText = element.textContent.replace(/\s+/g, ' ').trim();
 
       // Handle editing
       element.addEventListener('focus', () => {
         console.log('[OVERLAY] Element focused for editing');
-        originalText = element.textContent;
+        // Re-capture and normalize on focus in case content changed
+        originalText = element.textContent.replace(/\s+/g, ' ').trim();
       });
 
       element.addEventListener('blur', () => {
-        const newText = element.textContent;
+        // Normalize text - remove any extra whitespace/newlines that may have been added
+        const newText = element.textContent.replace(/\s+/g, ' ').trim();
         console.log('[OVERLAY] Element blur - checking for changes');
 
         // Only update if text actually changed
         if (newText !== originalText && newText.trim() !== '') {
           console.log('[OVERLAY] Text changed from:', originalText, 'to:', newText);
           updateDocumentText(element, originalText, newText);
+        } else {
+          // Restore original text if nothing changed (cleans up any formatting mess)
+          element.textContent = originalText;
         }
       });
 
@@ -143,6 +162,13 @@ console.log('[OVERLAY.JS] Script is loading...');
           e.preventDefault();
           element.blur(); // Finish editing
         }
+      });
+
+      // Prevent paste from bringing in HTML - paste as plain text only
+      element.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
       });
     });
   }
