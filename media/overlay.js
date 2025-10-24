@@ -41,6 +41,37 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Handle agent submission - copies to clipboard for Cursor, sends to agent for others
+   */
+  async function handleAgentSubmit(commentText, selection, isDocumentLevel, noteId) {
+    const provider = window.commentaryAgentProvider || 'cursor';
+    const isCursor = provider === 'cursor';
+
+    if (isCursor) {
+      // For Cursor: Just copy to clipboard without saving
+      // Build a simple prompt with the comment
+      const prompt = commentText;
+
+      try {
+        await navigator.clipboard.writeText(prompt);
+        // Show brief confirmation in console (user will see status bar message from extension)
+        console.log('[OVERLAY] Comment copied to clipboard for Cursor');
+      } catch (err) {
+        console.error('[OVERLAY] Failed to copy to clipboard:', err);
+      }
+    } else {
+      // For other providers: Send to agent (saves and sends)
+      postMessage({
+        type: 'saveAndSubmitToAgent',
+        selection: selection,
+        commentText: commentText,
+        isDocumentLevel: isDocumentLevel,
+        noteId: noteId
+      });
+    }
+  }
+
+  /**
    * Initialize the overlay
    */
   function init() {
@@ -391,18 +422,13 @@ console.log('[OVERLAY.JS] Script is loading...');
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
     submitBtn.title = agentConfig.tooltip;
     submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = () => {
+    submitBtn.onclick = async () => {
       const text = textarea.value;
       if (!text.trim()) {
         return;
       }
-      // Send atomic save-and-submit message
-      postMessage({
-        type: 'saveAndSubmitToAgent',
-        selection: currentSelection,
-        commentText: text.trim(),
-        isDocumentLevel: isDocumentLevelComment,
-      });
+      // Handle submission based on provider
+      await handleAgentSubmit(text.trim(), currentSelection, isDocumentLevelComment, null);
       hideBubble();
       window.getSelection()?.removeAllRanges();
     };
@@ -495,18 +521,13 @@ console.log('[OVERLAY.JS] Script is loading...');
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
     submitBtn.title = agentConfig.tooltip;
     submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = () => {
+    submitBtn.onclick = async () => {
       const text = textarea.value;
       if (!text.trim()) {
         return;
       }
-      // Send atomic save-and-submit message
-      postMessage({
-        type: 'saveAndSubmitToAgent',
-        selection: currentSelection,
-        commentText: text.trim(),
-        isDocumentLevel: isDocumentLevelComment,
-      });
+      // Handle submission based on provider
+      await handleAgentSubmit(text.trim(), currentSelection, isDocumentLevelComment, null);
       hideBubble();
     };
 
@@ -889,19 +910,13 @@ console.log('[OVERLAY.JS] Script is loading...');
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
     submitBtn.title = agentConfig.tooltip;
     submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = () => {
+    submitBtn.onclick = async () => {
       const text = textarea.value;
       if (!text.trim()) {
         return;
       }
-      // Send atomic save-and-submit message with existing noteId
-      postMessage({
-        type: 'saveAndSubmitToAgent',
-        selection: currentSelection,
-        commentText: text.trim(),
-        isDocumentLevel: note.isDocumentLevel,
-        noteId: note.id,  // Include noteId for editing existing comment
-      });
+      // Handle submission based on provider (includes noteId for editing)
+      await handleAgentSubmit(text.trim(), currentSelection, note.isDocumentLevel, note.id);
       hideBubble();
     };
 
@@ -998,19 +1013,13 @@ console.log('[OVERLAY.JS] Script is loading...');
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
     submitBtn.title = agentConfig.tooltip;
     submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = () => {
+    submitBtn.onclick = async () => {
       const text = textarea.value;
       if (!text.trim()) {
         return;
       }
-      // Send atomic save-and-submit message with existing noteId
-      postMessage({
-        type: 'saveAndSubmitToAgent',
-        selection: currentSelection,
-        commentText: text.trim(),
-        isDocumentLevel: true,
-        noteId: note.id,  // Include noteId for editing existing comment
-      });
+      // Handle submission based on provider (includes noteId for editing)
+      await handleAgentSubmit(text.trim(), currentSelection, true, note.id);
       hideBubble();
     };
 
