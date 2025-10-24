@@ -118,10 +118,6 @@
   border-top: 1px solid #21262d;
 }
 
-.commentary-buttons > .commentary-btn-danger {
-  margin-right: auto;
-}
-
 .commentary-btn {
   padding: 5px 16px;
   border: 1px solid rgba(240, 246, 252, 0.1);
