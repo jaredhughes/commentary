@@ -100,6 +100,17 @@ const themes = [
   {
     src: 'node_modules/@lowlighter/matcha/dist/matcha.css',
     dest: 'media/themes/matcha.css'
+  },
+
+  // Highlight.js - Syntax highlighting for code blocks
+  // Using Atom One themes - vibrant, balanced colors without excessive orange
+  {
+    src: 'node_modules/highlight.js/styles/atom-one-light.css',
+    dest: 'media/highlight-light.css'
+  },
+  {
+    src: 'node_modules/highlight.js/styles/atom-one-dark.css',
+    dest: 'media/highlight-dark.css'
   }
 ];
 
