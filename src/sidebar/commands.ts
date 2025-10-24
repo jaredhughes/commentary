@@ -577,7 +577,16 @@ export class CommandManager {
           { label: 'Simple', value: 'simple', description: 'Minimalist and clean (adapts to system theme)', detail: 'Simple.css' },
 
           // Matcha
-          { label: 'Matcha', value: 'matcha', description: 'Code-focused with excellent syntax highlighting', detail: 'Matcha' }
+          { label: 'Matcha', value: 'matcha', description: 'Code-focused with excellent syntax highlighting', detail: 'Matcha' },
+
+          // LaTeX.css
+          { label: 'LaTeX', value: 'latex', description: 'Academic paper styling inspired by LaTeX', detail: 'LaTeX.css' },
+
+          // Tufte CSS
+          { label: 'Tufte', value: 'tufte', description: 'Inspired by Edward Tufte\'s design principles', detail: 'Tufte CSS' },
+
+          // New.css
+          { label: 'New', value: 'new', description: 'Modern minimal design (4k+ GitHub stars)', detail: 'New.css' }
         ];
 
         // Mark current theme

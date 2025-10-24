@@ -293,7 +293,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
     /* Layout rules - extra top padding for floating button */
     body {
-      padding: 64px 32px 32px 32px;
+      padding: 80px 32px 32px 32px;
     }
     #markdown-content {
       max-width: none;
@@ -302,10 +302,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     }
 
     @media (max-width: 768px) {
-      body { padding: 56px 20px 20px 20px; }
+      body { padding: 72px 20px 20px 20px; }
     }
     @media (max-width: 480px) {
-      body { padding: 48px 12px 12px 12px; }
+      body { padding: 64px 12px 12px 12px; }
     }
   </style>
 

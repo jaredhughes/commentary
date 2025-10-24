@@ -102,6 +102,24 @@ const themes = [
     dest: 'media/themes/matcha.css'
   },
 
+  // LaTeX.css - Academic paper styling
+  {
+    src: 'node_modules/latex.css/style.css',
+    dest: 'media/themes/latex.css'
+  },
+
+  // Tufte CSS - Edward Tufte inspired
+  {
+    src: 'node_modules/tufte-css/tufte.css',
+    dest: 'media/themes/tufte.css'
+  },
+
+  // New.css - Modern minimal
+  {
+    src: 'node_modules/@exampledev/new.css/new.css',
+    dest: 'media/themes/new.css'
+  },
+
   // Highlight.js - Syntax highlighting for code blocks
   // Using Atom One themes - vibrant, balanced colors without excessive orange
   {
