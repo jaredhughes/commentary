@@ -132,7 +132,7 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
   outline: none;
 }
 
@@ -144,6 +144,7 @@
 
 .commentary-btn:hover {
   background: #1a1f26;
+  color: rgba(255, 255, 255, 1.0);
 }
 
 .commentary-btn:active {
@@ -159,6 +160,7 @@
 
 .commentary-btn-primary:hover {
   background: #2ea043;
+  color: rgba(255, 255, 255, 1.0);
 }
 
 .commentary-btn-primary:active {
@@ -173,6 +175,7 @@
 
 .commentary-btn-danger:hover {
   background: #e5534b;
+  color: rgba(255, 255, 255, 1.0);
 }
 
 .commentary-btn-danger:active {
