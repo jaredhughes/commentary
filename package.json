@@ -320,7 +320,10 @@
             "pico-purple",
             "pico-red",
             "simple",
-            "matcha"
+            "matcha",
+            "latex",
+            "tufte",
+            "new"
           ],
           "description": "Built-in theme for the Markdown preview"
         },
@@ -407,6 +410,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@exampledev/new.css": "^1.1.3",
     "@lowlighter/matcha": "^3.0.1",
     "@picocss/pico": "^2.1.1",
     "@types/mocha": "^10.0.6",
