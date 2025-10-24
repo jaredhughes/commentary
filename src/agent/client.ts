@@ -9,12 +9,15 @@ import * as path from 'path';
 import * as os from 'os';
 import { Note, AgentRequest, AgentResponse } from '../types';
 import { PayloadBuilder } from './payload';
+import { ApiIntegration } from './apiIntegration';
 
 export class AgentClient {
   private outputChannel: vscode.OutputChannel;
+  private apiIntegration: ApiIntegration;
 
   constructor(private context: vscode.ExtensionContext) {
     this.outputChannel = vscode.window.createOutputChannel('Commentary Agent');
+    this.apiIntegration = new ApiIntegration(context);
   }
 
   /**
@@ -90,6 +93,15 @@ export class AgentClient {
 
     // Format as prompt
     const prompt = PayloadBuilder.formatAsPrompt(request);
+
+    // FIRST: Try direct API integration (Claude API)
+    if (provider === 'claude' && this.apiIntegration.isAvailable()) {
+      const success = await this.apiIntegration.sendAndApply(request, prompt);
+      if (success) {
+        return this.mockAgentResponse(request);
+      }
+      // If API fails, fall through to CLI/clipboard methods
+    }
 
     // Try to send via Claude CLI in terminal
     if (provider === 'claude') {
@@ -195,25 +207,58 @@ export class AgentClient {
   }
 
   /**
-   * Send prompt via Cursor chat (copies to clipboard and prompts user)
+   * Send prompt via Cursor chat (opens chat directly with prompt)
    */
   private async sendViaCursorCLI(prompt: string, request: AgentRequest): Promise<boolean> {
     try {
-      // Copy prompt to clipboard
+      // Copy to clipboard as a fallback
       await vscode.env.clipboard.writeText(prompt);
 
-      // Show message prompting user to open Cursor chat
+      // Try to invoke Cursor's chat command directly
       const commentCount = request.contexts.length;
-      const message = commentCount === 1
-        ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
-        : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
 
-      // Don't await - just show the message and continue (prevents test timeouts)
-      vscode.window.showInformationMessage(message, 'Got it');
+      try {
+        // Attempt to open Cursor chat with the prompt
+        // Cursor provides commands like 'aichat.newchataction' or similar
+        const commands = await vscode.commands.getCommands();
+
+        // Look for Cursor-specific chat commands
+        const cursorChatCommand = commands.find(cmd =>
+          cmd.includes('aichat') ||
+          cmd.includes('cursorChat') ||
+          cmd.includes('composer')
+        );
+
+        if (cursorChatCommand) {
+          // Try to execute the chat command
+          await vscode.commands.executeCommand(cursorChatCommand);
+
+          // Wait a moment for chat to open, then the prompt is in clipboard ready to paste
+          vscode.window.showInformationMessage(
+            `💬 Cursor chat opened! Prompt is in clipboard - paste (⌘V) to send ${commentCount} comment${commentCount > 1 ? 's' : ''}.`,
+            'Got it'
+          );
+        } else {
+          // Fallback: show manual instruction
+          const message = commentCount === 1
+            ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
+            : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
+
+          vscode.window.showInformationMessage(message, 'Got it');
+        }
+      } catch (commandError) {
+        // If command execution fails, show manual instruction
+        console.log('Cursor command not available:', commandError);
+        const message = commentCount === 1
+          ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
+          : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
+
+        vscode.window.showInformationMessage(message, 'Got it');
+      }
 
       return true;
     } catch (error) {
-      console.error('Failed to copy prompt for Cursor:', error);
+      console.error('Failed to prepare prompt for Cursor:', error);
       return false;
     }
   }
