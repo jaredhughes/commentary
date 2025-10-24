@@ -97,6 +97,12 @@
         "category": "Commentary"
       },
       {
+        "command": "commentary.configureAgent",
+        "title": "Configure Agent...",
+        "category": "Commentary",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "commentary.toggleAgentProvider",
         "title": "Toggle AI Agent Provider",
         "category": "Commentary",
@@ -107,6 +113,16 @@
         "title": "Edit Comment",
         "category": "Commentary",
         "icon": "$(edit)"
+      },
+      {
+        "command": "commentary.editCommentFromSidebar",
+        "title": "Edit Comment from Sidebar",
+        "category": "Commentary"
+      },
+      {
+        "command": "commentary.openDocument",
+        "title": "Open Document",
+        "category": "Commentary"
       },
       {
         "command": "commentary.addDocumentComment",
@@ -121,15 +137,9 @@
       },
       {
         "command": "commentary.selectTheme",
-        "title": "Select Theme",
+        "title": "Select theme...",
         "category": "Commentary",
         "icon": "$(color-mode)"
-      },
-      {
-        "command": "commentary.toggleDarkLight",
-        "title": "Toggle Dark/Light Mode",
-        "category": "Commentary",
-        "icon": "$(symbol-color)"
       }
     ],
     "customEditors": [
@@ -201,10 +211,6 @@
           "when": "true"
         },
         {
-          "command": "commentary.toggleDarkLight",
-          "when": "true"
-        },
-        {
           "command": "commentary.saveComment",
           "when": "false"
         },
@@ -235,6 +241,14 @@
         {
           "command": "commentary.refreshComments",
           "when": "false"
+        },
+        {
+          "command": "commentary.editCommentFromSidebar",
+          "when": "false"
+        },
+        {
+          "command": "commentary.openDocument",
+          "when": "false"
         }
       ],
       "explorer/context": [
@@ -254,12 +268,12 @@
       "view/title": [
         {
           "command": "commentary.sendAllToAgent",
-          "when": "view == commentary.commentsView",
+          "when": "view == commentary.commentsView && commentary.hasComments",
           "group": "navigation@1"
         },
         {
           "command": "commentary.deleteAllComments",
-          "when": "view == commentary.commentsView",
+          "when": "view == commentary.commentsView && commentary.hasComments",
           "group": "navigation@2"
         }
       ],
@@ -270,19 +284,14 @@
           "group": "inline@1"
         },
         {
-          "command": "commentary.editComment",
+          "command": "commentary.sendToAgent",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
           "group": "inline@2"
         },
         {
-          "command": "commentary.sendToAgent",
-          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
-          "group": "inline@3"
-        },
-        {
           "command": "commentary.deleteComment",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
-          "group": "inline@4"
+          "group": "inline@3"
         }
       ]
     },
@@ -410,15 +419,19 @@
     "github-markdown-css": "^5.8.1",
     "glob": "^10.3.10",
     "husky": "^9.1.7",
+    "latex.css": "^1.13.0",
     "mocha": "^10.2.0",
+    "mvp.css": "^1.17.2",
     "sakura.css": "^1.5.1",
     "simpledotcss": "^2.3.7",
+    "tufte-css": "^1.8.0",
     "typescript": "^5.3.0",
     "water.css": "^2.1.1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
     "@types/markdown-it": "^14.1.2",
+    "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-github-headings": "^2.0.1",
