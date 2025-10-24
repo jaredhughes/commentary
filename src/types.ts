@@ -40,7 +40,10 @@ export interface SerializedSelection {
  */
 export enum MessageType {
   SaveComment = 'saveComment',
+  SaveAndSubmitToAgent = 'saveAndSubmitToAgent',
+  UpdateComment = 'updateComment',
   DeleteComment = 'deleteComment',
+  EditHighlightComment = 'editHighlightComment',
   RevealComment = 'revealComment',
   SendToAgent = 'sendToAgent',
   Ready = 'ready',
@@ -55,7 +58,8 @@ export enum HostMessageType {
   PaintHighlights = 'paintHighlights',
   RemoveHighlight = 'removeHighlight',
   ScrollToHighlight = 'scrollToHighlight',
-  ClearAllHighlights = 'clearAllHighlights'
+  ClearAllHighlights = 'clearAllHighlights',
+  ShowEditBubble = 'showEditBubble'
 }
 
 export interface BaseMessage {
@@ -70,9 +74,31 @@ export interface SaveCommentMessage extends BaseMessage {
   isDocumentLevel?: boolean;
 }
 
+export interface SaveAndSubmitToAgentMessage extends BaseMessage {
+  type: MessageType.SaveAndSubmitToAgent;
+  selection: SerializedSelection;
+  commentText: string;
+  documentUri?: string;
+  isDocumentLevel?: boolean;
+  noteId?: string; // For editing existing comments
+}
+
+export interface UpdateCommentMessage extends BaseMessage {
+  type: MessageType.UpdateComment;
+  noteId: string;
+  commentText: string;
+  documentUri?: string;
+}
+
 export interface DeleteCommentMessage extends BaseMessage {
   type: MessageType.DeleteComment;
   noteId: string;
+}
+
+export interface EditHighlightCommentMessage extends BaseMessage {
+  type: MessageType.EditHighlightComment;
+  noteId: string;
+  documentUri?: string;
 }
 
 export interface RevealCommentMessage extends BaseMessage {
@@ -83,6 +109,7 @@ export interface RevealCommentMessage extends BaseMessage {
 export interface SendToAgentMessage extends BaseMessage {
   type: MessageType.SendToAgent;
   noteId: string;
+  documentUri?: string;
 }
 
 export interface ReadyMessage extends BaseMessage {
@@ -100,7 +127,10 @@ export interface AddDocumentCommentMessage extends BaseMessage {
 
 export type PreviewMessage =
   | SaveCommentMessage
+  | SaveAndSubmitToAgentMessage
+  | UpdateCommentMessage
   | DeleteCommentMessage
+  | EditHighlightCommentMessage
   | RevealCommentMessage
   | SendToAgentMessage
   | ReadyMessage
@@ -130,11 +160,17 @@ export interface ClearAllHighlightsMessage extends BaseHostMessage {
   type: HostMessageType.ClearAllHighlights;
 }
 
+export interface ShowEditBubbleMessage extends BaseHostMessage {
+  type: HostMessageType.ShowEditBubble;
+  note: Note;
+}
+
 export type HostMessage =
   | PaintHighlightsMessage
   | RemoveHighlightMessage
   | ScrollToHighlightMessage
-  | ClearAllHighlightsMessage;
+  | ClearAllHighlightsMessage
+  | ShowEditBubbleMessage;
 
 /**
  * Storage interface
