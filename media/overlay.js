@@ -19,6 +19,9 @@ console.log('[OVERLAY.JS] Script is loading...');
   let highlights = new Map(); // noteId -> highlight element
   let bubbleJustOpened = false; // Track if bubble was just created to avoid immediate close
   let activeHighlight = null; // Temporary highlight while bubble is open
+  let trackedRange = null; // Track the range for repositioning on scroll
+  let scrollListener = null; // Reference to scroll listener for cleanup
+  let isDocumentLevelComment = false; // Track if current bubble is for document-level comment
 
   /**
    * Initialize the overlay
@@ -38,6 +41,41 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Notify extension that preview is ready
     postMessage({ type: 'ready' });
     console.log('[OVERLAY.JS] Ready message sent');
+  }
+
+  /**
+   * Create floating button for document-level comments
+   */
+  function createDocumentCommentButton() {
+    const button = document.createElement('button');
+    button.className = 'commentary-doc-button';
+    button.innerHTML = '💬';
+    button.title = 'Comment on document';
+    button.setAttribute('aria-label', 'Add comment for entire document');
+
+    button.onclick = () => {
+      // Set flag to indicate this is a document-level comment
+      isDocumentLevelComment = true;
+
+      // Create a placeholder selection for the entire document
+      currentSelection = {
+        quote: {
+          exact: '[Entire Document]',
+          prefix: '',
+          suffix: ''
+        },
+        position: {
+          start: 0,
+          end: document.body.textContent.length
+        }
+      };
+
+      // Show the bubble centered on screen
+      showBubbleForDocument();
+    };
+
+    document.body.appendChild(button);
+    console.log('[OVERLAY] Document comment button created');
   }
 
   /**
@@ -178,6 +216,107 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Update bubble and highlight positions based on the tracked range
+   */
+  function updatePositions() {
+    if (!trackedRange || !commentBubble) {
+      return;
+    }
+
+    try {
+      // Get current position of the range
+      const rects = trackedRange.getClientRects();
+      if (rects.length === 0) {
+        return;
+      }
+
+      // Use the first rect for bubble positioning (works for single and multi-line)
+      const rect = rects[0];
+      const bubbleRect = commentBubble.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const padding = 10;
+      const offset = 10; // Offset from text
+
+      // Calculate ideal position (below text, aligned with left edge)
+      let left = rect.left;
+      let top = rect.bottom + offset;
+
+      // Check if bubble fits below text
+      const fitsBelow = (top + bubbleRect.height + padding) <= viewportHeight;
+
+      // Check if bubble fits above text
+      const fitsAbove = (rect.top - bubbleRect.height - offset) >= padding;
+
+      // Position vertically: prefer below, fallback to above, then clamp
+      if (fitsBelow) {
+        top = rect.bottom + offset;
+      } else if (fitsAbove) {
+        top = rect.top - bubbleRect.height - offset;
+      } else {
+        // Doesn't fit either above or below - position at top with padding
+        // or bottom with padding, whichever gives more space
+        const spaceAbove = rect.top - padding;
+        const spaceBelow = viewportHeight - rect.bottom - padding;
+
+        if (spaceBelow >= spaceAbove) {
+          // More space below - align to bottom of viewport
+          top = viewportHeight - bubbleRect.height - padding;
+        } else {
+          // More space above - align to top of viewport
+          top = padding;
+        }
+      }
+
+      // Position horizontally: ensure bubble stays within viewport
+      // Try to align with left edge of selection
+      left = rect.left;
+
+      // If would overflow right edge, shift left
+      if (left + bubbleRect.width + padding > viewportWidth) {
+        left = viewportWidth - bubbleRect.width - padding;
+      }
+
+      // If would overflow left edge, shift right
+      if (left < padding) {
+        left = padding;
+      }
+
+      // Final safety clamps
+      left = Math.max(padding, Math.min(left, viewportWidth - bubbleRect.width - padding));
+      top = Math.max(padding, Math.min(top, viewportHeight - bubbleRect.height - padding));
+
+      // Update bubble position
+      commentBubble.style.left = left + 'px';
+      commentBubble.style.top = top + 'px';
+
+      // Update active highlight positions
+      if (activeHighlight) {
+        // Remove old highlight divs
+        while (activeHighlight.firstChild) {
+          activeHighlight.removeChild(activeHighlight.firstChild);
+        }
+
+        // Create new highlight divs for current positions
+        for (let i = 0; i < rects.length; i++) {
+          const r = rects[i];
+          const highlightDiv = document.createElement('div');
+          highlightDiv.className = 'commentary-active-highlight';
+          highlightDiv.style.position = 'fixed';
+          highlightDiv.style.left = r.left + 'px';
+          highlightDiv.style.top = r.top + 'px';
+          highlightDiv.style.width = r.width + 'px';
+          highlightDiv.style.height = r.height + 'px';
+          highlightDiv.style.pointerEvents = 'none';
+          activeHighlight.appendChild(highlightDiv);
+        }
+      }
+    } catch (error) {
+      console.error('[OVERLAY] Failed to update positions:', error);
+    }
+  }
+
+  /**
    * Show comment bubble near selection
    */
   function showBubble(selection, x, y) {
@@ -186,6 +325,9 @@ console.log('[OVERLAY.JS] Script is loading...');
     if (commentBubble) {
       commentBubble.remove();
     }
+
+    // Store the range for repositioning on scroll
+    trackedRange = selection.getRangeAt(0);
 
     commentBubble = document.createElement('div');
     commentBubble.className = 'commentary-bubble';
@@ -220,7 +362,11 @@ console.log('[OVERLAY.JS] Script is loading...');
     buttonContainer.className = 'commentary-buttons';
 
     const saveBtn = document.createElement('button');
+    // Detect platform for keyboard shortcut hint
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
     saveBtn.textContent = 'Save';
+    saveBtn.title = `Save comment (${shortcut})`;
     saveBtn.className = 'commentary-btn commentary-btn-primary';
     saveBtn.onclick = () => {
       console.log('[OVERLAY] Save button clicked!');
@@ -238,35 +384,118 @@ console.log('[OVERLAY.JS] Script is loading...');
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
 
-    // Calculate position that keeps bubble within viewport
+    // Make visible before positioning (needed for accurate getBoundingClientRect)
+    commentBubble.style.visibility = 'visible';
+
+    // Use updatePositions for initial positioning based on the range
+    updatePositions();
+
+    // Add scroll listener to keep bubble positioned with text
+    scrollListener = () => {
+      updatePositions();
+    };
+    window.addEventListener('scroll', scrollListener, true); // Use capture for all scroll events
+
+    // Focus textarea
+    textarea.focus();
+  }
+
+  /**
+   * Show comment bubble for document-level comments (near the button)
+   */
+  function showBubbleForDocument() {
+    // Don't call hideBubble() here - it clears currentSelection!
+    // Just remove old bubble if it exists
+    if (commentBubble) {
+      commentBubble.remove();
+    }
+
+    commentBubble = document.createElement('div');
+    commentBubble.className = 'commentary-bubble';
+
+    // Get button position
+    const button = document.querySelector('.commentary-doc-button');
+    let x = 70; // Default: right of button
+    let y = 20; // Default: slightly below top
+
+    if (button) {
+      const buttonRect = button.getBoundingClientRect();
+      x = buttonRect.right + 10; // 10px to the right of button
+      y = buttonRect.top;
+    }
+
+    // Position near button with viewport bounds checking
+    commentBubble.style.position = 'fixed';
+
+    // Temporarily append to measure dimensions
+    commentBubble.style.visibility = 'hidden';
+    document.body.appendChild(commentBubble);
+
+    // Create bubble content
+    const textarea = document.createElement('textarea');
+    textarea.placeholder = 'Add comment for entire document...';
+    textarea.className = 'commentary-textarea';
+
+    // Add keyboard shortcuts
+    textarea.addEventListener('keydown', (e) => {
+      // Cmd+Enter / Ctrl+Enter to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveComment(textarea.value);
+      }
+      // Escape to cancel
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideBubble();
+      }
+    });
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'commentary-buttons';
+
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.textContent = 'Save';
+    saveBtn.title = `Save comment (${shortcut})`;
+    saveBtn.className = 'commentary-btn commentary-btn-primary';
+    saveBtn.onclick = () => saveComment(textarea.value);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'commentary-btn';
+    cancelBtn.onclick = () => hideBubble();
+
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(saveBtn);
+
+    commentBubble.appendChild(textarea);
+    commentBubble.appendChild(buttonContainer);
+
+    // Now measure and position with bounds checking
     const bubbleRect = commentBubble.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const padding = 10; // Padding from viewport edges
+    const padding = 10;
 
-    // Calculate ideal position (below and to the right of cursor)
-    let left = x;
-    let top = y + 20;
-
-    // Check right edge - flip to left if would overflow
-    if (left + bubbleRect.width + padding > viewportWidth) {
-      left = Math.max(padding, viewportWidth - bubbleRect.width - padding);
+    // Horizontal constraint
+    if (x + bubbleRect.width + padding > viewportWidth) {
+      x = viewportWidth - bubbleRect.width - padding;
+    }
+    if (x < padding) {
+      x = padding;
     }
 
-    // Check bottom edge - flip to above cursor if would overflow
-    if (top + bubbleRect.height + padding > viewportHeight) {
-      top = Math.max(padding, y - bubbleRect.height - 10);
+    // Vertical constraint
+    if (y + bubbleRect.height + padding > viewportHeight) {
+      y = viewportHeight - bubbleRect.height - padding;
+    }
+    if (y < padding) {
+      y = padding;
     }
 
-    // Ensure bubble doesn't go off left edge
-    left = Math.max(padding, left);
-
-    // Ensure bubble doesn't go off top edge
-    top = Math.max(padding, top);
-
-    // Apply final position and make visible
-    commentBubble.style.left = left + 'px';
-    commentBubble.style.top = top + 'px';
+    commentBubble.style.left = x + 'px';
+    commentBubble.style.top = y + 'px';
     commentBubble.style.visibility = 'visible';
 
     // Focus textarea
@@ -334,9 +563,20 @@ console.log('[OVERLAY.JS] Script is loading...');
       commentBubble.remove();
       commentBubble = null;
     }
+
+    // Remove scroll listener
+    if (scrollListener) {
+      window.removeEventListener('scroll', scrollListener, true);
+      scrollListener = null;
+    }
+
+    // Clear tracked range
+    trackedRange = null;
+
     removeActiveHighlight();
     console.log('[OVERLAY] Clearing currentSelection');
     currentSelection = null;
+    isDocumentLevelComment = false; // Reset document-level flag
   }
 
   /**
@@ -345,6 +585,7 @@ console.log('[OVERLAY.JS] Script is loading...');
   function saveComment(text) {
     console.log('saveComment called with:', text);
     console.log('currentSelection:', currentSelection);
+    console.log('isDocumentLevelComment:', isDocumentLevelComment);
 
     if (!text.trim() || !currentSelection) {
       console.log('Skipping save - empty text or no selection');
@@ -355,6 +596,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       type: 'saveComment',
       selection: currentSelection,
       commentText: text.trim(),
+      isDocumentLevel: isDocumentLevelComment,
       // documentUri will be added by the extension host
     };
 
@@ -362,7 +604,11 @@ console.log('[OVERLAY.JS] Script is loading...');
     postMessage(message);
 
     hideBubble();
-    window.getSelection()?.removeAllRanges();
+
+    // Only clear selection if it's not a document-level comment
+    if (!isDocumentLevelComment) {
+      window.getSelection()?.removeAllRanges();
+    }
   }
 
   /**
