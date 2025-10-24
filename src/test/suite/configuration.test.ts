@@ -11,10 +11,10 @@ suite('Configuration Tests', () => {
       assert.ok(inspect);
     });
 
-    test('Should have default provider as claude', () => {
+    test('Should have default provider as cursor', () => {
       const config = vscode.workspace.getConfiguration('commentary.agent');
-      const provider = config.get<string>('provider', 'claude');
-      assert.strictEqual(provider, 'claude');
+      const provider = config.get<string>('provider', 'cursor');
+      assert.strictEqual(provider, 'cursor');
     });
   });
 
