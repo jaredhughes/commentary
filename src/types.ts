@@ -48,7 +48,8 @@ export enum MessageType {
   SendToAgent = 'sendToAgent',
   Ready = 'ready',
   SelectionMade = 'selectionMade',
-  AddDocumentComment = 'addDocumentComment'
+  AddDocumentComment = 'addDocumentComment',
+  UpdateDocumentText = 'updateDocumentText'
 }
 
 /**
@@ -125,6 +126,12 @@ export interface AddDocumentCommentMessage extends BaseMessage {
   type: MessageType.AddDocumentComment;
 }
 
+export interface UpdateDocumentTextMessage extends BaseMessage {
+  type: MessageType.UpdateDocumentText;
+  oldText: string;
+  newText: string;
+}
+
 export type PreviewMessage =
   | SaveCommentMessage
   | SaveAndSubmitToAgentMessage
@@ -135,7 +142,8 @@ export type PreviewMessage =
   | SendToAgentMessage
   | ReadyMessage
   | SelectionMadeMessage
-  | AddDocumentCommentMessage;
+  | AddDocumentCommentMessage
+  | UpdateDocumentTextMessage;
 
 export interface BaseHostMessage {
   type: HostMessageType;
