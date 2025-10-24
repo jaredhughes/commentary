@@ -990,14 +990,15 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Delete button (only for existing comments with noteId)
     if (editingNoteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.innerHTML = '🗑️';
       deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
       deleteBtn.onclick = () => {
         if (confirm('Delete this comment?')) {
           postMessage({
             type: 'deleteComment',
-            noteId: editingNoteId
+            noteId: editingNoteId,
+            documentUri: window.commentaryDocumentUri
           });
           hideBubble();
         }
@@ -1111,14 +1112,15 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Delete button (only for existing comments with noteId)
     if (editingNoteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.innerHTML = '🗑️';
       deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
       deleteBtn.onclick = () => {
         if (confirm('Delete this comment?')) {
           postMessage({
             type: 'deleteComment',
-            noteId: editingNoteId
+            noteId: editingNoteId,
+            documentUri: window.commentaryDocumentUri
           });
           hideBubble();
         }
