@@ -140,6 +140,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(treeView);
 
+  // Trigger initial refresh to load existing comments
+  commentsViewProvider.refresh();
+
   // Initialize file decoration provider for Explorer badges
   fileDecorationProvider = new CommentaryFileDecorationProvider(storageManager);
   context.subscriptions.push(
