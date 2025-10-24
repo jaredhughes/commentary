@@ -89,7 +89,7 @@ export class PayloadBuilder {
     const context = await this.buildContext(note);
     return {
       contexts: [context],
-      instruction: 'Review this comment and provide suggestions for improvement.',
+      instruction: 'Edit the document to address this comment. Apply the requested changes directly to the file.',
     };
   }
 
@@ -102,7 +102,7 @@ export class PayloadBuilder {
     return {
       contexts,
       instruction:
-        'Review these comments and provide suggestions for addressing all of them.',
+        'Edit the document to address all these comments. Apply the requested changes directly to the file.',
     };
   }
 

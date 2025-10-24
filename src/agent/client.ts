@@ -211,49 +211,63 @@ export class AgentClient {
    */
   private async sendViaCursorCLI(prompt: string, request: AgentRequest): Promise<boolean> {
     try {
-      // Copy to clipboard as a fallback
+      // Copy to clipboard first
       await vscode.env.clipboard.writeText(prompt);
 
-      // Try to invoke Cursor's chat command directly
       const commentCount = request.contexts.length;
 
-      try {
-        // Attempt to open Cursor chat with the prompt
-        // Cursor provides commands like 'aichat.newchataction' or similar
-        const commands = await vscode.commands.getCommands();
+      // Try to find and execute Cursor chat command
+      const commands = await vscode.commands.getCommands();
 
-        // Look for Cursor-specific chat commands
-        const cursorChatCommand = commands.find(cmd =>
-          cmd.includes('aichat') ||
-          cmd.includes('cursorChat') ||
-          cmd.includes('composer')
+      // Look for Cursor-specific chat commands (in order of preference)
+      const chatCommandPatterns = [
+        'aichat.newchataction',
+        'aichat.openaichat',
+        'workbench.action.chat.open',
+        'workbench.action.quickchat.toggle'
+      ];
+
+      let chatOpened = false;
+
+      for (const pattern of chatCommandPatterns) {
+        const matchingCommand = commands.find(cmd =>
+          cmd === pattern || cmd.includes(pattern)
         );
 
-        if (cursorChatCommand) {
-          // Try to execute the chat command
-          await vscode.commands.executeCommand(cursorChatCommand);
-
-          // Wait a moment for chat to open, then the prompt is in clipboard ready to paste
-          vscode.window.showInformationMessage(
-            `💬 Cursor chat opened! Prompt is in clipboard - paste (⌘V) to send ${commentCount} comment${commentCount > 1 ? 's' : ''}.`,
-            'Got it'
-          );
-        } else {
-          // Fallback: show manual instruction
-          const message = commentCount === 1
-            ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
-            : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
-
-          vscode.window.showInformationMessage(message, 'Got it');
+        if (matchingCommand) {
+          try {
+            await vscode.commands.executeCommand(matchingCommand);
+            chatOpened = true;
+            console.log('[Commentary] Opened Cursor chat with command:', matchingCommand);
+            break;
+          } catch (error) {
+            console.log('[Commentary] Failed to execute command:', matchingCommand, error);
+          }
         }
-      } catch (commandError) {
-        // If command execution fails, show manual instruction
-        console.log('Cursor command not available:', commandError);
-        const message = commentCount === 1
-          ? '💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss this comment.'
-          : `💬 Prompt copied! Open Cursor chat (⌘L) and paste to discuss ${commentCount} comments.`;
+      }
 
-        vscode.window.showInformationMessage(message, 'Got it');
+      if (chatOpened) {
+        // Give chat a moment to fully open and focus
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Try to focus the input field (this may or may not work depending on Cursor's implementation)
+        try {
+          await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+        } catch (error) {
+          // Silently fail - not critical
+        }
+
+        // Show brief status bar message instead of intrusive notification
+        vscode.window.setStatusBarMessage(
+          `$(comment-discussion) Chat ready - paste (⌘V) to send ${commentCount} comment${commentCount > 1 ? 's' : ''}`,
+          5000
+        );
+      } else {
+        // Fallback: show status bar message with manual instruction
+        vscode.window.setStatusBarMessage(
+          `$(clippy) Prompt copied - open Cursor chat (⌘L) and paste`,
+          5000
+        );
       }
 
       return true;
