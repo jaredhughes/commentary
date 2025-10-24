@@ -943,6 +943,13 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
+    // Scroll to the highlight and add visual emphasis
+    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    mark.classList.add('commentary-highlight-focus');
+    setTimeout(() => {
+      mark.classList.remove('commentary-highlight-focus');
+    }, 2000);
+
     // Remove old bubble if exists
     if (commentBubble) {
       commentBubble.remove();

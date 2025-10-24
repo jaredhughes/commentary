@@ -27,7 +27,6 @@ suite('Commentary Extension Test Suite', () => {
     assert.ok(commentaryCommands.includes('commentary.sendToAgent'));
     assert.ok(commentaryCommands.includes('commentary.sendAllToAgent'));
     assert.ok(commentaryCommands.includes('commentary.refreshComments'));
-    assert.ok(commentaryCommands.includes('commentary.revealComment'));
   });
 
   test('All required commands should be present', async () => {
@@ -41,7 +40,6 @@ suite('Commentary Extension Test Suite', () => {
       'commentary.sendAllToAgent',
       'commentary.exportComments',
       'commentary.importComments',
-      'commentary.revealComment',
       'commentary.refreshComments',
       'commentary.showCommentsSidebar',
     ];
