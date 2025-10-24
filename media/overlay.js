@@ -25,13 +25,18 @@ console.log('[OVERLAY.JS] Script is loading...');
   let editingNoteId = null; // Track which note is being edited (null for new comments)
 
   /**
-   * Get agent button text and icon
+   * Get agent button text and icon based on provider
    */
   function getAgentButtonConfig() {
+    const provider = window.commentaryAgentProvider || 'cursor';
+    const isClaude = provider === 'claude';
+
     return {
-      icon: '➤',
-      text: 'Send to agent',
-      tooltip: 'Send comment to AI agent (opens Cursor chat or calls Claude API)'
+      icon: isClaude ? '➤' : '📋',
+      text: isClaude ? 'Send to agent' : 'Copy for agent',
+      tooltip: isClaude
+        ? 'Send comment to Claude Code via terminal'
+        : 'Copy comment to clipboard and open Cursor chat'
     };
   }
 
