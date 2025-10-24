@@ -10,14 +10,32 @@ import { CommentsViewProvider } from './sidebar/commentsView';
 import { CommandManager } from './sidebar/commands';
 import { AgentClient } from './agent/client';
 import { MarkdownWebviewProvider } from './preview/markdownWebview';
+import { CommentaryFileDecorationProvider } from './decorations/fileDecorationProvider';
 
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
 let commentsViewProvider: CommentsViewProvider | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
+let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Commentary extension is now active');
+
+  // Set default theme based on system color scheme (only if not already configured)
+  const config = vscode.workspace.getConfiguration('commentary.theme');
+  const currentTheme = config.inspect<string>('name');
+
+  // Only set default if user hasn't explicitly configured a theme
+  if (!currentTheme?.workspaceValue && !currentTheme?.globalValue) {
+    const colorTheme = vscode.window.activeColorTheme;
+    const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
+      ? 'github-dark'
+      : 'github-light';
+
+    console.log(`Setting default theme based on color scheme: ${defaultTheme}`);
+    // Set as workspace value so it's not persisted globally
+    config.update('name', defaultTheme, vscode.ConfigurationTarget.Workspace);
+  }
 
   // Initialize storage
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -115,19 +133,25 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Initialize comments view provider
-  commentsViewProvider = new CommentsViewProvider(storageManager);
+  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
   const treeView = vscode.window.createTreeView('commentary.commentsView', {
     treeDataProvider: commentsViewProvider,
-    showCollapseAll: true,
   });
 
   context.subscriptions.push(treeView);
 
-  // Refresh view when notes change
+  // Initialize file decoration provider for Explorer badges
+  fileDecorationProvider = new CommentaryFileDecorationProvider(storageManager);
+  context.subscriptions.push(
+    vscode.window.registerFileDecorationProvider(fileDecorationProvider)
+  );
+
+  // Refresh view and decorations when notes change
   overlayHost.onNotesChanged(() => {
-    console.log('[Extension] onNotesChanged fired - refreshing sidebar');
+    console.log('[Extension] onNotesChanged fired - refreshing sidebar and decorations');
     commentsViewProvider?.refresh();
-    console.log('[Extension] Sidebar refresh called');
+    fileDecorationProvider?.refresh();
+    console.log('[Extension] Sidebar and decorations refresh called');
   });
 
   // Initialize command manager
@@ -136,7 +160,8 @@ export function activate(context: vscode.ExtensionContext) {
     storageManager,
     overlayHost,
     commentsViewProvider,
-    agentClient
+    agentClient,
+    markdownWebviewProvider
   );
   commandManager.registerCommands();
 

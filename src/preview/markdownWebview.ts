@@ -14,6 +14,7 @@ import { PreviewMessage } from '../types';
 export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider {
   private panels: Map<string, vscode.WebviewPanel> = new Map();
   private md: MarkdownIt;
+  private activeDocumentUri: string | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -56,6 +57,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
     this.panels.set(uri, webviewPanel);
 
+    // Track this as the active document
+    this.activeDocumentUri = uri;
+
     // Set initial content
     this.updateContent(webviewPanel, document);
 
@@ -69,9 +73,21 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     // Register panel with overlay host for sending messages back
     this.overlayHost.registerWebview(webviewPanel, document.uri.toString());
 
+    // Track when this panel becomes visible
+    webviewPanel.onDidChangeViewState((e) => {
+      if (e.webviewPanel.visible) {
+        this.activeDocumentUri = uri;
+      }
+    });
+
     // Clean up when panel is closed
     webviewPanel.onDidDispose(
-      () => this.panels.delete(uri),
+      () => {
+        this.panels.delete(uri);
+        if (this.activeDocumentUri === uri) {
+          this.activeDocumentUri = undefined;
+        }
+      },
       null,
       this.context.subscriptions
     );
@@ -172,6 +188,29 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       }
       changeDisposable.dispose();
     });
+  }
+
+  /**
+   * Refresh all open webviews (e.g., when theme changes)
+   */
+  async refreshAllWebviews(): Promise<void> {
+    console.log('[MarkdownWebviewProvider] Refreshing all webviews');
+    for (const [uriString, panel] of this.panels.entries()) {
+      try {
+        const uri = vscode.Uri.parse(uriString);
+        const document = await vscode.workspace.openTextDocument(uri);
+        this.updateContent(panel, document);
+      } catch (error) {
+        console.error(`Failed to refresh webview for ${uriString}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Get the URI of the currently active Commentary document
+   */
+  getActiveDocumentUri(): string | undefined {
+    return this.activeDocumentUri;
   }
 
   /**
