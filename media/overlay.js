@@ -987,6 +987,24 @@ console.log('[OVERLAY.JS] Script is loading...');
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
 
+    // Delete button (only for existing comments with noteId)
+    if (editingNoteId) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.title = 'Delete this comment';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger';
+      deleteBtn.onclick = () => {
+        if (confirm('Delete this comment?')) {
+          postMessage({
+            type: 'deleteComment',
+            noteId: editingNoteId
+          });
+          hideBubble();
+        }
+      };
+      buttonContainer.appendChild(deleteBtn);
+    }
+
     const saveBtn = document.createElement('button');
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
@@ -1089,6 +1107,24 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
+
+    // Delete button (only for existing comments with noteId)
+    if (editingNoteId) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.title = 'Delete this comment';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger';
+      deleteBtn.onclick = () => {
+        if (confirm('Delete this comment?')) {
+          postMessage({
+            type: 'deleteComment',
+            noteId: editingNoteId
+          });
+          hideBubble();
+        }
+      };
+      buttonContainer.appendChild(deleteBtn);
+    }
 
     const saveBtn = document.createElement('button');
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;

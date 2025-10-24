@@ -231,13 +231,23 @@ export class OverlayHost {
     });
 
     // Handle delete comment
-    this.messageHandler.on(MessageType.DeleteComment, async (msg: DeleteCommentMessage) => {
-      const activeEditor = vscode.window.activeTextEditor;
-      if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
+    this.messageHandler.on(MessageType.DeleteComment, async (msg: DeleteCommentMessage & { documentUri?: string }) => {
+      // Get document URI from the message or fall back to active editor
+      let documentUri: string | undefined;
+      if (msg.documentUri) {
+        documentUri = msg.documentUri;
+      } else {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.languageId === 'markdown') {
+          documentUri = activeEditor.document.uri.toString();
+        }
+      }
+
+      if (!documentUri) {
+        console.error('No document URI found for deleting comment');
         return;
       }
 
-      const documentUri = activeEditor.document.uri.toString();
       await this.storage.deleteNote(msg.noteId, documentUri);
 
       // Send removeHighlight message to the webview
