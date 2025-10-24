@@ -282,28 +282,18 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
   <!-- Minimal reset + base styles -->
   <style nonce="${nonce}">
-    /* Reset browser defaults */
+    /* Minimal reset - let themes control typography and spacing */
     * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
     }
     html, body {
       margin: 0;
       padding: 0;
     }
-    html {
-      font-size: 14px !important;
-    }
-    /* Reset link colors - let themes control everything */
-    a, a:link, a:visited, a:hover, a:active {
-      color: inherit;
-      text-decoration: inherit;
-    }
 
-    /* Layout rules */
+    /* Layout rules - extra top padding for floating button */
     body {
-      padding: 32px;
+      padding: 64px 32px 32px 32px;
     }
     #markdown-content {
       max-width: none;
@@ -311,15 +301,11 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       margin: 0 auto;
     }
 
-    /* Scale down code blocks */
-    code, pre, pre code {
-      font-size: 0.85em;
-    }
     @media (max-width: 768px) {
-      body { padding: 20px; }
+      body { padding: 56px 20px 20px 20px; }
     }
     @media (max-width: 480px) {
-      body { padding: 16px; }
+      body { padding: 48px 12px 12px 12px; }
     }
   </style>
 
