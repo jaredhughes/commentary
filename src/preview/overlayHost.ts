@@ -401,45 +401,6 @@ export class OverlayHost {
       await vscode.commands.executeCommand('commentary.sendToAgent', { note });
     });
 
-    // Handle update document text (from contenteditable)
-    this.messageHandler.on(MessageType.UpdateDocumentText, async (msg: UpdateDocumentTextMessage) => {
-      console.log('UpdateDocumentText handler called:', msg);
-
-      // Get active markdown editor
-      const activeEditor = vscode.window.activeTextEditor;
-      if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-        console.error('No active markdown editor found');
-        return;
-      }
-
-      const document = activeEditor.document;
-      const fullText = document.getText();
-
-      // Find the old text in the document
-      const oldTextIndex = fullText.indexOf(msg.oldText);
-      if (oldTextIndex === -1) {
-        console.error('Could not find old text in document:', msg.oldText);
-        vscode.window.showWarningMessage('Could not find text to replace in document');
-        return;
-      }
-
-      // Create edit to replace old text with new text
-      const startPos = document.positionAt(oldTextIndex);
-      const endPos = document.positionAt(oldTextIndex + msg.oldText.length);
-      const range = new vscode.Range(startPos, endPos);
-
-      // Apply the edit
-      const edit = new vscode.WorkspaceEdit();
-      edit.replace(document.uri, range, msg.newText);
-
-      const success = await vscode.workspace.applyEdit(edit);
-      if (success) {
-        console.log('Successfully updated document text');
-      } else {
-        console.error('Failed to update document text');
-        vscode.window.showErrorMessage('Failed to update document');
-      }
-    });
   }
 
   /**
