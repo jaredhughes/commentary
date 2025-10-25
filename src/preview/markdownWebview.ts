@@ -384,15 +384,15 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const config = vscode.workspace.getConfiguration('commentary.agent');
     const provider = config.get<string>('provider', 'cursor');
 
-    console.log('[MarkdownWebview] Broadcasting provider update:', provider);
+    console.log('[MarkdownWebview] Broadcasting provider update to all panels:', provider);
+    console.log('[MarkdownWebview] Number of panels:', this.panels.size);
 
     for (const panel of this.panels.values()) {
-      if (panel.visible) {
-        panel.webview.postMessage({
-          type: 'updateProvider',
-          provider: provider,
-        });
-      }
+      console.log('[MarkdownWebview] Sending update to panel, visible:', panel.visible);
+      panel.webview.postMessage({
+        type: 'updateProvider',
+        provider: provider,
+      });
     }
   }
 

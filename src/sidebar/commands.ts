@@ -37,11 +37,14 @@ export class CommandManager {
           const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(documentUri));
           await this.webviewProvider.openMarkdown(doc);
 
-          // Wait a moment for the webview to initialize
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Wait longer for the webview to initialize and highlights to paint
+          await new Promise(resolve => setTimeout(resolve, 800));
         } else {
-          // Document already open - just reveal the panel without re-opening
-          existingPanel.reveal(vscode.ViewColumn.One, true); // preserveFocus = true to avoid scrolling
+          // Document already open - just reveal the panel
+          existingPanel.reveal(vscode.ViewColumn.One, true);
+
+          // Still wait a bit for any pending updates
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
 
         // Get the webview panel and show the edit bubble
@@ -119,15 +122,35 @@ export class CommandManager {
       })
     );
 
-    // Send comment to agent
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.sendToAgent', async (item: CommentTreeItem) => {
-        if (!item || !item.note) {
-          return;
-        }
+    // Send comment to agent (shared logic for all provider variants)
+    const sendToAgentHandler = async (item: CommentTreeItem | { note: Note }) => {
+      // Handle both CommentTreeItem (from sidebar) and plain { note } object (from overlay)
+      const note = item instanceof CommentTreeItem ? item.note : item.note;
 
-        await this.agentClient.sendSingleComment(item.note);
-      })
+      if (!note) {
+        return;
+      }
+
+      await this.agentClient.sendSingleComment(note);
+
+      // Delete the comment after sending
+      await this.storage.deleteNote(note.id, note.file);
+      this.commentsView.refresh();
+    };
+
+    // Send comment to agent (generic)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgent', sendToAgentHandler)
+    );
+
+    // Send comment to agent (Claude-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentClaude', sendToAgentHandler)
+    );
+
+    // Send comment to agent (Cursor-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentCursor', sendToAgentHandler)
     );
 
     // Send all comments to agent (across all documents)
