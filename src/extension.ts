@@ -215,6 +215,8 @@ export function activate(context: vscode.ExtensionContext) {
       // We rely on preview scripts and styles injection
       return md;
     },
+    // Export context for testing
+    context,
   };
 }
 
