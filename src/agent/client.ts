@@ -191,17 +191,19 @@ export class AgentClient {
         `commentary-prompt-${Date.now()}.md`
       );
 
-      fs.writeFileSync(tempPromptPath, prompt);
+      // Build the prompt with file context
+      const promptWithFile = `I have comments on the file: ${filePath}\n\n${prompt}\n\nPlease review the comments and suggest edits.`;
+      fs.writeFileSync(tempPromptPath, promptWithFile);
 
-      // Execute: cat prompt.md | <claude-command> --output-file original.md
-      // This will send the prompt to Claude and save the response back to the original file
-      const command = `cat "${tempPromptPath}" | ${claudeCommand} --output-file "${filePath}"`;
+      // Execute: cat prompt.md | <claude-command>
+      // This will send the prompt to Claude Code in an interactive session
+      const command = `cat "${tempPromptPath}" | ${claudeCommand}`;
 
       terminal.sendText(command);
 
       const terminalStatus = isReusedTerminal ? '(reusing terminal)' : '(new terminal)';
       vscode.window.showInformationMessage(
-        `🤖 Sending ${request.contexts.length} comment(s) to Claude CLI ${terminalStatus}`,
+        `🤖 Opening Claude Code with ${request.contexts.length} comment(s) ${terminalStatus}`,
         'View Terminal'
       ).then((action) => {
         if (action === 'View Terminal') {
