@@ -1261,6 +1261,23 @@ console.log('[OVERLAY.JS] Script is loading...');
         };
         showBubbleForDocument();
         break;
+
+      case 'updateProvider':
+        // Update provider and refresh any visible edit bubbles
+        window.commentaryAgentProvider = message.provider;
+        console.log('[OVERLAY] Provider updated to:', message.provider);
+
+        // If there's a visible edit bubble, update its button text
+        if (commentBubble && commentBubble.parentNode) {
+          const submitBtn = commentBubble.querySelector('.commentary-btn-primary');
+          if (submitBtn) {
+            const agentConfig = getAgentButtonConfig();
+            submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
+            submitBtn.title = agentConfig.tooltip;
+            console.log('[OVERLAY] Updated submit button to:', agentConfig.text);
+          }
+        }
+        break;
     }
   }
 
