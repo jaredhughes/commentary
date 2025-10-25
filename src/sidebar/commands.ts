@@ -153,24 +153,37 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendToAgentCursor', sendToAgentHandler)
     );
 
-    // Send all comments to agent (across all documents)
+    // Send all comments to agent (across all documents) - shared handler
+    const sendAllToAgentHandler = async () => {
+      // Get all comments across all documents
+      const allNotes = await this.storage.getAllNotes();
+      const notes: Note[] = [];
+
+      for (const [fileUri, fileNotes] of allNotes.entries()) {
+        notes.push(...fileNotes);
+      }
+
+      if (notes.length === 0) {
+        vscode.window.showInformationMessage('No comments to send');
+        return;
+      }
+
+      await this.agentClient.sendMultipleComments(notes);
+    };
+
+    // Generic command (for command palette)
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.sendAllToAgent', async () => {
-        // Get all comments across all documents
-        const allNotes = await this.storage.getAllNotes();
-        const notes: Note[] = [];
+      vscode.commands.registerCommand('commentary.sendAllToAgent', sendAllToAgentHandler)
+    );
 
-        for (const [fileUri, fileNotes] of allNotes.entries()) {
-          notes.push(...fileNotes);
-        }
+    // Send all comments to agent (Claude-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentClaude', sendAllToAgentHandler)
+    );
 
-        if (notes.length === 0) {
-          vscode.window.showInformationMessage('No comments to send');
-          return;
-        }
-
-        await this.agentClient.sendMultipleComments(notes);
-      })
+    // Send all comments to agent (Cursor-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentCursor', sendAllToAgentHandler)
     );
 
     // Export comments
