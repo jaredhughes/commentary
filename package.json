@@ -62,6 +62,18 @@
         "icon": "$(send)"
       },
       {
+        "command": "commentary.sendToAgentClaude",
+        "title": "Send to Agent",
+        "category": "Commentary",
+        "icon": "$(send)"
+      },
+      {
+        "command": "commentary.sendToAgentCursor",
+        "title": "Copy for Agent",
+        "category": "Commentary",
+        "icon": "$(copy)"
+      },
+      {
         "command": "commentary.sendAllToAgent",
         "title": "Send all to agent",
         "category": "Commentary",
@@ -269,8 +281,13 @@
       ],
       "view/item/context": [
         {
-          "command": "commentary.sendToAgent",
-          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment)",
+          "command": "commentary.sendToAgentClaude",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == claude",
+          "group": "inline@1"
+        },
+        {
+          "command": "commentary.sendToAgentCursor",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == cursor",
           "group": "inline@1"
         },
         {

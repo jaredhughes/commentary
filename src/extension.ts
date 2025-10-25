@@ -41,6 +41,24 @@ export function activate(context: vscode.ExtensionContext) {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
   storageManager = new StorageManager(context, workspaceRoot);
 
+  // Set initial agent provider context key (for conditional UI)
+  const updateProviderContext = () => {
+    const agentConfig = vscode.workspace.getConfiguration('commentary.agent');
+    const provider = agentConfig.get<string>('provider', 'cursor');
+    vscode.commands.executeCommand('setContext', 'commentary.agentProvider', provider);
+    console.log('[Extension] Set commentary.agentProvider context to:', provider);
+  };
+  updateProviderContext();
+
+  // Listen for provider configuration changes and update context
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('commentary.agent.provider')) {
+        updateProviderContext();
+      }
+    })
+  );
+
   // Initialize overlay host
   overlayHost = new OverlayHost(context, storageManager);
 
