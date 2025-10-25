@@ -269,7 +269,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
     // Get theme CSS
     const config = vscode.workspace.getConfiguration('commentary');
-    const themeName = config.get<string>('theme.name', 'github-light');
+    const themeName = config.get<string>('theme.name', 'simple');
     const themeUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );

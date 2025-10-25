@@ -2,7 +2,7 @@
   "name": "commentary",
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "publisher": "hughesjared",
   "license": "MIT",
   "repository": {
@@ -327,10 +327,8 @@
       "properties": {
         "commentary.theme.name": {
           "type": "string",
-          "default": "github-light",
+          "default": "simple",
           "enum": [
-            "github-light",
-            "github-dark",
             "water-light",
             "water-dark",
             "sakura-light",
@@ -452,7 +450,6 @@
     "@typescript-eslint/parser": "^6.x",
     "@vscode/test-electron": "^2.3.8",
     "eslint": "^8.x",
-    "github-markdown-css": "^5.8.1",
     "glob": "^10.3.10",
     "husky": "^9.1.7",
     "latex.css": "^1.13.0",

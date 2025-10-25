@@ -93,11 +93,11 @@ suite('Configuration Tests', () => {
       assert.ok(inspect !== undefined);
     });
 
-    test('Should have default theme as github-light', () => {
+    test('Should have default theme as simple', () => {
       const config = vscode.workspace.getConfiguration('commentary.theme');
-      const theme = config.get<string>('name', 'github-light');
+      const theme = config.get<string>('name', 'simple');
 
-      assert.strictEqual(theme, 'github-light');
+      assert.strictEqual(theme, 'simple');
     });
   });
 

@@ -14,16 +14,6 @@ if (!fs.existsSync(themesDir)) {
 }
 
 const themes = [
-  // GitHub Markdown CSS - Familiar, accurate
-  {
-    src: 'node_modules/github-markdown-css/github-markdown-light.css',
-    dest: 'media/themes/github-light.css'
-  },
-  {
-    src: 'node_modules/github-markdown-css/github-markdown-dark.css',
-    dest: 'media/themes/github-dark.css'
-  },
-
   // Water.css - Modern, beautiful
   {
     src: 'node_modules/water.css/out/light.css',

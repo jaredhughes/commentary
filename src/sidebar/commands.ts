@@ -627,7 +627,7 @@ export class CommandManager {
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.selectTheme', async () => {
         const config = vscode.workspace.getConfiguration('commentary.theme');
-        const currentTheme = config.get<string>('name', 'github-light');
+        const currentTheme = config.get<string>('name', 'simple');
 
         // Define theme options organized by package
         interface ThemeOption {
@@ -638,10 +638,6 @@ export class CommandManager {
         }
 
         const themes: ThemeOption[] = [
-          // GitHub
-          { label: 'GitHub Light', value: 'github-light', description: 'Official GitHub markdown styling', detail: 'GitHub' },
-          { label: 'GitHub Dark', value: 'github-dark', description: 'Official GitHub dark mode', detail: 'GitHub' },
-
           // Water.css
           { label: 'Water Light', value: 'water-light', description: 'Modern, clean, excellent contrast', detail: 'Water.css' },
           { label: 'Water Dark', value: 'water-dark', description: 'Modern dark mode', detail: 'Water.css' },

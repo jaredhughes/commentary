@@ -29,8 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
   if (!currentTheme?.workspaceValue && !currentTheme?.globalValue) {
     const colorTheme = vscode.window.activeColorTheme;
     const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
-      ? 'github-dark'
-      : 'github-light';
+      ? 'water-dark'
+      : 'water-light';
 
     console.log(`Setting default theme based on color scheme: ${defaultTheme}`);
     // Set as workspace value so it's not persisted globally
