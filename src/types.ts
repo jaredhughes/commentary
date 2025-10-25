@@ -60,7 +60,8 @@ export enum HostMessageType {
   RemoveHighlight = 'removeHighlight',
   ScrollToHighlight = 'scrollToHighlight',
   ClearAllHighlights = 'clearAllHighlights',
-  ShowEditBubble = 'showEditBubble'
+  ShowEditBubble = 'showEditBubble',
+  UpdateProvider = 'updateProvider'
 }
 
 export interface BaseMessage {
