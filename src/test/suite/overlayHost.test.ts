@@ -240,9 +240,9 @@ suite('OverlayHost Tests', () => {
 
       await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
 
+      // Note should be deleted after sending to agent
       const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 1);
-      assert.strictEqual(notes[0].text, 'Send to agent');
+      assert.strictEqual(notes.length, 0);
     });
 
     test('Should update existing comment when submitting with noteId', async () => {
@@ -278,9 +278,9 @@ suite('OverlayHost Tests', () => {
 
       await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
 
+      // Note should be deleted after sending to agent
       const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 1);
-      assert.strictEqual(notes[0].text, 'Updated and sent');
+      assert.strictEqual(notes.length, 0);
     });
   });
 
