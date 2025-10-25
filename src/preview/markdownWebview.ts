@@ -57,6 +57,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         if (e.affectsConfiguration('commentary.agent.provider')) {
           this.broadcastProviderUpdate();
         }
+        // Refresh webviews when theme changes
+        if (e.affectsConfiguration('commentary.theme')) {
+          this.refreshAllWebviews();
+        }
       })
     );
   }
