@@ -332,7 +332,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <link rel="stylesheet" href="${overlayStyleUri}">
 </head>
 <body>
-  <div id="markdown-content">
+  <div id="markdown-content" class="markdown-body">
     ${htmlContent}
   </div>
 
