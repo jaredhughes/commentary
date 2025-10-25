@@ -33,7 +33,7 @@ export class CommentTreeItem extends vscode.TreeItem {
     this.command = {
       command: 'commentary.editCommentFromSidebar',
       title: 'Edit Comment',
-      arguments: [note],
+      arguments: [this],
     };
   }
 
