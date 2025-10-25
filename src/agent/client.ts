@@ -4,6 +4,9 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { Note, AgentRequest, AgentResponse } from '../types';
 import { PayloadBuilder } from './payload';
 import { ApiIntegration } from './apiIntegration';
@@ -197,16 +200,19 @@ export class AgentClient {
       // Build the prompt with file context
       const promptWithFile = `I have comments on the file: ${filePath}\n\n${prompt}\n\nPlease review the comments and suggest edits.`;
 
-      // Copy prompt to clipboard
-      await vscode.env.clipboard.writeText(promptWithFile);
+      // Write prompt to a temporary markdown file
+      const tempDir = os.tmpdir();
+      const tempFileName = `commentary-prompt-${Date.now()}.md`;
+      const tempFilePath = path.join(tempDir, tempFileName);
+      fs.writeFileSync(tempFilePath, promptWithFile, 'utf-8');
 
-      // Launch Claude Code interactively with the file
-      // Don't pipe content - causes "Raw mode not supported" error with Ink UI
-      terminal.sendText(`${claudeCommand} ${filePath}`);
+      // Launch Claude Code with the temp file (includes all context)
+      // This avoids "Raw mode not supported" error and provides full context in one file
+      terminal.sendText(`${claudeCommand} "${tempFilePath}"`);
 
       const terminalStatus = isReusedTerminal ? '(reusing terminal)' : '(new terminal)';
       vscode.window.showInformationMessage(
-        `📋 Prompt copied! Claude Code opening ${terminalStatus} - paste to send ${request.contexts.length} comment(s)`,
+        `🤖 Opening Claude Code ${terminalStatus} with ${request.contexts.length} comment(s)`,
         'View Terminal'
       ).then((action) => {
         if (action === 'View Terminal') {
@@ -214,7 +220,16 @@ export class AgentClient {
         }
       });
 
-      // No longer using temp file, so no cleanup needed
+      // Clean up temp file after a delay (Claude Code should have read it by then)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }, 30000); // 30 seconds should be enough
 
       return true;
     } catch (error) {
