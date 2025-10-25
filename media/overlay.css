@@ -3,6 +3,10 @@
  * Theme-aware highlight and bubble styles for the Markdown preview
  */
 
+/* Global: Ensure inline code uses monospace font across all themes */
+code, pre, kbd, samp, tt {
+  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Consolas, "Courier New", monospace;
+}
 
 /* Comment highlights - yellow/gold based */
 .commentary-highlight {
