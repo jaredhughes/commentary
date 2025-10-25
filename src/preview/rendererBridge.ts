@@ -25,7 +25,7 @@ export class RendererBridge {
    */
   static getThemeStylesheet(extensionUri: vscode.Uri): vscode.Uri | undefined {
     const config = vscode.workspace.getConfiguration('commentary');
-    const themeName = config.get<string>('theme.name', 'github-light');
+    const themeName = config.get<string>('theme.name', 'simple');
     const customCssPath = config.get<string>('theme.customCssPath', '');
 
     if (customCssPath) {
