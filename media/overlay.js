@@ -221,22 +221,22 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get text before a position
    */
   function getTextBefore(node, offset) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent.substring(0, offset);
-    }
-    // Simplified - in production, walk the DOM tree
-    return '';
+    // Create a range from start of document to the position
+    const range = document.createRange();
+    range.setStart(document.body, 0);
+    range.setEnd(node, offset);
+    return range.toString();
   }
 
   /**
    * Get text after a position
    */
   function getTextAfter(node, offset) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent.substring(offset);
-    }
-    // Simplified - in production, walk the DOM tree
-    return '';
+    // Create a range from the position to end of document
+    const range = document.createRange();
+    range.setStart(node, offset);
+    range.setEnd(document.body, document.body.childNodes.length);
+    return range.toString();
   }
 
   /**

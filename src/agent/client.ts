@@ -4,9 +4,6 @@
  */
 
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 import { Note, AgentRequest, AgentResponse } from '../types';
 import { PayloadBuilder } from './payload';
 import { ApiIntegration } from './apiIntegration';
@@ -197,25 +194,19 @@ export class AgentClient {
       const fileUri = vscode.Uri.parse(firstNote.file);
       const filePath = fileUri.fsPath;
 
-      // Create a temporary file with the prompt
-      const tempPromptPath = path.join(
-        os.tmpdir(),
-        `commentary-prompt-${Date.now()}.md`
-      );
-
       // Build the prompt with file context
       const promptWithFile = `I have comments on the file: ${filePath}\n\n${prompt}\n\nPlease review the comments and suggest edits.`;
-      fs.writeFileSync(tempPromptPath, promptWithFile);
 
-      // Execute: cat prompt.md | <claude-command>
-      // This will send the prompt to Claude Code in an interactive session
-      const command = `cat "${tempPromptPath}" | ${claudeCommand}`;
+      // Copy prompt to clipboard
+      await vscode.env.clipboard.writeText(promptWithFile);
 
-      terminal.sendText(command);
+      // Launch Claude Code interactively with the file
+      // Don't pipe content - causes "Raw mode not supported" error with Ink UI
+      terminal.sendText(`${claudeCommand} ${filePath}`);
 
       const terminalStatus = isReusedTerminal ? '(reusing terminal)' : '(new terminal)';
       vscode.window.showInformationMessage(
-        `🤖 Opening Claude Code with ${request.contexts.length} comment(s) ${terminalStatus}`,
+        `📋 Prompt copied! Claude Code opening ${terminalStatus} - paste to send ${request.contexts.length} comment(s)`,
         'View Terminal'
       ).then((action) => {
         if (action === 'View Terminal') {
@@ -223,14 +214,7 @@ export class AgentClient {
         }
       });
 
-      // Clean up temp file after a delay
-      setTimeout(() => {
-        try {
-          fs.unlinkSync(tempPromptPath);
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }, 5000);
+      // No longer using temp file, so no cleanup needed
 
       return true;
     } catch (error) {
