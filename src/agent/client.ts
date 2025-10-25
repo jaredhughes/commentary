@@ -154,10 +154,25 @@ export class AgentClient {
       const config = vscode.workspace.getConfiguration('commentary.agent');
       const claudeCommand = config.get<string>('claudeCommand', 'claude');
 
-      const terminal = vscode.window.createTerminal({
-        name: 'Commentary → Claude',
-        hideFromUser: false,
-      });
+      // Look for existing Commentary → Claude terminal
+      const existingTerminal = vscode.window.terminals.find(
+        t => t.name === 'Commentary → Claude'
+      );
+
+      let terminal: vscode.Terminal;
+      let isReusedTerminal = false;
+
+      if (existingTerminal) {
+        terminal = existingTerminal;
+        isReusedTerminal = true;
+        console.log('[Commentary] Reusing existing Claude terminal');
+      } else {
+        terminal = vscode.window.createTerminal({
+          name: 'Commentary → Claude',
+          hideFromUser: false,
+        });
+        console.log('[Commentary] Created new Claude terminal');
+      }
 
       terminal.show();
 
@@ -184,8 +199,9 @@ export class AgentClient {
 
       terminal.sendText(command);
 
+      const terminalStatus = isReusedTerminal ? '(reusing terminal)' : '(new terminal)';
       vscode.window.showInformationMessage(
-        `🤖 Sending ${request.contexts.length} comment(s) to Claude CLI...`,
+        `🤖 Sending ${request.contexts.length} comment(s) to Claude CLI ${terminalStatus}`,
         'View Terminal'
       ).then((action) => {
         if (action === 'View Terminal') {
