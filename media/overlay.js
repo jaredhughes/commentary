@@ -10,9 +10,8 @@ console.log('[OVERLAY.JS] Script is loading...');
 
   console.log('[OVERLAY.JS] IIFE starting...');
 
-  // VS Code API for messaging
-  const vscode = acquireVsCodeApi();
-  console.log('[OVERLAY.JS] vscode API acquired:', vscode);
+  // Note: VS Code API is already acquired in the HTML template
+  // and available as window.commentaryPostMessage
 
   let currentSelection = null;
   let commentBubble = null;
@@ -31,8 +30,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     const provider = window.commentaryAgentProvider || 'cursor';
     const isClaude = provider === 'claude';
 
+    console.log('[OVERLAY] getAgentButtonConfig - provider:', provider, 'isClaude:', isClaude);
+
     return {
-      icon: isClaude ? '➤' : '📋',
+      icon: isClaude ? '✨' : '📋',
       text: isClaude ? 'Send to agent' : 'Copy for agent',
       tooltip: isClaude
         ? 'Send comment to Claude Code via terminal'
@@ -66,27 +67,9 @@ console.log('[OVERLAY.JS] Script is loading...');
     createDocumentCommentButton();
     console.log('[OVERLAY.JS] Document comment button created');
 
-    // Make headings and paragraphs editable
-    makeEditableElements();
-    console.log('[OVERLAY.JS] Made headings and paragraphs editable');
-
     // Listen for mouseup to detect selections
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
-
-    // Listen for Cmd+S to blur contenteditable before save (so edit gets applied)
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        // If focus is on contenteditable, blur it first to trigger save
-        const activeElement = document.activeElement;
-        if (activeElement && activeElement.getAttribute('contenteditable') === 'plaintext-only') {
-          console.log('[OVERLAY] Cmd+S pressed, blurring contenteditable element');
-          activeElement.blur();
-          // The blur will trigger our edit, and the native save will happen after
-        }
-      }
-    });
-    console.log('[OVERLAY.JS] Cmd+S listener added');
 
     // Listen for messages from extension
     window.addEventListener('message', handleHostMessage);
@@ -97,108 +80,6 @@ console.log('[OVERLAY.JS] Script is loading...');
     console.log('[OVERLAY.JS] Ready message sent');
   }
 
-  /**
-   * Make headings and paragraphs editable on double-click
-   */
-  function makeEditableElements() {
-    // Find all headings, paragraphs, and list items in the main content
-    const editableSelector = 'h1, h2, h3, h4, h5, h6, p, li';
-    const elements = document.querySelectorAll(editableSelector);
-
-    elements.forEach((element) => {
-      // Skip if inside a blockquote, code, pre, or other special containers
-      if (element.closest('pre, code, blockquote, table')) {
-        return;
-      }
-
-      // Store original text for comparison (normalize it)
-      let originalText = element.textContent.replace(/\s+/g, ' ').trim();
-      let isEditing = false;
-
-      // Enable editing on double-click
-      element.addEventListener('dblclick', () => {
-        if (isEditing) return;
-
-        console.log('[OVERLAY] Element double-clicked, enabling edit mode');
-        isEditing = true;
-
-        // Make contenteditable
-        element.setAttribute('contenteditable', 'plaintext-only');
-        element.focus();
-
-        // Select all text for easy replacement
-        const range = document.createRange();
-        range.selectNodeContents(element);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-
-        // Re-capture original text
-        originalText = element.textContent.replace(/\s+/g, ' ').trim();
-      });
-
-      // Handle blur - save changes and disable editing
-      element.addEventListener('blur', () => {
-        if (!isEditing) return;
-
-        console.log('[OVERLAY] Element blur - checking for changes');
-        isEditing = false;
-
-        // Remove contenteditable
-        element.removeAttribute('contenteditable');
-
-        // Normalize text - remove any extra whitespace/newlines that may have been added
-        const newText = element.textContent.replace(/\s+/g, ' ').trim();
-
-        // Only update if text actually changed
-        if (newText !== originalText && newText.trim() !== '') {
-          console.log('[OVERLAY] Text changed from:', originalText, 'to:', newText);
-          updateDocumentText(element, originalText, newText);
-        } else {
-          // Restore original text if nothing changed (cleans up any formatting mess)
-          element.textContent = originalText;
-        }
-      });
-
-      // Prevent Enter from creating new lines (keep it simple)
-      element.addEventListener('keydown', (e) => {
-        if (!isEditing) return;
-
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          element.blur(); // Finish editing
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          // Cancel editing - restore original text
-          element.textContent = originalText;
-          element.blur();
-        }
-      });
-
-      // Prevent paste from bringing in HTML - paste as plain text only
-      element.addEventListener('paste', (e) => {
-        if (!isEditing) return;
-
-        e.preventDefault();
-        const text = e.clipboardData.getData('text/plain');
-        document.execCommand('insertText', false, text);
-      });
-    });
-  }
-
-  /**
-   * Update the markdown document with edited text
-   */
-  function updateDocumentText(element, oldText, newText) {
-    console.log('[OVERLAY] Sending document update request');
-
-    // Send message to extension to update the file
-    postMessage({
-      type: 'updateDocumentText',
-      oldText: oldText.trim(),
-      newText: newText.trim(),
-    });
-  }
 
   /**
    * Create floating button for document-level comments
@@ -779,6 +660,7 @@ console.log('[OVERLAY.JS] Script is loading...');
         type: 'updateComment',
         noteId: editingNoteId,
         commentText: text.trim(),
+        documentUri: window.commentaryDocumentUri
       };
     } else {
       // Creating new comment
@@ -806,24 +688,46 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Paint highlights from notes
    */
   function paintHighlights(notes) {
+    console.log('[OVERLAY] paintHighlights called with', notes.length, 'notes');
+
     // Clear existing highlights
     clearHighlights();
+    console.log('[OVERLAY] Cleared existing highlights');
+
+    let successCount = 0;
+    let failCount = 0;
 
     for (const note of notes) {
-      paintHighlight(note);
+      const success = paintHighlight(note);
+      if (success) {
+        successCount++;
+      } else {
+        failCount++;
+      }
     }
+
+    console.log('[OVERLAY] Painted highlights: success=' + successCount + ', failed=' + failCount);
+    console.log('[OVERLAY] Highlights map now has', highlights.size, 'entries');
   }
 
   /**
    * Paint a single highlight
    */
   function paintHighlight(note) {
+    console.log('[OVERLAY] Painting highlight for note:', note.id, 'text:', note.text.substring(0, 30));
+
+    // Skip document-level comments (no visible highlight)
+    if (note.isDocumentLevel) {
+      console.log('[OVERLAY] Skipping document-level comment:', note.id);
+      return true;
+    }
+
     // Try to find the text using the quote selector
     const range = findTextRange(note.quote);
 
     if (!range) {
-      console.warn('Could not anchor note:', note.id);
-      return;
+      console.warn('[OVERLAY] Could not anchor note:', note.id, 'selected text:', note.quote.exact.substring(0, 30));
+      return false;
     }
 
     // Create highlight mark element
@@ -847,23 +751,59 @@ console.log('[OVERLAY.JS] Script is loading...');
         });
         bubbleJustOpened = true;
       });
+
+      console.log('[OVERLAY] Successfully painted highlight:', note.id);
+      return true;
     } catch (error) {
-      console.error('Failed to paint highlight:', error);
+      console.error('[OVERLAY] Failed to paint highlight:', note.id, error);
+      return false;
     }
   }
 
   /**
-   * Find a text range using TextQuoteSelector
+   * Find a text range using TextQuoteSelector with prefix/suffix disambiguation
    */
   function findTextRange(quote) {
     const bodyText = document.body.textContent || '';
-    const index = bodyText.indexOf(quote.exact);
 
-    if (index === -1) {
-      return null;
+    // Use prefix and suffix to find the correct occurrence
+    // Build the search pattern: prefix + exact + suffix
+    const prefixToUse = quote.prefix || '';
+    const suffixToUse = quote.suffix || '';
+    const searchText = prefixToUse + quote.exact + suffixToUse;
+
+    // Find the full pattern
+    const patternIndex = bodyText.indexOf(searchText);
+
+    if (patternIndex === -1) {
+      console.warn('[OVERLAY] Could not find text pattern:', {
+        prefix: prefixToUse.substring(Math.max(0, prefixToUse.length - 20)),
+        exact: quote.exact.substring(0, 50),
+        suffix: suffixToUse.substring(0, 20)
+      });
+
+      // Fallback: try without prefix/suffix
+      const exactIndex = bodyText.indexOf(quote.exact);
+      if (exactIndex === -1) {
+        console.error('[OVERLAY] Could not find exact text either');
+        return null;
+      }
+
+      console.warn('[OVERLAY] Found exact text without prefix/suffix at:', exactIndex);
+      return findRangeAtIndex(exactIndex, quote.exact.length);
     }
 
-    // Simplified range finding - in production, use proper DOM traversal
+    // Calculate the actual start position (after the prefix)
+    const exactStart = patternIndex + prefixToUse.length;
+    console.log('[OVERLAY] Found text range at position:', exactStart);
+
+    return findRangeAtIndex(exactStart, quote.exact.length);
+  }
+
+  /**
+   * Helper: Find DOM range at a specific character index
+   */
+  function findRangeAtIndex(index, length) {
     const range = document.createRange();
     const walker = document.createTreeWalker(
       document.body,
@@ -882,14 +822,16 @@ console.log('[OVERLAY.JS] Script is loading...');
       const node = walker.currentNode;
       const nodeLength = node.textContent.length;
 
-      if (currentPos <= index && currentPos + nodeLength > index) {
+      // Find start node
+      if (!startNode && currentPos <= index && currentPos + nodeLength > index) {
         startNode = node;
         startOffset = index - currentPos;
       }
 
-      if (currentPos <= index + quote.exact.length && currentPos + nodeLength >= index + quote.exact.length) {
+      // Find end node
+      if (currentPos <= index + length && currentPos + nodeLength >= index + length) {
         endNode = node;
-        endOffset = index + quote.exact.length - currentPos;
+        endOffset = index + length - currentPos;
         break;
       }
 
@@ -897,11 +839,22 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     if (startNode && endNode) {
-      range.setStart(startNode, startOffset);
-      range.setEnd(endNode, endOffset);
-      return range;
+      try {
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        return range;
+      } catch (error) {
+        console.error('[OVERLAY] Failed to create range:', error, {
+          startOffset,
+          endOffset,
+          startNodeLength: startNode.textContent.length,
+          endNodeLength: endNode.textContent.length
+        });
+        return null;
+      }
     }
 
+    console.error('[OVERLAY] Could not find start/end nodes for range');
     return null;
   }
 
@@ -909,6 +862,8 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Clear all highlights
    */
   function clearHighlights() {
+    console.log('[OVERLAY] Clearing', highlights.size, 'highlights');
+
     for (const [noteId, mark] of highlights.entries()) {
       // Unwrap the mark element
       const parent = mark.parentNode;
@@ -917,9 +872,20 @@ console.log('[OVERLAY.JS] Script is loading...');
           parent.insertBefore(mark.firstChild, mark);
         }
         parent.removeChild(mark);
+
+        // Normalize text nodes after unwrapping to merge adjacent text nodes
+        parent.normalize();
       }
     }
     highlights.clear();
+
+    // Normalize the entire markdown content container to ensure clean text nodes
+    const markdownContent = document.getElementById('markdown-content');
+    if (markdownContent) {
+      markdownContent.normalize();
+    }
+
+    console.log('[OVERLAY] All highlights cleared and text nodes normalized');
   }
 
   /**
@@ -957,6 +923,8 @@ console.log('[OVERLAY.JS] Script is loading...');
    */
   function showEditBubble(note) {
     console.log('[OVERLAY] Showing edit bubble for note:', note.id);
+    console.log('[OVERLAY] Current highlights map:', highlights);
+    console.log('[OVERLAY] Highlights map size:', highlights.size);
 
     // Set up state for editing
     editingNoteId = note.id;
@@ -969,6 +937,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     const mark = highlights.get(note.id);
     if (!mark) {
       console.error('[OVERLAY] No highlight found for note:', note.id);
+      console.error('[OVERLAY] Available highlight IDs:', Array.from(highlights.keys()));
+
+      // Show a user-friendly message
+      alert('Could not find this comment in the document. Try refreshing the preview.');
       return;
     }
 
@@ -1045,20 +1017,30 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Delete button (only for existing comments with noteId) - append last (right side)
     if (editingNoteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.innerHTML = '×';
       deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
+        console.log('[OVERLAY] Delete button clicked, noteId:', editingNoteId);
+        console.log('[OVERLAY] documentUri:', window.commentaryDocumentUri);
+
         if (confirm('Delete this comment?')) {
+          console.log('[OVERLAY] User confirmed deletion');
           postMessage({
             type: 'deleteComment',
             noteId: editingNoteId,
             documentUri: window.commentaryDocumentUri
           });
           hideBubble();
+          console.log('[OVERLAY] Delete message sent and bubble hidden');
+        } else {
+          console.log('[OVERLAY] User canceled deletion');
         }
       };
       buttonContainer.appendChild(deleteBtn);
+      console.log('[OVERLAY] Delete button added to edit bubble');
+    } else {
+      console.log('[OVERLAY] No editingNoteId, delete button not added');
     }
 
     commentBubble.appendChild(textarea);
@@ -1167,20 +1149,30 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Delete button (only for existing comments with noteId) - append last (right side)
     if (editingNoteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.innerHTML = '×';
       deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
+        console.log('[OVERLAY] Delete button clicked, noteId:', editingNoteId);
+        console.log('[OVERLAY] documentUri:', window.commentaryDocumentUri);
+
         if (confirm('Delete this comment?')) {
+          console.log('[OVERLAY] User confirmed deletion');
           postMessage({
             type: 'deleteComment',
             noteId: editingNoteId,
             documentUri: window.commentaryDocumentUri
           });
           hideBubble();
+          console.log('[OVERLAY] Delete message sent and bubble hidden');
+        } else {
+          console.log('[OVERLAY] User canceled deletion');
         }
       };
       buttonContainer.appendChild(deleteBtn);
+      console.log('[OVERLAY] Delete button added to edit bubble');
+    } else {
+      console.log('[OVERLAY] No editingNoteId, delete button not added');
     }
 
     commentBubble.appendChild(textarea);
@@ -1285,7 +1277,7 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Send message to extension host
    */
   function postMessage(message) {
-    vscode.postMessage(message);
+    window.commentaryPostMessage(message);
   }
 
   // Initialize when DOM is ready
