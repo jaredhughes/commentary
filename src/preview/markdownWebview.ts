@@ -50,6 +50,15 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         enabled: true,
         label: true,
       });
+
+    // Listen for configuration changes and update all webviews
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('commentary.agent.provider')) {
+          this.broadcastProviderUpdate();
+        }
+      })
+    );
   }
 
   /**
@@ -366,6 +375,25 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
     return text;
+  }
+
+  /**
+   * Broadcast provider update to all active webviews
+   */
+  private broadcastProviderUpdate(): void {
+    const config = vscode.workspace.getConfiguration('commentary.agent');
+    const provider = config.get<string>('provider', 'cursor');
+
+    console.log('[MarkdownWebview] Broadcasting provider update:', provider);
+
+    for (const panel of this.panels.values()) {
+      if (panel.visible) {
+        panel.webview.postMessage({
+          type: 'updateProvider',
+          provider: provider,
+        });
+      }
+    }
   }
 
   /**

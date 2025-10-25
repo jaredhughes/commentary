@@ -174,12 +174,18 @@ export interface ShowEditBubbleMessage extends BaseHostMessage {
   note: Note;
 }
 
+export interface UpdateProviderMessage extends BaseHostMessage {
+  type: HostMessageType.UpdateProvider;
+  provider: string;
+}
+
 export type HostMessage =
   | PaintHighlightsMessage
   | RemoveHighlightMessage
   | ScrollToHighlightMessage
   | ClearAllHighlightsMessage
-  | ShowEditBubbleMessage;
+  | ShowEditBubbleMessage
+  | UpdateProviderMessage;
 
 /**
  * Storage interface
