@@ -354,62 +354,75 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
-   * Show comment bubble near selection
+   * Create and show comment modal (unified function for all cases)
+   * @param {Object} options - Configuration options
+   * @param {string} options.placeholder - Textarea placeholder text
+   * @param {string} [options.value=''] - Initial textarea value (for editing)
+   * @param {string} [options.noteId] - Note ID (for editing)
+   * @param {'selection'|'button'} options.positionType - How to position the modal
+   * @param {Selection} [options.selection] - DOM selection (for selection-based positioning)
+   * @param {Range} [options.range] - DOM range (alternative to selection for positioning)
+   * @param {number} [options.x] - X coordinate (for button-based positioning)
+   * @param {number} [options.y] - Y coordinate (for button-based positioning)
    */
-  function showBubble(selection, x, y) {
+  function showCommentModal(options) {
+    const {
+      placeholder = 'Add comment...',
+      value = '',
+      noteId = null,
+      positionType,
+      selection = null,
+      range = null,
+      x = 0,
+      y = 0
+    } = options;
+
     // Don't call hideBubble() here - it clears currentSelection!
     // Just remove old bubble if it exists
     if (commentBubble) {
       commentBubble.remove();
     }
 
-    // Store the range for repositioning on scroll
-    trackedRange = selection.getRangeAt(0);
+    // For selection-based positioning, store the range for repositioning on scroll
+    if (positionType === 'selection') {
+      if (range) {
+        trackedRange = range;
+      } else if (selection) {
+        trackedRange = selection.getRangeAt(0);
+      }
+    }
 
     commentBubble = document.createElement('div');
     commentBubble.className = 'commentary-bubble';
-
-    // Position near cursor with viewport bounds checking
     commentBubble.style.position = 'fixed';
 
     // Temporarily append to measure dimensions
     commentBubble.style.visibility = 'hidden';
     document.body.appendChild(commentBubble);
 
-    // Create bubble content
+    // Create textarea
     const textarea = document.createElement('textarea');
-    textarea.placeholder = 'Add comment...';
+    textarea.placeholder = placeholder;
+    textarea.value = value;
     textarea.className = 'commentary-textarea';
 
     // Add keyboard shortcuts
     textarea.addEventListener('keydown', (e) => {
-      // Cmd+Enter / Ctrl+Enter to save
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
         saveComment(textarea.value);
       }
-      // Escape to close
       if (e.key === 'Escape') {
         e.preventDefault();
         hideBubble();
       }
     });
 
+    // Create button container
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
 
-    const saveBtn = document.createElement('button');
-    // Detect platform for keyboard shortcut hint
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save comment (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => {
-      console.log('[OVERLAY] Save button clicked!');
-      saveComment(textarea.value);
-    };
-
+    // Submit button (primary action)
     const submitBtn = document.createElement('button');
     const agentConfig = getAgentButtonConfig();
     submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
@@ -420,47 +433,108 @@ console.log('[OVERLAY.JS] Script is loading...');
       if (!text.trim()) {
         return;
       }
-      // Handle submission based on provider
-      await handleAgentSubmit(text.trim(), currentSelection, isDocumentLevelComment, null);
+      await handleAgentSubmit(text.trim(), currentSelection, isDocumentLevelComment, noteId);
       hideBubble();
-      window.getSelection()?.removeAllRanges();
+      if (positionType === 'selection') {
+        window.getSelection()?.removeAllRanges();
+      }
     };
-
-    buttonContainer.appendChild(saveBtn);
     buttonContainer.appendChild(submitBtn);
+
+    // Save button
+    const saveBtn = document.createElement('button');
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+    saveBtn.innerHTML = '💾 Save';
+    saveBtn.title = `Save comment (${shortcut})`;
+    saveBtn.className = 'commentary-btn';
+    saveBtn.onclick = () => saveComment(textarea.value);
+    buttonContainer.appendChild(saveBtn);
+
+    // Delete button (only for editing)
+    if (noteId) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = 'Delete this comment';
+      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
+      deleteBtn.onclick = () => {
+        console.log('[OVERLAY] Delete button clicked, noteId:', noteId);
+        if (confirm('Delete this comment?')) {
+          console.log('[OVERLAY] User confirmed deletion');
+          postMessage({
+            type: 'deleteComment',
+            noteId: noteId,
+            documentUri: window.commentaryDocumentUri
+          });
+          hideBubble();
+        }
+      };
+      buttonContainer.appendChild(deleteBtn);
+    }
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
 
-    // Make visible before positioning (needed for accurate getBoundingClientRect)
+    // Position the modal
     commentBubble.style.visibility = 'visible';
 
-    // Use updatePositions for initial positioning based on the range
-    updatePositions();
-
-    // Add scroll listener to keep bubble positioned with text
-    scrollListener = () => {
+    if (positionType === 'selection' && trackedRange) {
+      // Position relative to selected text with scroll tracking
       updatePositions();
-    };
-    window.addEventListener('scroll', scrollListener, true); // Use capture for all scroll events
+      scrollListener = () => updatePositions();
+      window.addEventListener('scroll', scrollListener, true);
+    } else {
+      // Position at fixed coordinates (button-based)
+      const bubbleRect = commentBubble.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const padding = 10;
+
+      let finalX = x;
+      let finalY = y;
+
+      // Horizontal constraint
+      if (finalX + bubbleRect.width + padding > viewportWidth) {
+        finalX = viewportWidth - bubbleRect.width - padding;
+      }
+      if (finalX < padding) {
+        finalX = padding;
+      }
+
+      // Vertical constraint
+      if (finalY + bubbleRect.height + padding > viewportHeight) {
+        finalY = viewportHeight - bubbleRect.height - padding;
+      }
+      if (finalY < padding) {
+        finalY = padding;
+      }
+
+      commentBubble.style.left = finalX + 'px';
+      commentBubble.style.top = finalY + 'px';
+    }
 
     // Focus textarea
     textarea.focus();
+    if (value) {
+      textarea.select(); // Select existing text for easy editing
+    }
+  }
+
+  /**
+   * Show comment bubble near selection (wrapper)
+   */
+  function showBubble(selection, x, y) {
+    showCommentModal({
+      placeholder: 'Add comment...',
+      positionType: 'selection',
+      selection: selection
+    });
   }
 
   /**
    * Show comment bubble for document-level comments (near the button)
    */
   function showBubbleForDocument() {
-    // Don't call hideBubble() here - it clears currentSelection!
-    // Just remove old bubble if it exists
-    if (commentBubble) {
-      commentBubble.remove();
-    }
-
-    commentBubble = document.createElement('div');
-    commentBubble.className = 'commentary-bubble';
-
     // Get button position
     const button = document.querySelector('.commentary-doc-button');
     let x = 70; // Default: right of button
@@ -472,92 +546,12 @@ console.log('[OVERLAY.JS] Script is loading...');
       y = buttonRect.top;
     }
 
-    // Position near button with viewport bounds checking
-    commentBubble.style.position = 'fixed';
-
-    // Temporarily append to measure dimensions
-    commentBubble.style.visibility = 'hidden';
-    document.body.appendChild(commentBubble);
-
-    // Create bubble content
-    const textarea = document.createElement('textarea');
-    textarea.placeholder = 'Add comment for entire document...';
-    textarea.className = 'commentary-textarea';
-
-    // Add keyboard shortcuts
-    textarea.addEventListener('keydown', (e) => {
-      // Cmd+Enter / Ctrl+Enter to save
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        saveComment(textarea.value);
-      }
-      // Escape to cancel
-      else if (e.key === 'Escape') {
-        e.preventDefault();
-        hideBubble();
-      }
+    showCommentModal({
+      placeholder: 'Add comment for entire document...',
+      positionType: 'button',
+      x: x,
+      y: y
     });
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'commentary-buttons';
-
-    const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save comment (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => saveComment(textarea.value);
-
-    const submitBtn = document.createElement('button');
-    const agentConfig = getAgentButtonConfig();
-    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
-    submitBtn.title = agentConfig.tooltip;
-    submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = async () => {
-      const text = textarea.value;
-      if (!text.trim()) {
-        return;
-      }
-      // Handle submission based on provider
-      await handleAgentSubmit(text.trim(), currentSelection, isDocumentLevelComment, null);
-      hideBubble();
-    };
-
-    buttonContainer.appendChild(saveBtn);
-    buttonContainer.appendChild(submitBtn);
-
-    commentBubble.appendChild(textarea);
-    commentBubble.appendChild(buttonContainer);
-
-    // Now measure and position with bounds checking
-    const bubbleRect = commentBubble.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const padding = 10;
-
-    // Horizontal constraint
-    if (x + bubbleRect.width + padding > viewportWidth) {
-      x = viewportWidth - bubbleRect.width - padding;
-    }
-    if (x < padding) {
-      x = padding;
-    }
-
-    // Vertical constraint
-    if (y + bubbleRect.height + padding > viewportHeight) {
-      y = viewportHeight - bubbleRect.height - padding;
-    }
-    if (y < padding) {
-      y = padding;
-    }
-
-    commentBubble.style.left = x + 'px';
-    commentBubble.style.top = y + 'px';
-    commentBubble.style.visibility = 'visible';
-
-    // Focus textarea
-    textarea.focus();
   }
 
   /**
@@ -951,114 +945,18 @@ console.log('[OVERLAY.JS] Script is loading...');
       mark.classList.remove('commentary-highlight-focus');
     }, 2000);
 
-    // Remove old bubble if exists
-    if (commentBubble) {
-      commentBubble.remove();
-    }
-
     // Get the range for positioning
     const range = document.createRange();
     range.selectNode(mark);
-    trackedRange = range;
 
-    commentBubble = document.createElement('div');
-    commentBubble.className = 'commentary-bubble';
-    commentBubble.style.position = 'fixed';
-    commentBubble.style.visibility = 'hidden';
-    document.body.appendChild(commentBubble);
-
-    // Create textarea with existing comment text
-    const textarea = document.createElement('textarea');
-    textarea.value = note.text; // Pre-fill with existing comment
-    textarea.className = 'commentary-textarea';
-    textarea.placeholder = 'Edit comment...';
-
-    // Add keyboard shortcuts
-    textarea.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        saveComment(textarea.value);
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        hideBubble();
-      }
+    // Use unified modal function
+    showCommentModal({
+      placeholder: 'Edit comment...',
+      value: note.text,
+      noteId: note.id,
+      positionType: 'selection',
+      range: range
     });
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'commentary-buttons';
-
-    const submitBtn = document.createElement('button');
-    const agentConfig = getAgentButtonConfig();
-    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
-    submitBtn.title = agentConfig.tooltip;
-    submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = async () => {
-      const text = textarea.value;
-      if (!text.trim()) {
-        return;
-      }
-      // Handle submission based on provider (includes noteId for editing)
-      await handleAgentSubmit(text.trim(), currentSelection, note.isDocumentLevel, note.id);
-      hideBubble();
-    };
-
-    const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save changes (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => saveComment(textarea.value);
-
-    buttonContainer.appendChild(submitBtn);
-    buttonContainer.appendChild(saveBtn);
-
-    // Delete button (only for existing comments with noteId) - append last (right side)
-    if (editingNoteId) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '×';
-      deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
-      deleteBtn.onclick = () => {
-        console.log('[OVERLAY] Delete button clicked, noteId:', editingNoteId);
-        console.log('[OVERLAY] documentUri:', window.commentaryDocumentUri);
-
-        if (confirm('Delete this comment?')) {
-          console.log('[OVERLAY] User confirmed deletion');
-          postMessage({
-            type: 'deleteComment',
-            noteId: editingNoteId,
-            documentUri: window.commentaryDocumentUri
-          });
-          hideBubble();
-          console.log('[OVERLAY] Delete message sent and bubble hidden');
-        } else {
-          console.log('[OVERLAY] User canceled deletion');
-        }
-      };
-      buttonContainer.appendChild(deleteBtn);
-      console.log('[OVERLAY] Delete button added to edit bubble');
-    } else {
-      console.log('[OVERLAY] No editingNoteId, delete button not added');
-    }
-
-    commentBubble.appendChild(textarea);
-    commentBubble.appendChild(buttonContainer);
-
-    // Position the bubble
-    commentBubble.style.visibility = 'visible';
-    updatePositions();
-
-    // Add scroll listener
-    scrollListener = () => {
-      updatePositions();
-    };
-    window.addEventListener('scroll', scrollListener, true);
-
-    // Focus textarea and select all text for easy editing
-    textarea.focus();
-    textarea.select();
   }
 
   /**
@@ -1075,15 +973,6 @@ console.log('[OVERLAY.JS] Script is loading...');
       position: note.position
     };
 
-    // Remove old bubble if exists
-    if (commentBubble) {
-      commentBubble.remove();
-    }
-
-    commentBubble = document.createElement('div');
-    commentBubble.className = 'commentary-bubble';
-    commentBubble.style.position = 'fixed';
-
     // Get button position
     const button = document.querySelector('.commentary-doc-button');
     let x = 70; // Default: right of button
@@ -1095,115 +984,15 @@ console.log('[OVERLAY.JS] Script is loading...');
       y = buttonRect.top;
     }
 
-    // Temporarily append to measure dimensions
-    commentBubble.style.visibility = 'hidden';
-    document.body.appendChild(commentBubble);
-
-    // Create textarea with existing comment text
-    const textarea = document.createElement('textarea');
-    textarea.value = note.text;
-    textarea.className = 'commentary-textarea';
-    textarea.placeholder = 'Edit document comment...';
-
-    // Add keyboard shortcuts
-    textarea.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        saveComment(textarea.value);
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        hideBubble();
-      }
+    // Use unified modal function
+    showCommentModal({
+      placeholder: 'Edit document comment...',
+      value: note.text,
+      noteId: note.id,
+      positionType: 'button',
+      x: x,
+      y: y
     });
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'commentary-buttons';
-
-    const submitBtn = document.createElement('button');
-    const agentConfig = getAgentButtonConfig();
-    submitBtn.innerHTML = `${agentConfig.icon} ${agentConfig.text}`;
-    submitBtn.title = agentConfig.tooltip;
-    submitBtn.className = 'commentary-btn commentary-btn-primary';
-    submitBtn.onclick = async () => {
-      const text = textarea.value;
-      if (!text.trim()) {
-        return;
-      }
-      // Handle submission based on provider (includes noteId for editing)
-      await handleAgentSubmit(text.trim(), currentSelection, true, note.id);
-      hideBubble();
-    };
-
-    const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save changes (${shortcut})`;
-    saveBtn.className = 'commentary-btn';
-    saveBtn.onclick = () => saveComment(textarea.value);
-
-    buttonContainer.appendChild(submitBtn);
-    buttonContainer.appendChild(saveBtn);
-
-    // Delete button (only for existing comments with noteId) - append last (right side)
-    if (editingNoteId) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '×';
-      deleteBtn.title = 'Delete this comment';
-      deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
-      deleteBtn.onclick = () => {
-        console.log('[OVERLAY] Delete button clicked, noteId:', editingNoteId);
-        console.log('[OVERLAY] documentUri:', window.commentaryDocumentUri);
-
-        if (confirm('Delete this comment?')) {
-          console.log('[OVERLAY] User confirmed deletion');
-          postMessage({
-            type: 'deleteComment',
-            noteId: editingNoteId,
-            documentUri: window.commentaryDocumentUri
-          });
-          hideBubble();
-          console.log('[OVERLAY] Delete message sent and bubble hidden');
-        } else {
-          console.log('[OVERLAY] User canceled deletion');
-        }
-      };
-      buttonContainer.appendChild(deleteBtn);
-      console.log('[OVERLAY] Delete button added to edit bubble');
-    } else {
-      console.log('[OVERLAY] No editingNoteId, delete button not added');
-    }
-
-    commentBubble.appendChild(textarea);
-    commentBubble.appendChild(buttonContainer);
-
-    // Position with viewport bounds checking
-    const bubbleRect = commentBubble.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const padding = 10;
-
-    if (x + bubbleRect.width + padding > viewportWidth) {
-      x = viewportWidth - bubbleRect.width - padding;
-    }
-    if (x < padding) {
-      x = padding;
-    }
-    if (y + bubbleRect.height + padding > viewportHeight) {
-      y = viewportHeight - bubbleRect.height - padding;
-    }
-    if (y < padding) {
-      y = padding;
-    }
-
-    commentBubble.style.left = x + 'px';
-    commentBubble.style.top = y + 'px';
-    commentBubble.style.visibility = 'visible';
-
-    // Focus textarea and select all text
-    textarea.focus();
-    textarea.select();
   }
 
   /**
