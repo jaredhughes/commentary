@@ -406,18 +406,6 @@ console.log('[OVERLAY.JS] Script is loading...');
     textarea.value = value;
     textarea.className = 'commentary-textarea';
 
-    // Add keyboard shortcuts
-    textarea.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        saveComment(textarea.value);
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        hideBubble();
-      }
-    });
-
     // Create button container
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'commentary-buttons';
@@ -450,6 +438,33 @@ console.log('[OVERLAY.JS] Script is loading...');
     saveBtn.className = 'commentary-btn';
     saveBtn.onclick = () => saveComment(textarea.value);
     buttonContainer.appendChild(saveBtn);
+
+    // Input validation: Enable/disable buttons based on text content
+    const updateButtonStates = () => {
+      const hasText = textarea.value.trim().length > 0;
+      submitBtn.disabled = !hasText;
+      saveBtn.disabled = !hasText;
+    };
+
+    // Set initial button states
+    updateButtonStates();
+
+    // Update button states on input
+    textarea.addEventListener('input', updateButtonStates);
+
+    // Add keyboard shortcuts (after button creation so we can check disabled state)
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!saveBtn.disabled) {
+          saveComment(textarea.value);
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideBubble();
+      }
+    });
 
     // Delete button (only for editing)
     if (noteId) {

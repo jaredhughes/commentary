@@ -182,6 +182,30 @@
   margin-left: auto;
 }
 
+/* Disabled button states */
+.commentary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #21262d;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.commentary-btn-primary:disabled {
+  background: #238636;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.commentary-btn:disabled:hover {
+  background: #21262d;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.commentary-btn-primary:disabled:hover {
+  background: #238636;
+  color: rgba(255, 255, 255, 0.3);
+}
+
 /* Dark theme adjustments - yellow/gold works well on dark backgrounds */
 @media (prefers-color-scheme: dark) {
   .commentary-highlight {
