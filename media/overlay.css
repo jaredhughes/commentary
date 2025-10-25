@@ -178,6 +178,10 @@
   background: #c92a2a;
 }
 
+.commentary-btn-right {
+  margin-left: auto;
+}
+
 /* Dark theme adjustments - yellow/gold works well on dark backgrounds */
 @media (prefers-color-scheme: dark) {
   .commentary-highlight {

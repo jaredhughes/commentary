@@ -166,6 +166,18 @@ export class AgentClient {
         terminal = existingTerminal;
         isReusedTerminal = true;
         console.log('[Commentary] Reusing existing Claude terminal');
+
+        // Interrupt any running Claude session cleanly
+        terminal.sendText('\x03'); // Send Ctrl+C
+
+        // Wait a moment for the interrupt to process
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Clear the terminal for a clean slate
+        terminal.sendText('clear');
+
+        // Wait for clear to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
       } else {
         terminal = vscode.window.createTerminal({
           name: 'Commentary → Claude',
