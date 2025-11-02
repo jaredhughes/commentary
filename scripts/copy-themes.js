@@ -150,6 +150,36 @@ for (const { src, dest } of themes) {
 
 console.log(`\n📊 Summary: ${copied} copied, ${failed} failed`);
 
+// Also copy codicons for webview access
+console.log('\n📦 Copying codicons...');
+const codiconsSource = path.join(__dirname, '../node_modules/@vscode/codicons/dist');
+const codiconsTarget = path.join(__dirname, '../media/codicons');
+
+try {
+  // Create codicons directory
+  if (!fs.existsSync(codiconsTarget)) {
+    fs.mkdirSync(codiconsTarget, { recursive: true });
+  }
+  
+  // Copy codicon files (css, ttf)
+  const codiconFiles = fs.readdirSync(codiconsSource).filter(f => 
+    f.startsWith('codicon.') && (f.endsWith('.css') || f.endsWith('.ttf'))
+  );
+  
+  for (const file of codiconFiles) {
+    fs.copyFileSync(
+      path.join(codiconsSource, file),
+      path.join(codiconsTarget, file)
+    );
+    console.log('✓', file);
+  }
+  
+  console.log('\n✅ Codicons copied successfully');
+} catch (error) {
+  console.error('❌ Failed to copy codicons:', error.message);
+  failed++;
+}
+
 if (failed > 0) {
   process.exit(1);
 }

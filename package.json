@@ -481,6 +481,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
     "@types/markdown-it": "^14.1.2",
+    "@vscode/codicons": "^0.0.41",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
