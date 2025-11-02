@@ -19,7 +19,10 @@ export class SidecarStorage implements ICommentStorage {
   private getCommentFilePath(fileUri: string): vscode.Uri {
     // Convert file URI to relative path and create corresponding .json file
     const relativePath = vscode.workspace.asRelativePath(fileUri);
-    const commentFileName = relativePath.replace(/\//g, '_').replace(/\\/g, '_') + '.json';
+    // Replace all path separators and Windows-illegal filename characters (: < > " | ? *)
+    const commentFileName = relativePath
+      .replace(/[/\\:]/g, '_')
+      .replace(/[<>"|?*]/g, '_') + '.json';
     return vscode.Uri.joinPath(this.getCommentsDir(), commentFileName);
   }
 
