@@ -362,6 +362,9 @@ suite('Storage Tests', () => {
     });
 
     test('Should export notes as JSON', async () => {
+      // Ensure clean state - recreate storage instance to avoid state from previous tests
+      storage = new SidecarStorage(workspaceUri);
+      
       const note: Note = {
         id: 'test-1',
         file: vscode.Uri.joinPath(workspaceUri, 'test.md').toString(),
@@ -377,13 +380,16 @@ suite('Storage Tests', () => {
       const savedNotes = await storage.getNotes(note.file);
       assert.strictEqual(savedNotes.length, 1, 'Note should be saved before export');
       
-      // Small delay to ensure file system flush on Windows
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Verify getAllNotes can read the directory
+      const allNotes = await storage.getAllNotes();
+      assert.strictEqual(allNotes.size, 1, 'getAllNotes should return 1 file');
+      assert.ok(allNotes.has(note.file), 'getAllNotes should contain our file');
       
       const exported = await storage.exportNotes();
 
       const parsed = JSON.parse(exported);
       assert.ok(Object.keys(parsed).length > 0, `Exported should have keys. Got: ${exported}`);
+      assert.ok(parsed[note.file], `Exported should have our file. Got keys: ${Object.keys(parsed)}`);
     });
 
     test('Should import notes from JSON', async () => {
