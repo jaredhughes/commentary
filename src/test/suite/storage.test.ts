@@ -361,13 +361,7 @@ suite('Storage Tests', () => {
       assert.strictEqual(allNotes.size, 0);
     });
 
-    test('Should export notes as JSON', async function() {
-      // Skip on Windows - known issue with directory reading in test environment
-      if (process.platform === 'win32') {
-        this.skip();
-        return;
-      }
-
+    test('Should export notes as JSON', async () => {
       const note: Note = {
         id: 'test-1',
         file: vscode.Uri.joinPath(workspaceUri, 'test.md').toString(),
@@ -382,6 +376,9 @@ suite('Storage Tests', () => {
       // Verify the note was actually saved before exporting
       const savedNotes = await storage.getNotes(note.file);
       assert.strictEqual(savedNotes.length, 1, 'Note should be saved before export');
+      
+      // Small delay to ensure file system flush on Windows
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const exported = await storage.exportNotes();
 
