@@ -73,12 +73,19 @@ export class CommentTreeItem extends vscode.TreeItem {
 }
 
 export class FileTreeItem extends vscode.TreeItem {
+  // Make collapsibleState mutable so we can update it
+  public collapsibleState: vscode.TreeItemCollapsibleState;
+  
   constructor(
     public readonly fileUri: string,
     public readonly noteCount: number,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    collapsibleState: vscode.TreeItemCollapsibleState
   ) {
     super(formatFilePathForDisplay(fileUri), collapsibleState);
+    this.collapsibleState = collapsibleState;
+    
+    // Set ID to the file URI so VS Code can track this item's state
+    this.id = fileUri;
 
     // Update tooltip and description based on comment count
     if (noteCount === 0) {
@@ -139,7 +146,6 @@ function formatFilePathForDisplay(fileUri: string): string {
     }
 
     // File is outside workspace - check if it's in any workspace folder
-    let foundInWorkspace = false;
     for (const folder of workspaceFolders) {
       if (fullFsPath.startsWith(folder.uri.fsPath)) {
         // File is actually in a workspace folder - compute relative path manually
@@ -174,6 +180,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
   private isExpanded: boolean = true; // Track expand/collapse state
+  private fileItems: FileTreeItem[] = []; // Cache file items for toggle operation
 
   constructor(
     private storage: StorageManager,
@@ -261,12 +268,20 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Sort: files with comments first, then alphabetically
     items.sort((a, b) => {
-      if (a.noteCount > 0 && b.noteCount === 0) return -1;
-      if (a.noteCount === 0 && b.noteCount > 0) return 1;
+      if (a.noteCount > 0 && b.noteCount === 0) {
+        return -1;
+      }
+      if (a.noteCount === 0 && b.noteCount > 0) {
+        return 1;
+      }
       return a.label!.toString().localeCompare(b.label!.toString());
     });
 
     console.log('[CommentsView] Returning', items.length, 'file items');
+    
+    // Cache the items for toggle operations
+    this.fileItems = items;
+    
     return items;
   }
 
@@ -318,29 +333,17 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   async toggleExpandCollapseAll(): Promise<void> {
     // Toggle state
     this.isExpanded = !this.isExpanded;
+    console.log('[CommentsView] Toggle state:', this.isExpanded ? 'EXPANDED' : 'COLLAPSED');
     
-    // Refresh the view, which will use the new state in getFileItems
-    this.refresh();
-    
-    // After refresh, expand/collapse all visible items
-    if (this.treeView) {
-      // Use a small delay to ensure items are rendered
-      setTimeout(async () => {
-        const fileItems = await this.getFileItems();
-        for (const item of fileItems) {
-          if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
-            try {
-              await this.treeView!.reveal(item, { 
-                expand: this.isExpanded,
-                focus: false,
-                select: false
-              });
-            } catch (error) {
-              // Item might not be visible yet, ignore
-            }
-          }
-        }
-      }, 100);
+    // Fire change events for each individual item to force VS Code to refresh them
+    // This is necessary because VS Code caches expansion state per item ID
+    for (const item of this.fileItems) {
+      if (item.noteCount > 0) {
+        this._onDidChangeTreeData.fire(item);
+      }
     }
+    
+    // Also fire a general refresh
+    this._onDidChangeTreeData.fire(undefined);
   }
 }
