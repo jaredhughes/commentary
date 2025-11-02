@@ -142,8 +142,8 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       changeDisposable.dispose();
     });
 
-    // Auto-reveal Comments sidebar (non-blocking - fire and forget)
-    vscode.commands.executeCommand('commentary.commentsView.focus');
+    // Auto-reveal Comments sidebar (handled by extension.ts via showCommentsSidebar command)
+    // No-op here - extension.ts handles view focusing
   }
 
   /**

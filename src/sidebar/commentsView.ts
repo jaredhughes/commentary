@@ -103,41 +103,86 @@ export class FileTreeItem extends vscode.TreeItem {
 }
 
 /**
- * Format file path for display - converts to ~/relative path if possible
+ * Format file path for display - converts to workspace-relative path if in workspace
  */
 function formatFilePathForDisplay(fileUri: string): string {
   try {
     // Parse the file:// URI to get the absolute path
     const uri = vscode.Uri.parse(fileUri);
-    let filePath = uri.fsPath;
+    const fullPath = uri.fsPath;
 
-    // Try to make it relative to home directory
-    const homeDir = os.homedir();
-    if (filePath.startsWith(homeDir)) {
-      filePath = '~' + filePath.substring(homeDir.length);
+    // Check if we have a workspace folder
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      // No workspace - show home-relative or just filename
+      const homeDir = os.homedir();
+      if (fullPath.startsWith(homeDir)) {
+        return '~' + fullPath.substring(homeDir.length);
+      }
+      return path.basename(fullPath);
     }
 
-    // If it's in a workspace, try to make it workspace-relative
+    // Try to make it workspace-relative
+    // asRelativePath returns the relative path if in workspace, or full fsPath if outside
     const workspaceRelative = vscode.workspace.asRelativePath(uri, false);
-    if (workspaceRelative !== uri.fsPath && workspaceRelative.length < filePath.length) {
+    const fullFsPath = uri.fsPath;
+    
+    // If the returned path is different from the full path AND doesn't start with /,
+    // it means it's a relative path within the workspace
+    const isInWorkspace = workspaceRelative !== fullFsPath && 
+                          !path.isAbsolute(workspaceRelative) &&
+                          workspaceRelative.length < fullFsPath.length;
+    
+    if (isInWorkspace) {
+      // File is in workspace - use relative path
       return workspaceRelative;
     }
 
-    return filePath;
+    // File is outside workspace - check if it's in any workspace folder
+    let foundInWorkspace = false;
+    for (const folder of workspaceFolders) {
+      if (fullFsPath.startsWith(folder.uri.fsPath)) {
+        // File is actually in a workspace folder - compute relative path manually
+        const relativePath = path.relative(folder.uri.fsPath, fullFsPath);
+        if (!relativePath.startsWith('..')) {
+          return relativePath;
+        }
+      }
+    }
+
+    // File is truly outside workspace - show home-relative or just filename
+    const homeDir = os.homedir();
+    if (fullPath.startsWith(homeDir)) {
+      return '~' + fullPath.substring(homeDir.length);
+    }
+
+    // Last resort: just show the filename
+    return path.basename(fullPath);
   } catch (error) {
-    // Fallback to the URI as-is
-    return fileUri;
+    // Fallback to just the filename from the URI string
+    try {
+      const uri = vscode.Uri.parse(fileUri);
+      return path.basename(uri.fsPath);
+    } catch {
+      return fileUri;
+    }
   }
 }
 
 export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+  private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
+  private isExpanded: boolean = true; // Track expand/collapse state
 
   constructor(
     private storage: StorageManager,
     private webviewProvider: MarkdownWebviewProvider
   ) {}
+
+  setTreeView(treeView: vscode.TreeView<vscode.TreeItem>): void {
+    this.treeView = treeView;
+  }
 
   refresh(): void {
     console.log('[CommentsView] refresh() called');
@@ -201,10 +246,15 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       const uriString = fileUri.toString();
       const commentCount = fileCommentCounts.get(uriString) || 0;
 
-      // Files with comments are expanded, files without are collapsed
-      const collapsibleState = commentCount > 0
-        ? vscode.TreeItemCollapsibleState.Expanded
-        : vscode.TreeItemCollapsibleState.None;
+      // Files with comments can be expanded/collapsed based on toggle state
+      let collapsibleState: vscode.TreeItemCollapsibleState;
+      if (commentCount > 0) {
+        collapsibleState = this.isExpanded
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.Collapsed;
+      } else {
+        collapsibleState = vscode.TreeItemCollapsibleState.None;
+      }
 
       items.push(new FileTreeItem(uriString, commentCount, collapsibleState));
     }
@@ -260,5 +310,37 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     }
 
     return [];
+  }
+
+  /**
+   * Toggle expand/collapse all file items
+   */
+  async toggleExpandCollapseAll(): Promise<void> {
+    // Toggle state
+    this.isExpanded = !this.isExpanded;
+    
+    // Refresh the view, which will use the new state in getFileItems
+    this.refresh();
+    
+    // After refresh, expand/collapse all visible items
+    if (this.treeView) {
+      // Use a small delay to ensure items are rendered
+      setTimeout(async () => {
+        const fileItems = await this.getFileItems();
+        for (const item of fileItems) {
+          if (item.collapsibleState !== vscode.TreeItemCollapsibleState.None) {
+            try {
+              await this.treeView!.reveal(item, { 
+                expand: this.isExpanded,
+                focus: false,
+                select: false
+              });
+            } catch (error) {
+              // Item might not be visible yet, ignore
+            }
+          }
+        }
+      }, 100);
+    }
   }
 }

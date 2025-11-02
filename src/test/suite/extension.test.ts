@@ -26,7 +26,6 @@ suite('Commentary Extension Test Suite', () => {
     assert.ok(commentaryCommands.includes('commentary.deleteAllComments'));
     assert.ok(commentaryCommands.includes('commentary.sendToAgent'));
     assert.ok(commentaryCommands.includes('commentary.sendAllToAgent'));
-    assert.ok(commentaryCommands.includes('commentary.refreshComments'));
   });
 
   test('All required commands should be present', async () => {
@@ -38,9 +37,6 @@ suite('Commentary Extension Test Suite', () => {
       'commentary.deleteAllComments',
       'commentary.sendToAgent',
       'commentary.sendAllToAgent',
-      'commentary.exportComments',
-      'commentary.importComments',
-      'commentary.refreshComments',
       'commentary.showCommentsSidebar',
     ];
 

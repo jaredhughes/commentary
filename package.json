@@ -5,6 +5,11 @@
   "version": "0.9.7",
   "publisher": "hughesjared",
   "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1a1f2e",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jaredhughes/commentary"
@@ -74,6 +79,12 @@
         "icon": "$(copy)"
       },
       {
+        "command": "commentary.sendToAgentVSCode",
+        "title": "Send to VS Code Chat",
+        "category": "Commentary",
+        "icon": "$(send)"
+      },
+      {
         "command": "commentary.sendAllToAgent",
         "title": "Send all to agent",
         "category": "Commentary",
@@ -92,27 +103,21 @@
         "icon": "$(copy)"
       },
       {
-        "command": "commentary.exportComments",
-        "title": "Export",
+        "command": "commentary.sendAllToAgentVSCode",
+        "title": "Send all to VS Code Chat",
         "category": "Commentary",
-        "icon": "$(export)"
-      },
-      {
-        "command": "commentary.importComments",
-        "title": "Import",
-        "category": "Commentary",
-        "icon": "$(go-to-file)"
-      },
-      {
-        "command": "commentary.refreshComments",
-        "title": "Refresh",
-        "category": "Commentary",
-        "icon": "$(refresh)"
+        "icon": "$(send)"
       },
       {
         "command": "commentary.showCommentsSidebar",
         "title": "Show Comments Sidebar",
         "category": "Commentary"
+      },
+      {
+        "command": "commentary.toggleExpandCollapse",
+        "title": "Toggle Expand/Collapse All",
+        "category": "Commentary",
+        "icon": "$(expand-all)"
       },
       {
         "command": "commentary.configureAgent",
@@ -253,18 +258,6 @@
           "when": "false"
         },
         {
-          "command": "commentary.exportComments",
-          "when": "false"
-        },
-        {
-          "command": "commentary.importComments",
-          "when": "false"
-        },
-        {
-          "command": "commentary.refreshComments",
-          "when": "false"
-        },
-        {
           "command": "commentary.editCommentFromSidebar",
           "when": "false"
         },
@@ -289,19 +282,29 @@
       ],
       "view/title": [
         {
+          "command": "commentary.toggleExpandCollapse",
+          "when": "view == commentary.commentsView",
+          "group": "navigation@1"
+        },
+        {
           "command": "commentary.sendAllToAgentClaude",
           "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == claude",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "commentary.sendAllToAgentCursor",
           "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == cursor",
-          "group": "navigation@1"
+          "group": "navigation@2"
+        },
+        {
+          "command": "commentary.sendAllToAgentVSCode",
+          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == vscode",
+          "group": "navigation@2"
         },
         {
           "command": "commentary.deleteAllComments",
           "when": "view == commentary.commentsView && commentary.hasComments",
-          "group": "navigation@2"
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -313,6 +316,11 @@
         {
           "command": "commentary.sendToAgentCursor",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == cursor",
+          "group": "inline@1"
+        },
+        {
+          "command": "commentary.sendToAgentVSCode",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == vscode",
           "group": "inline@1"
         },
         {
@@ -387,7 +395,15 @@
             "claude",
             "cursor",
             "openai",
-            "custom"
+            "custom",
+            "vscode"
+          ],
+          "enumDescriptions": [
+            "Claude Code CLI or API",
+            "Cursor chat interface",
+            "OpenAI API",
+            "Custom API endpoint",
+            "VS Code built-in Chat/Agent"
           ],
           "description": "AI agent provider"
         },
@@ -456,6 +472,7 @@
     "mocha": "^10.2.0",
     "mvp.css": "^1.17.2",
     "sakura.css": "^1.5.1",
+    "sharp": "^0.34.4",
     "simpledotcss": "^2.3.7",
     "tufte-css": "^1.8.0",
     "typescript": "^5.3.0",
@@ -468,6 +485,7 @@
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-github-headings": "^2.0.1",
-    "markdown-it-task-lists": "^2.1.1"
+    "markdown-it-task-lists": "^2.1.1",
+    "openai": "^6.7.0"
   }
 }

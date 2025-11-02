@@ -78,6 +78,8 @@ export class AgentClient {
         return 'OpenAI';
       case 'custom':
         return 'AI Agent';
+      case 'vscode':
+        return 'VS Code Chat';
       default:
         return 'AI Agent';
     }
@@ -115,6 +117,14 @@ export class AgentClient {
     if (provider === 'cursor') {
       const usedCLI = await this.sendViaCursorCLI(prompt, request);
       if (usedCLI) {
+        return this.mockAgentResponse(request);
+      }
+    }
+
+    // Try to send via VS Code Chat (built-in agent)
+    if (provider === 'vscode') {
+      const usedChat = await this.sendViaVSCodeChat(prompt, request);
+      if (usedChat) {
         return this.mockAgentResponse(request);
       }
     }
@@ -305,6 +315,81 @@ export class AgentClient {
       return true;
     } catch (error) {
       console.error('Failed to prepare prompt for Cursor:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send prompt via VS Code Chat (built-in agent mode)
+   */
+  private async sendViaVSCodeChat(prompt: string, request: AgentRequest): Promise<boolean> {
+    try {
+      // Copy to clipboard first
+      await vscode.env.clipboard.writeText(prompt);
+
+      const commentCount = request.contexts.length;
+
+      // Try to find and execute VS Code chat commands
+      const commands = await vscode.commands.getCommands();
+
+      // VS Code Chat command patterns (in order of preference)
+      const chatCommandPatterns = [
+        'workbench.action.chat.open',
+        'workbench.action.quickchat.toggle',
+        'workbench.action.chat.newChat',
+        'github.copilot.chat.start',
+        'aichat.newchataction',
+        'aichat.openaichat'
+      ];
+
+      let chatOpened = false;
+      let usedCommand = '';
+
+      for (const pattern of chatCommandPatterns) {
+        const matchingCommand = commands.find(cmd =>
+          cmd === pattern || cmd.includes(pattern)
+        );
+
+        if (matchingCommand) {
+          try {
+            await vscode.commands.executeCommand(matchingCommand);
+            chatOpened = true;
+            usedCommand = matchingCommand;
+            console.log('[Commentary] Opened VS Code Chat with command:', matchingCommand);
+            break;
+          } catch (error) {
+            console.log('[Commentary] Failed to execute command:', matchingCommand, error);
+          }
+        }
+      }
+
+      if (chatOpened) {
+        // Give chat a moment to fully open and focus
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Try to focus the chat input field
+        try {
+          await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+        } catch (error) {
+          // Silently fail - not critical
+        }
+
+        // Show status bar message
+        vscode.window.setStatusBarMessage(
+          `$(comment-discussion) VS Code Chat ready - paste (⌘V) to send ${commentCount} comment${commentCount > 1 ? 's' : ''}`,
+          5000
+        );
+      } else {
+        // Fallback: show status bar message with manual instruction
+        vscode.window.setStatusBarMessage(
+          `$(clippy) Prompt copied - open VS Code Chat and paste`,
+          5000
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to prepare prompt for VS Code Chat:', error);
       return false;
     }
   }

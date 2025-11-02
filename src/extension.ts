@@ -15,6 +15,7 @@ import { CommentaryFileDecorationProvider } from './decorations/fileDecorationPr
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
 let commentsViewProvider: CommentsViewProvider | undefined;
+let commentsTreeView: vscode.TreeView<vscode.TreeItem> | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
 
@@ -81,6 +82,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize agent client
   const agentClient = new AgentClient(context);
 
+  // Initialize comments view provider early (needed for commands below)
+  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
+  commentsTreeView = vscode.window.createTreeView('commentary.commentsView', {
+    treeDataProvider: commentsViewProvider,
+  });
+  commentsViewProvider.setTreeView(commentsTreeView);
+  context.subscriptions.push(commentsTreeView);
+
   // Register command to open markdown in Commentary view
   context.subscriptions.push(
     vscode.commands.registerCommand('commentary.openPreview', async (uri?: vscode.Uri, allUris?: vscode.Uri[]) => {
@@ -99,8 +108,13 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -110,8 +124,13 @@ export function activate(context: vscode.ExtensionContext) {
       // Check active editor first
       if (editor && editor.document.languageId === 'markdown') {
         await markdownWebviewProvider?.openMarkdown(editor.document);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -122,8 +141,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (markdownEditor) {
         await markdownWebviewProvider?.openMarkdown(markdownEditor.document);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -134,8 +158,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (markdownDoc) {
         await markdownWebviewProvider?.openMarkdown(markdownDoc);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -146,17 +175,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Register command to show Comments sidebar
   context.subscriptions.push(
     vscode.commands.registerCommand('commentary.showCommentsSidebar', async () => {
-      await vscode.commands.executeCommand('commentary.commentsView.focus');
+      // Show the view container
+      await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
     })
   );
-
-  // Initialize comments view provider
-  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
-  const treeView = vscode.window.createTreeView('commentary.commentsView', {
-    treeDataProvider: commentsViewProvider,
-  });
-
-  context.subscriptions.push(treeView);
 
   // Trigger initial refresh to load existing comments
   commentsViewProvider.refresh();
