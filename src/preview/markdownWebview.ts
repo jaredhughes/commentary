@@ -293,6 +293,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
   <title>Commentary</title>
 
+  <!-- Codicons for VS Code icons -->
+  <link rel="stylesheet" href="${webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'))}">
+
   <!-- Minimal reset + base styles -->
   <style nonce="${nonce}">
     /* Minimal reset - let themes control typography and spacing */

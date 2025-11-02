@@ -466,10 +466,28 @@ console.log('[OVERLAY.JS] Script is loading...');
       }
     });
 
+    // Add global escape handler (when bubble is open but textarea isn't focused)
+    const globalEscapeHandler = (e) => {
+      if (e.key === 'Escape' && commentBubble) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideBubble();
+      }
+    };
+    document.addEventListener('keydown', globalEscapeHandler);
+    
+    // Clean up global handler when bubble is hidden
+    const originalHideBubble = hideBubble;
+    hideBubble = function() {
+      document.removeEventListener('keydown', globalEscapeHandler);
+      hideBubble = originalHideBubble; // Restore original
+      originalHideBubble();
+    };
+
     // Delete button (only for editing)
     if (noteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '×';
+      deleteBtn.innerHTML = '<i class="codicon codicon-trash"></i>';
       deleteBtn.title = 'Delete this comment';
       deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
@@ -930,8 +948,8 @@ console.log('[OVERLAY.JS] Script is loading...');
   /**
    * Show edit bubble for an existing comment
    */
-  function showEditBubble(note) {
-    console.log('[OVERLAY] Showing edit bubble for note:', note.id);
+  function showEditBubble(note, shouldScroll = false) {
+    console.log('[OVERLAY] Showing edit bubble for note:', note.id, 'shouldScroll:', shouldScroll);
     console.log('[OVERLAY] Current highlights map:', highlights);
     console.log('[OVERLAY] Highlights map size:', highlights.size);
 
@@ -953,8 +971,12 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // Scroll to the highlight and add visual emphasis
-    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Only scroll if requested (e.g., when clicking from sidebar)
+    if (shouldScroll) {
+      mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Always add visual emphasis
     mark.classList.add('commentary-highlight-focus');
     setTimeout(() => {
       mark.classList.remove('commentary-highlight-focus');
@@ -1034,7 +1056,7 @@ console.log('[OVERLAY.JS] Script is loading...');
         break;
 
       case 'showEditBubble':
-        showEditBubble(message.note);
+        showEditBubble(message.note, message.shouldScroll);
         break;
 
       case 'showEditBubbleForDocument':
