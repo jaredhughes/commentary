@@ -362,9 +362,6 @@ suite('Storage Tests', () => {
     });
 
     test('Should export notes as JSON', async () => {
-      // Ensure clean state - recreate storage instance to avoid state from previous tests
-      storage = new SidecarStorage(workspaceUri);
-      
       const note: Note = {
         id: 'test-1',
         file: vscode.Uri.joinPath(workspaceUri, 'test.md').toString(),
