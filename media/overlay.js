@@ -33,7 +33,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     console.log('[OVERLAY] getAgentButtonConfig - provider:', provider, 'isClaude:', isClaude);
 
     return {
-      icon: isClaude ? '✨' : '📋',
+      icon: isClaude ? '<i class="codicon codicon-sparkle"></i>' : '<i class="codicon codicon-copy"></i>',
       text: isClaude ? 'Send to agent' : 'Copy for agent',
       tooltip: isClaude
         ? 'Send comment to Claude Code via terminal'
@@ -431,10 +431,9 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     // Save button
     const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save comment (${shortcut})`;
+    const saveBtnConfig = getSaveButtonConfig();
+    saveBtn.innerHTML = saveBtnConfig.icon + (saveBtnConfig.text ? ' ' + saveBtnConfig.text : '');
+    saveBtn.title = saveBtnConfig.tooltip;
     saveBtn.className = 'commentary-btn';
     saveBtn.onclick = () => saveComment(textarea.value);
     buttonContainer.appendChild(saveBtn);
@@ -487,8 +486,9 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Delete button (only for editing)
     if (noteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '<i class="codicon codicon-trash"></i>';
-      deleteBtn.title = 'Delete this comment';
+      const deleteBtnConfig = getDeleteButtonConfig();
+      deleteBtn.innerHTML = deleteBtnConfig.icon;
+      deleteBtn.title = deleteBtnConfig.tooltip;
       deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
         console.log('[OVERLAY] Delete button clicked, noteId:', noteId);

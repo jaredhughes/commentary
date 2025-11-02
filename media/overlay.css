@@ -142,6 +142,20 @@ code, pre, kbd, samp, tt {
   font-size: 16px;
 }
 
+/* Ensure codicons display properly in buttons */
+.commentary-btn .codicon {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 16px;
+  line-height: 1;
+  margin-right: 4px;
+}
+
+/* Icon-only buttons (like delete) should not have margin */
+.commentary-btn-icon .codicon {
+  margin-right: 0;
+}
+
 .commentary-btn:hover {
   background: #1a1f26;
   color: rgba(255, 255, 255, 1.0);
