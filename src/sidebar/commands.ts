@@ -9,8 +9,11 @@ import { AgentClient } from '../agent/client';
 import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { Note } from '../types';
+import { DocumentNavigationService } from './documentNavigation';
 
 export class CommandManager {
+  private navigationService: DocumentNavigationService;
+
   constructor(
     private context: vscode.ExtensionContext,
     private storage: StorageManager,
@@ -18,7 +21,10 @@ export class CommandManager {
     private commentsView: CommentsViewProvider,
     private agentClient: AgentClient,
     private webviewProvider: MarkdownWebviewProvider
-  ) {}
+  ) {
+    // Initialize navigation service with default timing
+    this.navigationService = new DocumentNavigationService(webviewProvider, overlayHost);
+  }
 
   registerCommands(): void {
     // Edit comment from sidebar (click behavior)
@@ -27,45 +33,16 @@ export class CommandManager {
         if (!note || !note.note) {
           return;
         }
-        const documentUri = note.note.file;
-
-        // Check if the document is already open in a webview panel
-        const existingPanel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
-
-        if (!existingPanel) {
-          // Document not open - open it first
-          const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(documentUri));
-          await this.webviewProvider.openMarkdown(doc);
-
-          // Wait longer for the webview to initialize and highlights to paint
-          await new Promise(resolve => setTimeout(resolve, 800));
-        } else {
-          // Document already open - just reveal the panel
-          existingPanel.reveal(vscode.ViewColumn.One, true);
-
-          // Still wait a bit for any pending updates
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        // Get the webview panel and show the edit bubble
-        const panel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
-        if (panel) {
-          // Use different message type for document-level comments
-          const messageType = note.note.isDocumentLevel ? 'showEditBubbleForDocument' : 'showEditBubble';
-          await panel.webview.postMessage({
-            type: messageType,
-            note: note.note,
-          });
-        }
+        
+        // Use the navigation service to handle all the complexity
+        await this.navigationService.navigateToComment(note.note, true);
       })
     );
 
     // Open/focus document from sidebar (click on file item)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.openDocument', async (fileUri: string) => {
-        // Open the document in Commentary webview (rendered mode)
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(fileUri));
-        await this.webviewProvider.openMarkdown(doc);
+        await this.navigationService.openDocument(fileUri);
       })
     );
 
