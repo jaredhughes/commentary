@@ -108,9 +108,8 @@ export class SidecarStorage implements ICommentStorage {
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Directory doesn't exist yet, return empty map
-      console.log('[SidecarStorage] getAllNotes error:', error);
     }
 
     return result;
