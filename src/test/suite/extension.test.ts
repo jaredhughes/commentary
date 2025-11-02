@@ -7,11 +7,11 @@ suite('Commentary Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('hughesjared.commentary'));
+    assert.ok(vscode.extensions.getExtension('jaredhughes.commentary'));
   });
 
   test('Extension should activate', async () => {
-    const extension = vscode.extensions.getExtension('hughesjared.commentary');
+    const extension = vscode.extensions.getExtension('jaredhughes.commentary');
     assert.ok(extension);
     await extension?.activate();
     assert.strictEqual(extension?.isActive, true);
@@ -49,7 +49,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have proper package.json metadata', () => {
-    const extension = vscode.extensions.getExtension('hughesjared.commentary');
+    const extension = vscode.extensions.getExtension('jaredhughes.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -60,7 +60,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have Cursor provider in configuration', () => {
-    const extension = vscode.extensions.getExtension('hughesjared.commentary');
+    const extension = vscode.extensions.getExtension('jaredhughes.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -74,7 +74,7 @@ suite('Commentary Extension Test Suite', () => {
   });
 
   test('Extension should have Cursor-specific configuration properties', () => {
-    const extension = vscode.extensions.getExtension('hughesjared.commentary');
+    const extension = vscode.extensions.getExtension('jaredhughes.commentary');
     assert.ok(extension);
 
     const packageJSON = extension.packageJSON;
@@ -89,7 +89,7 @@ suite('Storage Tests', () => {
   let storage: WorkspaceStorage;
 
   suiteSetup(async () => {
-    const extension = vscode.extensions.getExtension('hughesjared.commentary');
+    const extension = vscode.extensions.getExtension('jaredhughes.commentary');
     assert.ok(extension);
   });
 

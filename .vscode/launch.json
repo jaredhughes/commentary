@@ -6,7 +6,8 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extension=jaredhughes.commentary"
       ],
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
@@ -18,7 +19,8 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extension=jaredhughes.commentary"
       ],
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
@@ -33,7 +35,8 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/index",
+        "--disable-extension=jaredhughes.commentary"
       ],
       "outFiles": [
         "${workspaceFolder}/out/test/**/*.js"

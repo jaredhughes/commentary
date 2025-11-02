@@ -13,7 +13,7 @@ suite('Storage Tests', () => {
   let context: vscode.ExtensionContext;
 
   suiteSetup(() => {
-    const ext = vscode.extensions.getExtension('hughesjared.commentary');
+    const ext = vscode.extensions.getExtension('jaredhughes.commentary');
     if (!ext) {
       throw new Error('Extension not found');
     }
