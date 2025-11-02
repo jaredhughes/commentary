@@ -97,31 +97,24 @@ export class SidecarStorage implements ICommentStorage {
 
     try {
       const dir = this.getCommentsDir();
-      console.log(`[SidecarStorage] getAllNotes - reading directory: ${dir.fsPath}`);
       const entries = await vscode.workspace.fs.readDirectory(dir);
-      console.log(`[SidecarStorage] getAllNotes - found ${entries.length} entries`);
 
       for (const [filename, type] of entries) {
-        console.log(`[SidecarStorage] getAllNotes - checking entry: ${filename}, type: ${type}`);
         if (type === vscode.FileType.File && filename.endsWith('.json')) {
           const filePath = vscode.Uri.joinPath(dir, filename);
           const content = await vscode.workspace.fs.readFile(filePath);
           const text = Buffer.from(content).toString('utf8');
           const notes = JSON.parse(text) as Note[];
-          console.log(`[SidecarStorage] getAllNotes - parsed ${notes.length} notes from ${filename}`);
 
           if (notes.length > 0) {
-            console.log(`[SidecarStorage] getAllNotes - adding to map with key: ${notes[0].file}`);
             result.set(notes[0].file, notes);
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Directory doesn't exist yet, return empty map
-      console.error(`[SidecarStorage] getAllNotes - error: ${error}`);
     }
 
-    console.log(`[SidecarStorage] getAllNotes - returning ${result.size} files`);
     return result;
   }
 
