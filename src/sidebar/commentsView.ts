@@ -1,186 +1,21 @@
 /**
- * Sidebar tree view for displaying comments
+ * Sidebar tree view for displaying comments with hierarchical folder structure
  */
 
 import * as vscode from 'vscode';
-import * as os from 'os';
-import * as path from 'path';
 import { StorageManager } from '../storage';
-import { Note } from '../types';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
+import { FolderTreeItem, FileTreeItem, CommentTreeItem } from './treeItems';
+import { buildFolderTree, getWorkspaceRelativePath, getDisplayPath, FileNode, FolderNode, isFileInWorkspace } from '../utils/fileTree';
 
-export class CommentTreeItem extends vscode.TreeItem {
-  constructor(
-    public readonly note: Note,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
-  ) {
-    // Use larger label for better visibility
-    super(note.text, collapsibleState);
-
-    this.tooltip = this.buildTooltip();
-    this.description = this.buildDescription();
-
-    // Different contextValue and icon for document-level comments
-    if (note.isDocumentLevel) {
-      this.contextValue = 'documentComment';
-      this.iconPath = new vscode.ThemeIcon('note', new vscode.ThemeColor('charts.blue'));
-    } else {
-      this.contextValue = 'comment';
-      this.iconPath = new vscode.ThemeIcon('comment', new vscode.ThemeColor('charts.yellow'));
-    }
-
-    // Make clickable to edit (works for both regular and document-level comments)
-    this.command = {
-      command: 'commentary.editCommentFromSidebar',
-      title: 'Edit Comment',
-      arguments: [this],
-    };
-  }
-
-  private buildDescription(): string {
-    if (this.note.isDocumentLevel) {
-      return '📄 Entire document';
-    }
-    if (this.note.lines) {
-      return `L${this.note.lines.start}–${this.note.lines.end}`;
-    }
-    return `Pos ${this.note.position.start}–${this.note.position.end}`;
-  }
-
-  private buildTooltip(): string {
-    if (this.note.isDocumentLevel) {
-      return [
-        `Comment: ${this.note.text}`,
-        '',
-        'Scope: Entire document',
-        `Created: ${new Date(this.note.createdAt).toLocaleString()}`,
-        '',
-        'Click to edit'
-      ].join('\n');
-    }
-
-    const lines = [`Comment: ${this.note.text}`, '', `Selected: "${this.note.quote.exact}"`];
-
-    if (this.note.lines) {
-      lines.push(`Lines: ${this.note.lines.start}–${this.note.lines.end}`);
-    }
-
-    lines.push(`Created: ${new Date(this.note.createdAt).toLocaleString()}`);
-    lines.push('', 'Click to edit');
-
-    return lines.join('\n');
-  }
-}
-
-export class FileTreeItem extends vscode.TreeItem {
-  // Make collapsibleState mutable so we can update it
-  public collapsibleState: vscode.TreeItemCollapsibleState;
-  
-  constructor(
-    public readonly fileUri: string,
-    public readonly noteCount: number,
-    collapsibleState: vscode.TreeItemCollapsibleState
-  ) {
-    super(formatFilePathForDisplay(fileUri), collapsibleState);
-    this.collapsibleState = collapsibleState;
-    
-    // Set ID to the file URI so VS Code can track this item's state
-    this.id = fileUri;
-
-    // Update tooltip and description based on comment count
-    if (noteCount === 0) {
-      this.tooltip = 'No comments yet';
-      this.description = '';
-      this.iconPath = new vscode.ThemeIcon('file', new vscode.ThemeColor('disabledForeground'));
-    } else {
-      this.tooltip = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
-      this.description = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
-      this.iconPath = new vscode.ThemeIcon('file');
-    }
-
-    this.contextValue = 'file';
-
-    // Make clickable to open/focus document
-    this.command = {
-      command: 'commentary.openDocument',
-      title: 'Open Document',
-      arguments: [fileUri],
-    };
-  }
-}
-
-/**
- * Format file path for display - converts to workspace-relative path if in workspace
- */
-function formatFilePathForDisplay(fileUri: string): string {
-  try {
-    // Parse the file:// URI to get the absolute path
-    const uri = vscode.Uri.parse(fileUri);
-    const fullPath = uri.fsPath;
-
-    // Check if we have a workspace folder
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      // No workspace - show home-relative or just filename
-      const homeDir = os.homedir();
-      if (fullPath.startsWith(homeDir)) {
-        return '~' + fullPath.substring(homeDir.length);
-      }
-      return path.basename(fullPath);
-    }
-
-    // Try to make it workspace-relative
-    // asRelativePath returns the relative path if in workspace, or full fsPath if outside
-    const workspaceRelative = vscode.workspace.asRelativePath(uri, false);
-    const fullFsPath = uri.fsPath;
-    
-    // If the returned path is different from the full path AND doesn't start with /,
-    // it means it's a relative path within the workspace
-    const isInWorkspace = workspaceRelative !== fullFsPath && 
-                          !path.isAbsolute(workspaceRelative) &&
-                          workspaceRelative.length < fullFsPath.length;
-    
-    if (isInWorkspace) {
-      // File is in workspace - use relative path
-      return workspaceRelative;
-    }
-
-    // File is outside workspace - check if it's in any workspace folder
-    for (const folder of workspaceFolders) {
-      if (fullFsPath.startsWith(folder.uri.fsPath)) {
-        // File is actually in a workspace folder - compute relative path manually
-        const relativePath = path.relative(folder.uri.fsPath, fullFsPath);
-        if (!relativePath.startsWith('..')) {
-          return relativePath;
-        }
-      }
-    }
-
-    // File is truly outside workspace - show home-relative or just filename
-    const homeDir = os.homedir();
-    if (fullPath.startsWith(homeDir)) {
-      return '~' + fullPath.substring(homeDir.length);
-    }
-
-    // Last resort: just show the filename
-    return path.basename(fullPath);
-  } catch (error) {
-    // Fallback to just the filename from the URI string
-    try {
-      const uri = vscode.Uri.parse(fileUri);
-      return path.basename(uri.fsPath);
-    } catch {
-      return fileUri;
-    }
-  }
-}
+export { CommentTreeItem, FileTreeItem, FolderTreeItem };
 
 export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
   private isExpanded: boolean = true; // Track expand/collapse state
-  private fileItems: FileTreeItem[] = []; // Cache file items for toggle operation
+  private folderTree: FolderNode | null = null; // Cache the folder tree
 
   constructor(
     private storage: StorageManager,
@@ -193,6 +28,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   refresh(): void {
     console.log('[CommentsView] refresh() called');
+    this.folderTree = null; // Invalidate cache
     this._onDidChangeTreeData.fire();
     console.log('[CommentsView] _onDidChangeTreeData fired');
 
@@ -213,75 +49,125 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
     console.log('[CommentsView] getChildren called, element:', element);
+    
     if (!element) {
-      // Root level: show files with comments
-      const items = await this.getFileItems();
-      console.log('[CommentsView] Returning file items:', items.length);
-      return items;
+      // Root level: build and show folder hierarchy
+      return this.getRootItems();
+    }
+
+    if (element instanceof FolderTreeItem) {
+      // Show subfolders and files in this folder
+      return this.getFolderChildren(element);
     }
 
     if (element instanceof FileTreeItem) {
       // Show comments for this file
-      const items = await this.getCommentItems(element.fileUri);
-      console.log('[CommentsView] Returning comment items for file:', items.length);
-      return items;
+      return this.getCommentItems(element.fileUri);
     }
 
     return [];
   }
 
-  private async getFileItems(): Promise<FileTreeItem[]> {
-    console.log('[CommentsView] getFileItems called');
-    const items: FileTreeItem[] = [];
-
-    // Find all markdown files in workspace
-    const workspaceFiles = await vscode.workspace.findFiles('**/*.md', '**/node_modules/**');
-    console.log('[CommentsView] Found', workspaceFiles.length, 'markdown files in workspace');
-
-    // Get all notes to check which files have comments
-    const allNotes = await this.storage.getAllNotes();
-    console.log('[CommentsView] getAllNotes returned:', allNotes.size, 'files with notes');
-
-    // Create a map of file URIs to comment counts
-    const fileCommentCounts = new Map<string, number>();
-    for (const [fileUri, notes] of allNotes.entries()) {
-      fileCommentCounts.set(fileUri, notes.length);
+  private async getRootItems(): Promise<vscode.TreeItem[]> {
+    console.log('[CommentsView] getRootItems called');
+    
+    // Build the folder tree if not cached
+    if (!this.folderTree) {
+      this.folderTree = await this.buildFolderTree();
     }
 
-    // Create items for all markdown files
-    for (const fileUri of workspaceFiles) {
-      const uriString = fileUri.toString();
-      const commentCount = fileCommentCounts.get(uriString) || 0;
+    const items: vscode.TreeItem[] = [];
 
-      // Files with comments can be expanded/collapsed based on toggle state
-      let collapsibleState: vscode.TreeItemCollapsibleState;
-      if (commentCount > 0) {
-        collapsibleState = this.isExpanded
-          ? vscode.TreeItemCollapsibleState.Expanded
-          : vscode.TreeItemCollapsibleState.Collapsed;
-      } else {
-        collapsibleState = vscode.TreeItemCollapsibleState.None;
-      }
-
-      items.push(new FileTreeItem(uriString, commentCount, collapsibleState));
+    // Add subfolders
+    for (const [folderName, folder] of this.folderTree.subfolders) {
+      items.push(new FolderTreeItem(
+        folder.path,
+        folderName,
+        folder.files.length + this.countSubfolderFiles(folder),
+        folder.commentCount
+      ));
     }
 
-    // Sort: files with comments first, then alphabetically
+    // Add root-level files
+    for (const file of this.folderTree.files) {
+      const collapsibleState = file.commentCount > 0
+        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+        : vscode.TreeItemCollapsibleState.None;
+      
+      items.push(new FileTreeItem(
+        file.uri,
+        file.fileName,
+        file.commentCount,
+        collapsibleState
+      ));
+    }
+
+    // Sort: folders first, then files
     items.sort((a, b) => {
-      if (a.noteCount > 0 && b.noteCount === 0) {
+      if (a instanceof FolderTreeItem && b instanceof FileTreeItem) {
         return -1;
       }
-      if (a.noteCount === 0 && b.noteCount > 0) {
+      if (a instanceof FileTreeItem && b instanceof FolderTreeItem) {
         return 1;
       }
-      return a.label!.toString().localeCompare(b.label!.toString());
+      return (a.label || '').toString().localeCompare((b.label || '').toString());
     });
 
-    console.log('[CommentsView] Returning', items.length, 'file items');
+    console.log('[CommentsView] Returning root items:', items.length);
+    return items;
+  }
+
+  private async getFolderChildren(folderItem: FolderTreeItem): Promise<vscode.TreeItem[]> {
+    console.log('[CommentsView] getFolderChildren called for:', folderItem.folderPath);
     
-    // Cache the items for toggle operations
-    this.fileItems = items;
-    
+    if (!this.folderTree) {
+      this.folderTree = await this.buildFolderTree();
+    }
+
+    // Find the folder node
+    const folderNode = this.findFolderNode(this.folderTree, folderItem.folderPath);
+    if (!folderNode) {
+      return [];
+    }
+
+    const items: vscode.TreeItem[] = [];
+
+    // Add subfolders
+    for (const [folderName, folder] of folderNode.subfolders) {
+      items.push(new FolderTreeItem(
+        folder.path,
+        folderName,
+        folder.files.length + this.countSubfolderFiles(folder),
+        folder.commentCount
+      ));
+    }
+
+    // Add files
+    for (const file of folderNode.files) {
+      const collapsibleState = file.commentCount > 0
+        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+        : vscode.TreeItemCollapsibleState.None;
+      
+      items.push(new FileTreeItem(
+        file.uri,
+        file.fileName,
+        file.commentCount,
+        collapsibleState
+      ));
+    }
+
+    // Sort: folders first, then files
+    items.sort((a, b) => {
+      if (a instanceof FolderTreeItem && b instanceof FileTreeItem) {
+        return -1;
+      }
+      if (a instanceof FileTreeItem && b instanceof FolderTreeItem) {
+        return 1;
+      }
+      return (a.label || '').toString().localeCompare((b.label || '').toString());
+    });
+
+    console.log('[CommentsView] Returning folder children:', items.length);
     return items;
   }
 
@@ -290,60 +176,156 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const notes = await this.storage.getNotes(fileUri);
     console.log('[CommentsView] Got', notes.length, 'notes');
 
-    // Sort by position
-    notes.sort((a, b) => a.position.start - b.position.start);
-
-    return notes.map(
+    const items = notes.map(
       (note) => new CommentTreeItem(note, vscode.TreeItemCollapsibleState.None)
     );
+
+    console.log('[CommentsView] Returning comment items for file:', items.length);
+    return items;
+  }
+
+  private async buildFolderTree(): Promise<FolderNode> {
+    console.log('[CommentsView] buildFolderTree called');
+    
+    // Find all markdown files in workspace
+    const workspaceFiles = await vscode.workspace.findFiles('**/*.md', '**/node_modules/**');
+    console.log('[CommentsView] Found', workspaceFiles.length, 'markdown files in workspace');
+
+    // Get all notes to check which files have comments
+    const allNotes = await this.storage.getAllNotes();
+    console.log('[CommentsView] getAllNotes returned:', allNotes.size, 'files with notes');
+
+    // Build file nodes with workspace-relative paths
+    const fileNodes: FileNode[] = [];
+    const filesOutsideWorkspace: FileNode[] = [];
+
+    for (const fileUri of workspaceFiles) {
+      const uriString = fileUri.toString();
+      const notes = allNotes.get(uriString) || [];
+      const relativePath = getWorkspaceRelativePath(uriString);
+
+      const fileNode: FileNode = {
+        uri: uriString,
+        relativePath: relativePath || getDisplayPath(uriString),
+        fileName: fileUri.fsPath.split('/').pop() || '',
+        commentCount: notes.length
+      };
+
+      if (relativePath && isFileInWorkspace(uriString)) {
+        fileNodes.push(fileNode);
+      } else {
+        // Files outside workspace go to a special section
+        filesOutsideWorkspace.push(fileNode);
+      }
+    }
+
+    // Build the folder tree
+    const tree = buildFolderTree(fileNodes);
+
+    // Add files outside workspace as a special folder if any exist
+    if (filesOutsideWorkspace.length > 0) {
+      const externalFolder: FolderNode = {
+        path: '__external__',
+        label: 'External Files',
+        files: filesOutsideWorkspace,
+        subfolders: new Map(),
+        commentCount: filesOutsideWorkspace.reduce((sum, f) => sum + f.commentCount, 0)
+      };
+      tree.subfolders.set('__external__', externalFolder);
+    }
+
+    console.log('[CommentsView] Built folder tree with', tree.subfolders.size, 'root folders');
+    return tree;
+  }
+
+  private findFolderNode(root: FolderNode, targetPath: string): FolderNode | null {
+    if (root.path === targetPath) {
+      return root;
+    }
+
+    for (const subfolder of root.subfolders.values()) {
+      const found = this.findFolderNode(subfolder, targetPath);
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  private countSubfolderFiles(folder: FolderNode): number {
+    let count = 0;
+    for (const subfolder of folder.subfolders.values()) {
+      count += subfolder.files.length + this.countSubfolderFiles(subfolder);
+    }
+    return count;
   }
 
   /**
-   * Get all comments for the active editor
-   * Prioritizes Commentary preview if open, otherwise falls back to active text editor
-   */
-  async getActiveFileComments(): Promise<Note[]> {
-    // First check if there's an active Commentary document
-    const activeCommentaryUri = this.webviewProvider.getActiveDocumentUri();
-    if (activeCommentaryUri) {
-      return this.storage.getNotes(activeCommentaryUri);
-    }
-
-    // Fall back to checking active text editor
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor && activeEditor.document.languageId === 'markdown') {
-      return this.storage.getNotes(activeEditor.document.uri.toString());
-    }
-
-    // If active editor isn't markdown, search through all visible editors
-    const markdownEditor = vscode.window.visibleTextEditors.find(
-      (editor) => editor.document.languageId === 'markdown'
-    );
-
-    if (markdownEditor) {
-      return this.storage.getNotes(markdownEditor.document.uri.toString());
-    }
-
-    return [];
-  }
-
-  /**
-   * Toggle expand/collapse all file items
+   * Toggle expand/collapse state for all file items that have comments
+   * This expands/collapses files, not folders
    */
   async toggleExpandCollapseAll(): Promise<void> {
     // Toggle state
     this.isExpanded = !this.isExpanded;
     console.log('[CommentsView] Toggle state:', this.isExpanded ? 'EXPANDED' : 'COLLAPSED');
     
-    // Fire change events for each individual item to force VS Code to refresh them
-    // This is necessary because VS Code caches expansion state per item ID
-    for (const item of this.fileItems) {
-      if (item.noteCount > 0) {
-        this._onDidChangeTreeData.fire(item);
+    // If we have a tree view, we can programmatically expand/collapse items
+    if (this.treeView && this.folderTree) {
+      const allFileItems = this.getAllFileItems(this.folderTree);
+      console.log('[CommentsView] Found', allFileItems.length, 'file items to toggle');
+      
+      // Filter to only files with comments
+      const filesWithComments = allFileItems.filter(item => item.noteCount > 0);
+      console.log('[CommentsView] Toggling', filesWithComments.length, 'files with comments');
+      
+      // Expand or collapse each file item
+      for (const fileItem of filesWithComments) {
+        try {
+          if (this.isExpanded) {
+            // Expand: reveal with expand level 1 (show the file's children)
+            await this.treeView.reveal(fileItem, { expand: 1, select: false, focus: false });
+          } else {
+            // Collapse: reveal with expand level 0 (collapse the file)
+            await this.treeView.reveal(fileItem, { expand: false, select: false, focus: false });
+          }
+        } catch (error) {
+          // Ignore errors - item might not be visible yet
+          console.log('[CommentsView] Could not toggle item:', error);
+        }
       }
     }
     
-    // Also fire a general refresh
+    // Force full refresh to update all collapsible states
+    this.folderTree = null;
     this._onDidChangeTreeData.fire(undefined);
+  }
+  
+  /**
+   * Get all file items from the folder tree (recursively)
+   */
+  private getAllFileItems(folder: FolderNode): FileTreeItem[] {
+    const items: FileTreeItem[] = [];
+    
+    // Add files from this folder
+    for (const file of folder.files) {
+      const collapsibleState = file.commentCount > 0
+        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+        : vscode.TreeItemCollapsibleState.None;
+      
+      items.push(new FileTreeItem(
+        file.uri,
+        file.fileName,
+        file.commentCount,
+        collapsibleState
+      ));
+    }
+    
+    // Recursively add files from subfolders
+    for (const subfolder of folder.subfolders.values()) {
+      items.push(...this.getAllFileItems(subfolder));
+    }
+    
+    return items;
   }
 }
