@@ -18,9 +18,33 @@ let commentsViewProvider: CommentsViewProvider | undefined;
 let commentsTreeView: vscode.TreeView<vscode.TreeItem> | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
+let isActivating = false;
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Commentary extension is now active');
+  // Prevent concurrent activation
+  if (isActivating) {
+    console.warn('[Commentary] Activation already in progress, skipping');
+    return;
+  }
+  
+  // Check if already activated (hot reload scenario)
+  if (commentsTreeView) {
+    console.warn('[Commentary] Extension already activated, calling deactivate first');
+    deactivate();
+  }
+  
+  isActivating = true;
+  console.log('[Commentary] Extension activating from:', context.extensionPath);
+  
+  try {
+    activateInternal(context);
+  } finally {
+    isActivating = false;
+  }
+}
+
+function activateInternal(context: vscode.ExtensionContext) {
+  console.log('[Commentary] Extension is now active');
 
   // Set default theme based on system color scheme (only if not already configured)
   const config = vscode.workspace.getConfiguration('commentary.theme');
@@ -243,6 +267,44 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  overlayHost?.dispose();
-  console.log('Commentary extension deactivated');
+  console.log('[Commentary] Extension deactivating...');
+  
+  isActivating = false;
+  
+  // Dispose all resources in reverse order
+  if (commentsTreeView) {
+    try {
+      commentsTreeView.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing tree view:', e);
+    }
+    commentsTreeView = undefined;
+  }
+  
+  if (commentsViewProvider) {
+    commentsViewProvider = undefined;
+  }
+  
+  if (overlayHost) {
+    try {
+      overlayHost.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing overlay host:', e);
+    }
+    overlayHost = undefined;
+  }
+  
+  if (markdownWebviewProvider) {
+    // MarkdownWebviewProvider doesn't have dispose, but panels are managed by it
+    markdownWebviewProvider = undefined;
+  }
+  
+  // FileDecorationProvider doesn't need explicit disposal
+  if (fileDecorationProvider) {
+    fileDecorationProvider = undefined;
+  }
+  
+  storageManager = undefined;
+  
+  console.log('[Commentary] Extension deactivated');
 }
