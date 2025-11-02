@@ -377,10 +377,16 @@ suite('Storage Tests', () => {
       const savedNotes = await storage.getNotes(note.file);
       assert.strictEqual(savedNotes.length, 1, 'Note should be saved before export');
       
+      // Verify getAllNotes can read the directory
+      const allNotes = await storage.getAllNotes();
+      assert.strictEqual(allNotes.size, 1, 'getAllNotes should return 1 file');
+      assert.ok(allNotes.has(note.file), 'getAllNotes should contain our file');
+      
       const exported = await storage.exportNotes();
 
       const parsed = JSON.parse(exported);
       assert.ok(Object.keys(parsed).length > 0, `Exported should have keys. Got: ${exported}`);
+      assert.ok(parsed[note.file], `Exported should have our file. Got keys: ${Object.keys(parsed)}`);
     });
 
     test('Should import notes from JSON', async () => {

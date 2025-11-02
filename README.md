@@ -1,5 +1,7 @@
 # 📝 Commentary
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jaredhughes/commentary?utm_source=oss&utm_medium=github&utm_campaign=jaredhughes%2Fcommentary&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 **Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.**
 
 ## Overview
