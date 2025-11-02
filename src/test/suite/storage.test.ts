@@ -248,8 +248,10 @@ suite('Storage Tests', () => {
     suiteSetup(() => {
       const folders = vscode.workspace.workspaceFolders;
       if (!folders || folders.length === 0) {
-        // Create a temporary workspace URI for testing
-        workspaceUri = vscode.Uri.file('/tmp/commentary-test');
+        // Create a temporary workspace URI for testing - use platform-specific temp dir
+        const os = require('os');
+        const tempDir = os.tmpdir();
+        workspaceUri = vscode.Uri.file(`${tempDir}/commentary-test`);
       } else {
         workspaceUri = folders[0].uri;
       }
