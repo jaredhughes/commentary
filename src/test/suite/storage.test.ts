@@ -372,10 +372,15 @@ suite('Storage Tests', () => {
       };
 
       await storage.saveNote(note);
+      
+      // Verify the note was actually saved before exporting
+      const savedNotes = await storage.getNotes(note.file);
+      assert.strictEqual(savedNotes.length, 1, 'Note should be saved before export');
+      
       const exported = await storage.exportNotes();
 
       const parsed = JSON.parse(exported);
-      assert.ok(Object.keys(parsed).length > 0);
+      assert.ok(Object.keys(parsed).length > 0, `Exported should have keys. Got: ${exported}`);
     });
 
     test('Should import notes from JSON', async () => {
