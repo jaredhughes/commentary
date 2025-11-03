@@ -8,6 +8,7 @@ import MarkdownIt from 'markdown-it';
 import markdownItAnchor from 'markdown-it-anchor';
 import markdownItTaskLists from 'markdown-it-task-lists';
 import hljs from 'highlight.js';
+import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from '../utils/buttonConfig';
 import { StorageManager } from '../storage';
 import { OverlayHost } from './overlayHost';
 import { PreviewMessage } from '../types';
@@ -142,8 +143,8 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       changeDisposable.dispose();
     });
 
-    // Auto-reveal Comments sidebar (non-blocking - fire and forget)
-    vscode.commands.executeCommand('commentary.commentsView.focus');
+    // Auto-reveal Comments sidebar (handled by extension.ts via showCommentsSidebar command)
+    // No-op here - extension.ts handles view focusing
   }
 
   /**
@@ -266,13 +267,29 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const overlayStyleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'overlay.css')
     );
-
-    // Get theme CSS
+    
+    // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
     const themeName = config.get<string>('theme.name', 'simple');
+    
+    // Get button configurations from our pure utility
+    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+    const isMac = process.platform === 'darwin';
+    const agentBtnConfig = getAgentButtonConfig(provider);
+    const saveBtnConfig = getSaveButtonConfig(isMac);
+    const deleteBtnConfig = getDeleteButtonConfig();
+    
+    console.log('[MarkdownWebview] Theme loading:', {
+      themeName,
+      configuredTheme: config.get<string>('theme.name'),
+      extensionUri: this.context.extensionUri.toString(),
+    });
+    
     const themeUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );
+    
+    console.log('[MarkdownWebview] Theme URI:', themeUri.toString());
 
     // Determine if theme is dark for syntax highlighting
     // Simple theme looks better with dark syntax highlighting
@@ -281,6 +298,12 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const highlightUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', highlightTheme)
     );
+    
+    console.log('[MarkdownWebview] Syntax highlighting:', {
+      isDarkTheme,
+      highlightTheme,
+      highlightUri: highlightUri.toString(),
+    });
 
     // Generate nonce for security
     const nonce = this.getNonce();
@@ -290,8 +313,11 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} data:;">
   <title>Commentary</title>
+
+  <!-- Codicons for VS Code icons -->
+  <link rel="stylesheet" href="${webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'codicons', 'codicon.css'))}" data-codicons="true">
 
   <!-- Minimal reset + base styles -->
   <style nonce="${nonce}">
@@ -323,13 +349,94 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->
-  <link rel="stylesheet" href="${themeUri}">
+  <link rel="stylesheet" href="${themeUri}" data-theme-name="${themeName}">
 
   <!-- Syntax Highlighting CSS -->
-  <link rel="stylesheet" href="${highlightUri}">
+  <link rel="stylesheet" href="${highlightUri}" data-highlight-theme="${highlightTheme}">
 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
+  
+  <script nonce="${nonce}">
+    // Debug theme loading
+    console.log('[Commentary Webview] Theme loading:', {
+      theme: '${themeName}',
+      themeUri: '${themeUri}',
+      highlightTheme: '${highlightTheme}',
+      highlightUri: '${highlightUri}',
+      isDarkTheme: ${isDarkTheme},
+    });
+    
+    // Validate theme file loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      const themeLink = document.querySelector('link[data-theme-name]');
+      const highlightLink = document.querySelector('link[data-highlight-theme]');
+      const codiconLink = document.querySelector('link[data-codicons]');
+      
+      // Note: Can't read cssRules due to CORS, just check if sheet loaded
+      const getSheetInfo = (link) => {
+        if (!link) return null;
+        try {
+          return {
+            href: link.href,
+            loaded: link.sheet !== null,
+            // cssRules can't be read due to CORS security
+          };
+        } catch (e) {
+          return {
+            href: link.href,
+            error: 'Could not access stylesheet',
+          };
+        }
+      };
+      
+      console.log('[Commentary Webview] DOM loaded, checking stylesheets:', {
+        themeLink: getSheetInfo(themeLink),
+        highlightLink: getSheetInfo(highlightLink),
+        codiconLink: getSheetInfo(codiconLink),
+        totalStylesheets: document.styleSheets.length,
+      });
+      
+      // Check for CSS variables set by themes
+      const rootStyles = getComputedStyle(document.documentElement);
+      const sampleVars = [
+        '--pico-font-family',
+        '--pico-background-color',
+        '--pico-color',
+        'color-scheme',
+      ];
+      
+      const cssVars = {};
+      sampleVars.forEach(varName => {
+        cssVars[varName] = rootStyles.getPropertyValue(varName) || 'not set';
+      });
+      
+      console.log('[Commentary Webview] CSS variables on :root:', cssVars);
+      console.log('[Commentary Webview] Computed body styles:', {
+        backgroundColor: rootStyles.getPropertyValue('background-color'),
+        color: rootStyles.getPropertyValue('color'),
+        fontFamily: rootStyles.getPropertyValue('font-family'),
+      });
+      
+      // Test if codicon font is available
+      const testCodeIcon = document.createElement('i');
+      testCodeIcon.className = 'codicon codicon-trash';
+      testCodeIcon.style.position = 'absolute';
+      testCodeIcon.style.left = '-9999px';
+      document.body.appendChild(testCodeIcon);
+      
+      setTimeout(() => {
+        const testStyles = getComputedStyle(testCodeIcon);
+        console.log('[Commentary Webview] Codicon test:', {
+          fontFamily: testStyles.fontFamily,
+          fontSize: testStyles.fontSize,
+          content: testStyles.content,
+          display: testStyles.display,
+        });
+        document.body.removeChild(testCodeIcon);
+      }, 100);
+    });
+  </script>
 </head>
 <body>
   <div id="markdown-content" class="markdown-body">
@@ -352,8 +459,12 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       // Store document URI for context
       window.commentaryDocumentUri = '${document.uri.toString()}';
 
-      // Store agent provider for dynamic UI
-      window.commentaryAgentProvider = '${config.get<string>('agent.provider', 'cursor')}';
+      // Inject button configurations from our pure utility (server-side generated)
+      window.commentaryButtonConfigs = {
+        agent: ${JSON.stringify(agentBtnConfig)},
+        save: ${JSON.stringify(saveBtnConfig)},
+        delete: ${JSON.stringify(deleteBtnConfig)}
+      };
     })();
   </script>
 </body>

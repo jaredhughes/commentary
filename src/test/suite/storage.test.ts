@@ -9,27 +9,62 @@ import { WorkspaceStorage } from '../../storage/workspaceStorage';
 import { SidecarStorage } from '../../storage/sidecarStorage';
 import { Note } from '../../types';
 
+// Mock workspace state for testing
+class MockMemento implements vscode.Memento {
+  private storage = new Map<string, unknown>();
+
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
+  get<T>(key: string, defaultValue?: T): T | undefined {
+    return (this.storage.get(key) as T) ?? defaultValue;
+  }
+
+  async update(key: string, value: unknown): Promise<void> {
+    if (value === undefined) {
+      this.storage.delete(key);
+    } else {
+      this.storage.set(key, value);
+    }
+  }
+
+  keys(): readonly string[] {
+    return Array.from(this.storage.keys());
+  }
+
+  setKeysForSync(_keys: readonly string[]): void {
+    // Not needed for tests
+  }
+}
+
 suite('Storage Tests', () => {
-  let context: vscode.ExtensionContext;
+  let mockContext: vscode.ExtensionContext;
+  let workspaceState: MockMemento;
 
   suiteSetup(() => {
-    const ext = vscode.extensions.getExtension('hughesjared.commentary');
-    if (!ext) {
-      throw new Error('Extension not found');
-    }
-    context = ext.exports?.context || ext;
+    // Create mock extension context with working Memento
+    workspaceState = new MockMemento();
+    mockContext = {
+      workspaceState,
+      globalState: new MockMemento(),
+      subscriptions: [],
+      extensionUri: vscode.Uri.file('/tmp/test-extension'),
+      extensionPath: '/tmp/test-extension',
+      storagePath: '/tmp/test-storage',
+      globalStoragePath: '/tmp/test-global-storage',
+      logPath: '/tmp/test-logs',
+    } as unknown as vscode.ExtensionContext;
   });
 
   suite('WorkspaceStorage', () => {
     let storage: WorkspaceStorage;
 
     setup(() => {
-      storage = new WorkspaceStorage(context);
+      storage = new WorkspaceStorage(mockContext);
     });
 
     teardown(async () => {
       // Clean up all test data
-      await context.workspaceState.update('commentary.notes', undefined);
+      await workspaceState.update('commentary.notes', undefined);
     });
 
     test('Should save and retrieve note', async () => {
