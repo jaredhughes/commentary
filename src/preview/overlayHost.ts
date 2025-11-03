@@ -339,6 +339,7 @@ export class OverlayHost {
           await panel.webview.postMessage({
             type: 'showEditBubble',
             note: note,
+            shouldScroll: false, // Don't scroll when clicked on highlight itself
           });
         }
       } else {

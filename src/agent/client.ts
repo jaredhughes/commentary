@@ -1,22 +1,25 @@
 /**
  * AI Agent client (provider-agnostic)
- * MVP: Logs to output channel, shows formatted prompt to user
+ * Thin wrapper around ProviderAdapter - handles high-level orchestration
  */
 
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 import { Note, AgentRequest, AgentResponse } from '../types';
 import { PayloadBuilder } from './payload';
+import { ProviderAdapter } from './providerAdapter';
 import { ApiIntegration } from './apiIntegration';
 
 export class AgentClient {
   private outputChannel: vscode.OutputChannel;
+  private adapter: ProviderAdapter;
   private apiIntegration: ApiIntegration;
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(
+    private context: vscode.ExtensionContext,
+    adapter?: ProviderAdapter
+  ) {
     this.outputChannel = vscode.window.createOutputChannel('Commentary Agent');
+    this.adapter = adapter || new ProviderAdapter(context);
     this.apiIntegration = new ApiIntegration(context);
   }
 
@@ -66,246 +69,42 @@ export class AgentClient {
   }
 
   /**
-   * Get human-friendly provider name
-   */
-  private getProviderDisplayName(provider: string): string {
-    switch (provider) {
-      case 'claude':
-        return 'Claude';
-      case 'cursor':
-        return 'Cursor';
-      case 'openai':
-        return 'OpenAI';
-      case 'custom':
-        return 'AI Agent';
-      default:
-        return 'AI Agent';
-    }
-  }
-
-  /**
-   * Send request to agent
+   * Send request to agent using new provider adapter
    */
   private async sendRequest(request: AgentRequest): Promise<AgentResponse | void> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
-    const provider = config.get<string>('provider', 'claude');
-    const providerName = this.getProviderDisplayName(provider);
+    const provider = config.get<string>('provider', 'cursor');
 
     // Format as prompt
     const prompt = PayloadBuilder.formatAsPrompt(request);
 
-    // FIRST: Try direct API integration (Claude API)
-    if (provider === 'claude' && this.apiIntegration.isAvailable()) {
-      const success = await this.apiIntegration.sendAndApply(request, prompt);
-      if (success) {
-        return this.mockAgentResponse(request);
-      }
-      // If API fails, fall through to CLI/clipboard methods
-    }
-
-    // Try to send via Claude CLI in terminal
-    if (provider === 'claude') {
-      const usedCLI = await this.sendViaClaudeCLI(prompt, request);
-      if (usedCLI) {
-        return this.mockAgentResponse(request);
-      }
-    }
-
-    // Try to send via Cursor CLI in terminal
-    if (provider === 'cursor') {
-      const usedCLI = await this.sendViaCursorCLI(prompt, request);
-      if (usedCLI) {
-        return this.mockAgentResponse(request);
-      }
-    }
-
-    // Fallback: Log to output channel and copy to clipboard
+    // Log to output channel for debugging
     this.outputChannel.clear();
-    this.outputChannel.appendLine(`=== Commentary ${providerName} Request ===`);
-    this.outputChannel.appendLine('');
+    this.outputChannel.appendLine(`=== Commentary Request (${provider}) ===`);
     this.outputChannel.appendLine(prompt);
-    this.outputChannel.appendLine('');
-    this.outputChannel.appendLine('=== End Request ===');
-    this.outputChannel.show();
 
-    // Copy to clipboard
-    await vscode.env.clipboard.writeText(prompt);
+    try {
+      // FIRST: Try direct API integration (Claude API only for now)
+      if (provider === 'claude' && this.apiIntegration.isAvailable()) {
+        const success = await this.apiIntegration.sendAndApply(request, prompt);
+        if (success) {
+          return this.mockAgentResponse(request);
+        }
+        // If API fails, fall through to adapter
+      }
 
-    // Show clearer instructions for next steps
-    const action = await vscode.window.showInformationMessage(
-      `📋 Prompt copied to clipboard! Paste it into ${providerName}.`,
-      'View Full Prompt',
-      'Got it'
-    );
-
-    if (action === 'View Full Prompt') {
+      // Use the new provider adapter for all provider methods
+      const result = await this.adapter.send(prompt, request);
+      
+      if (result.success) {
+        return this.mockAgentResponse(request);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to send to agent: ${error}`);
       this.outputChannel.show();
-    }
-
-    return this.mockAgentResponse(request);
-  }
-
-  /**
-   * Send prompt via Claude CLI in integrated terminal
-   */
-  private async sendViaClaudeCLI(prompt: string, request: AgentRequest): Promise<boolean> {
-    try {
-      // Get configured Claude command
-      const config = vscode.workspace.getConfiguration('commentary.agent');
-      const claudeCommand = config.get<string>('claudeCommand', 'claude');
-
-      // Look for existing Commentary → Claude terminal
-      const existingTerminal = vscode.window.terminals.find(
-        t => t.name === 'Commentary → Claude'
-      );
-
-      let terminal: vscode.Terminal;
-      let isReusedTerminal = false;
-
-      if (existingTerminal) {
-        terminal = existingTerminal;
-        isReusedTerminal = true;
-        console.log('[Commentary] Reusing existing Claude terminal');
-
-        // Interrupt any running Claude session cleanly
-        terminal.sendText('\x03'); // Send Ctrl+C
-
-        // Wait a moment for the interrupt to process
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Clear the terminal for a clean slate
-        terminal.sendText('clear');
-
-        // Wait for clear to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } else {
-        terminal = vscode.window.createTerminal({
-          name: 'Commentary → Claude',
-          hideFromUser: false,
-        });
-        console.log('[Commentary] Created new Claude terminal');
-      }
-
-      terminal.show();
-
-      // Get the file being commented on
-      const firstNote = request.contexts[0]?.note;
-      if (!firstNote) {
-        return false;
-      }
-
-      const fileUri = vscode.Uri.parse(firstNote.file);
-      const filePath = fileUri.fsPath;
-
-      // Build the prompt with file context
-      const promptWithFile = `I have comments on the file: ${filePath}\n\n${prompt}\n\nPlease review the comments and suggest edits.`;
-
-      // Write prompt to a temporary markdown file
-      const tempDir = os.tmpdir();
-      const tempFileName = `commentary-prompt-${Date.now()}.md`;
-      const tempFilePath = path.join(tempDir, tempFileName);
-      fs.writeFileSync(tempFilePath, promptWithFile, 'utf-8');
-
-      // Launch Claude Code with the temp file (includes all context)
-      // This avoids "Raw mode not supported" error and provides full context in one file
-      terminal.sendText(`${claudeCommand} "${tempFilePath}"`);
-
-      const terminalStatus = isReusedTerminal ? '(reusing terminal)' : '(new terminal)';
-      vscode.window.showInformationMessage(
-        `🤖 Opening Claude Code ${terminalStatus} with ${request.contexts.length} comment(s)`,
-        'View Terminal'
-      ).then((action) => {
-        if (action === 'View Terminal') {
-          terminal.show();
-        }
-      });
-
-      // Clean up temp file after a delay (Claude Code should have read it by then)
-      setTimeout(() => {
-        try {
-          if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-          }
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }, 30000); // 30 seconds should be enough
-
-      return true;
-    } catch (error) {
-      console.error('Failed to use Claude CLI:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Send prompt via Cursor chat (opens chat directly with prompt)
-   */
-  private async sendViaCursorCLI(prompt: string, request: AgentRequest): Promise<boolean> {
-    try {
-      // Copy to clipboard first
-      await vscode.env.clipboard.writeText(prompt);
-
-      const commentCount = request.contexts.length;
-
-      // Try to find and execute Cursor chat command
-      const commands = await vscode.commands.getCommands();
-
-      // Look for Cursor-specific chat commands (in order of preference)
-      const chatCommandPatterns = [
-        'aichat.newchataction',
-        'aichat.openaichat',
-        'workbench.action.chat.open',
-        'workbench.action.quickchat.toggle'
-      ];
-
-      let chatOpened = false;
-
-      for (const pattern of chatCommandPatterns) {
-        const matchingCommand = commands.find(cmd =>
-          cmd === pattern || cmd.includes(pattern)
-        );
-
-        if (matchingCommand) {
-          try {
-            await vscode.commands.executeCommand(matchingCommand);
-            chatOpened = true;
-            console.log('[Commentary] Opened Cursor chat with command:', matchingCommand);
-            break;
-          } catch (error) {
-            console.log('[Commentary] Failed to execute command:', matchingCommand, error);
-          }
-        }
-      }
-
-      if (chatOpened) {
-        // Give chat a moment to fully open and focus
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Try to focus the input field (this may or may not work depending on Cursor's implementation)
-        try {
-          await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
-        } catch (error) {
-          // Silently fail - not critical
-        }
-
-        // Show brief status bar message instead of intrusive notification
-        vscode.window.setStatusBarMessage(
-          `$(comment-discussion) Chat ready - paste (⌘V) to send ${commentCount} comment${commentCount > 1 ? 's' : ''}`,
-          5000
-        );
-      } else {
-        // Fallback: show status bar message with manual instruction
-        vscode.window.setStatusBarMessage(
-          `$(clippy) Prompt copied - open Cursor chat (⌘L) and paste`,
-          5000
-        );
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to prepare prompt for Cursor:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -323,5 +122,6 @@ export class AgentClient {
 
   dispose(): void {
     this.outputChannel.dispose();
+    this.adapter.dispose();
   }
 }

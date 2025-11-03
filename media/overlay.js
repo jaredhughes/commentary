@@ -27,17 +27,26 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get agent button text and icon based on provider
    */
   function getAgentButtonConfig() {
-    const provider = window.commentaryAgentProvider || 'cursor';
-    const isClaude = provider === 'claude';
-
-    console.log('[OVERLAY] getAgentButtonConfig - provider:', provider, 'isClaude:', isClaude);
-
-    return {
-      icon: isClaude ? '✨' : '📋',
-      text: isClaude ? 'Send to agent' : 'Copy for agent',
-      tooltip: isClaude
-        ? 'Send comment to Claude Code via terminal'
-        : 'Copy comment to clipboard and open Cursor chat'
+    return window.commentaryButtonConfigs?.agent || {
+      icon: '<i class="codicon codicon-copy"></i>',
+      text: 'Copy for agent',
+      tooltip: 'Copy comment to clipboard'
+    };
+  }
+  
+  function getSaveButtonConfig() {
+    return window.commentaryButtonConfigs?.save || {
+      icon: '<i class="codicon codicon-save"></i>',
+      text: 'Save',
+      tooltip: 'Save comment'
+    };
+  }
+  
+  function getDeleteButtonConfig() {
+    return window.commentaryButtonConfigs?.delete || {
+      icon: '<i class="codicon codicon-trash"></i>',
+      text: '',
+      tooltip: 'Delete this comment'
     };
   }
 
@@ -431,10 +440,9 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     // Save button
     const saveBtn = document.createElement('button');
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
-    saveBtn.innerHTML = '💾 Save';
-    saveBtn.title = `Save comment (${shortcut})`;
+    const saveBtnConfig = getSaveButtonConfig();
+    saveBtn.innerHTML = saveBtnConfig.icon + (saveBtnConfig.text ? ' ' + saveBtnConfig.text : '');
+    saveBtn.title = saveBtnConfig.tooltip;
     saveBtn.className = 'commentary-btn';
     saveBtn.onclick = () => saveComment(textarea.value);
     buttonContainer.appendChild(saveBtn);
@@ -466,11 +474,30 @@ console.log('[OVERLAY.JS] Script is loading...');
       }
     });
 
+    // Add global escape handler (when bubble is open but textarea isn't focused)
+    const globalEscapeHandler = (e) => {
+      if (e.key === 'Escape' && commentBubble) {
+        e.preventDefault();
+        e.stopPropagation();
+        hideBubble();
+      }
+    };
+    document.addEventListener('keydown', globalEscapeHandler);
+    
+    // Clean up global handler when bubble is hidden
+    const originalHideBubble = hideBubble;
+    hideBubble = function() {
+      document.removeEventListener('keydown', globalEscapeHandler);
+      hideBubble = originalHideBubble; // Restore original
+      originalHideBubble();
+    };
+
     // Delete button (only for editing)
     if (noteId) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '×';
-      deleteBtn.title = 'Delete this comment';
+      const deleteBtnConfig = getDeleteButtonConfig();
+      deleteBtn.innerHTML = deleteBtnConfig.icon;
+      deleteBtn.title = deleteBtnConfig.tooltip;
       deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
         console.log('[OVERLAY] Delete button clicked, noteId:', noteId);
@@ -930,8 +957,8 @@ console.log('[OVERLAY.JS] Script is loading...');
   /**
    * Show edit bubble for an existing comment
    */
-  function showEditBubble(note) {
-    console.log('[OVERLAY] Showing edit bubble for note:', note.id);
+  function showEditBubble(note, shouldScroll = false) {
+    console.log('[OVERLAY] Showing edit bubble for note:', note.id, 'shouldScroll:', shouldScroll);
     console.log('[OVERLAY] Current highlights map:', highlights);
     console.log('[OVERLAY] Highlights map size:', highlights.size);
 
@@ -953,8 +980,12 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // Scroll to the highlight and add visual emphasis
-    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Only scroll if requested (e.g., when clicking from sidebar)
+    if (shouldScroll) {
+      mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Always add visual emphasis
     mark.classList.add('commentary-highlight-focus');
     setTimeout(() => {
       mark.classList.remove('commentary-highlight-focus');
@@ -1034,7 +1065,7 @@ console.log('[OVERLAY.JS] Script is loading...');
         break;
 
       case 'showEditBubble':
-        showEditBubble(message.note);
+        showEditBubble(message.note, message.shouldScroll);
         break;
 
       case 'showEditBubbleForDocument':

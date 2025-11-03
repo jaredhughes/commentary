@@ -52,37 +52,37 @@ const themes = [
     dest: 'media/themes/sakura-earthly.css'
   },
 
-  // Pico CSS - Professional, semantic (classless auto dark/light)
+  // Pico CSS - Professional, semantic (classless, uses system dark mode)
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.amber.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.amber.css',
     dest: 'media/themes/pico-amber.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.blue.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.blue.css',
     dest: 'media/themes/pico-blue.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.cyan.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.cyan.css',
     dest: 'media/themes/pico-cyan.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.green.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.green.css',
     dest: 'media/themes/pico-green.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.grey.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.grey.css',
     dest: 'media/themes/pico-grey.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.pink.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.pink.css',
     dest: 'media/themes/pico-pink.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.purple.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.purple.css',
     dest: 'media/themes/pico-purple.css'
   },
   {
-    src: 'node_modules/@picocss/pico/css/pico.classless.conditional.red.css',
+    src: 'node_modules/@picocss/pico/css/pico.classless.red.css',
     dest: 'media/themes/pico-red.css'
   },
 
@@ -149,6 +149,36 @@ for (const { src, dest } of themes) {
 }
 
 console.log(`\n📊 Summary: ${copied} copied, ${failed} failed`);
+
+// Also copy codicons for webview access
+console.log('\n📦 Copying codicons...');
+const codiconsSource = path.join(__dirname, '../node_modules/@vscode/codicons/dist');
+const codiconsTarget = path.join(__dirname, '../media/codicons');
+
+try {
+  // Create codicons directory
+  if (!fs.existsSync(codiconsTarget)) {
+    fs.mkdirSync(codiconsTarget, { recursive: true });
+  }
+  
+  // Copy codicon files (css, ttf)
+  const codiconFiles = fs.readdirSync(codiconsSource).filter(f => 
+    f.startsWith('codicon.') && (f.endsWith('.css') || f.endsWith('.ttf'))
+  );
+  
+  for (const file of codiconFiles) {
+    fs.copyFileSync(
+      path.join(codiconsSource, file),
+      path.join(codiconsTarget, file)
+    );
+    console.log('✓', file);
+  }
+  
+  console.log('\n✅ Codicons copied successfully');
+} catch (error) {
+  console.error('❌ Failed to copy codicons:', error.message);
+  failed++;
+}
 
 if (failed > 0) {
   process.exit(1);

@@ -3,12 +3,17 @@ import * as vscode from 'vscode';
 import { AgentClient } from '../../agent/client';
 import { PayloadBuilder } from '../../agent/payload';
 import { Note } from '../../types';
+import { getProviderDisplayName } from '../../agent/providers/types';
+import { MockProviderAdapter } from '../mocks/mockProviderAdapter';
+import { ProviderAdapter } from '../../agent/providerAdapter';
 
 suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;
   let client: AgentClient;
+  let mockAdapter: MockProviderAdapter;
 
   setup(() => {
+    mockAdapter = new MockProviderAdapter();
     mockContext = {
       subscriptions: [],
       workspaceState: {
@@ -36,7 +41,7 @@ suite('Agent Client Tests', () => {
       logPath: '/test/log',
     } as unknown as vscode.ExtensionContext;
 
-    client = new AgentClient(mockContext);
+    client = new AgentClient(mockContext, mockAdapter as unknown as ProviderAdapter);
   });
 
   teardown(() => {
@@ -58,34 +63,24 @@ suite('Agent Client Tests', () => {
   });
 
   suite('Provider Display Names', () => {
-    // Helper to access private method for testing
-    function getProviderDisplayName(clientInstance: AgentClient, provider: string): string {
-      return (clientInstance as unknown as { getProviderDisplayName: (provider: string) => string }).getProviderDisplayName(provider);
-    }
-
     test('Should return correct display name for claude', () => {
-      const displayName = getProviderDisplayName(client, 'claude');
-      assert.strictEqual(displayName, 'Claude');
+      assert.strictEqual(getProviderDisplayName('claude'), 'Claude');
     });
 
     test('Should return correct display name for cursor', () => {
-      const displayName = getProviderDisplayName(client, 'cursor');
-      assert.strictEqual(displayName, 'Cursor');
+      assert.strictEqual(getProviderDisplayName('cursor'), 'Cursor');
     });
 
     test('Should return correct display name for openai', () => {
-      const displayName = getProviderDisplayName(client, 'openai');
-      assert.strictEqual(displayName, 'OpenAI');
+      assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
     });
 
     test('Should return correct display name for custom', () => {
-      const displayName = getProviderDisplayName(client, 'custom');
-      assert.strictEqual(displayName, 'AI Agent');
+      assert.strictEqual(getProviderDisplayName('custom'), 'AI Agent');
     });
 
-    test('Should return default display name for unknown provider', () => {
-      const displayName = getProviderDisplayName(client, 'unknown');
-      assert.strictEqual(displayName, 'AI Agent');
+    test('Should return correct display name for vscode', () => {
+      assert.strictEqual(getProviderDisplayName('vscode'), 'VS Code Chat');
     });
   });
 

@@ -15,11 +15,36 @@ import { CommentaryFileDecorationProvider } from './decorations/fileDecorationPr
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
 let commentsViewProvider: CommentsViewProvider | undefined;
+let commentsTreeView: vscode.TreeView<vscode.TreeItem> | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
+let isActivating = false;
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Commentary extension is now active');
+  // Prevent concurrent activation
+  if (isActivating) {
+    console.warn('[Commentary] Activation already in progress, skipping');
+    return;
+  }
+  
+  // Check if already activated (hot reload scenario)
+  if (commentsTreeView) {
+    console.warn('[Commentary] Extension already activated, calling deactivate first');
+    deactivate();
+  }
+  
+  isActivating = true;
+  console.log('[Commentary] Extension activating from:', context.extensionPath);
+  
+  try {
+    activateInternal(context);
+  } finally {
+    isActivating = false;
+  }
+}
+
+function activateInternal(context: vscode.ExtensionContext) {
+  console.log('[Commentary] Extension is now active');
 
   // Set default theme based on system color scheme (only if not already configured)
   const config = vscode.workspace.getConfiguration('commentary.theme');
@@ -81,6 +106,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize agent client
   const agentClient = new AgentClient(context);
 
+  // Initialize comments view provider early (needed for commands below)
+  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
+  commentsTreeView = vscode.window.createTreeView('commentary.commentsView', {
+    treeDataProvider: commentsViewProvider,
+  });
+  commentsViewProvider.setTreeView(commentsTreeView);
+  context.subscriptions.push(commentsTreeView);
+
   // Register command to open markdown in Commentary view
   context.subscriptions.push(
     vscode.commands.registerCommand('commentary.openPreview', async (uri?: vscode.Uri, allUris?: vscode.Uri[]) => {
@@ -99,8 +132,13 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -110,8 +148,13 @@ export function activate(context: vscode.ExtensionContext) {
       // Check active editor first
       if (editor && editor.document.languageId === 'markdown') {
         await markdownWebviewProvider?.openMarkdown(editor.document);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -122,8 +165,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (markdownEditor) {
         await markdownWebviewProvider?.openMarkdown(markdownEditor.document);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -134,8 +182,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (markdownDoc) {
         await markdownWebviewProvider?.openMarkdown(markdownDoc);
-        // Auto-reveal Comments sidebar
-        await vscode.commands.executeCommand('commentary.commentsView.focus');
+        // Auto-reveal Comments sidebar - just show the view
+        if (commentsTreeView && commentsTreeView.visible) {
+          // View is already visible
+        } else {
+          // Try to show the view container
+          await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
+        }
         return;
       }
 
@@ -146,17 +199,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Register command to show Comments sidebar
   context.subscriptions.push(
     vscode.commands.registerCommand('commentary.showCommentsSidebar', async () => {
-      await vscode.commands.executeCommand('commentary.commentsView.focus');
+      // Show the view container
+      await vscode.commands.executeCommand('workbench.view.extension.commentary-sidebar');
     })
   );
-
-  // Initialize comments view provider
-  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
-  const treeView = vscode.window.createTreeView('commentary.commentsView', {
-    treeDataProvider: commentsViewProvider,
-  });
-
-  context.subscriptions.push(treeView);
 
   // Trigger initial refresh to load existing comments
   commentsViewProvider.refresh();
@@ -221,6 +267,44 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  overlayHost?.dispose();
-  console.log('Commentary extension deactivated');
+  console.log('[Commentary] Extension deactivating...');
+  
+  isActivating = false;
+  
+  // Dispose all resources in reverse order
+  if (commentsTreeView) {
+    try {
+      commentsTreeView.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing tree view:', e);
+    }
+    commentsTreeView = undefined;
+  }
+  
+  if (commentsViewProvider) {
+    commentsViewProvider = undefined;
+  }
+  
+  if (overlayHost) {
+    try {
+      overlayHost.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing overlay host:', e);
+    }
+    overlayHost = undefined;
+  }
+  
+  if (markdownWebviewProvider) {
+    // MarkdownWebviewProvider doesn't have dispose, but panels are managed by it
+    markdownWebviewProvider = undefined;
+  }
+  
+  // FileDecorationProvider doesn't need explicit disposal
+  if (fileDecorationProvider) {
+    fileDecorationProvider = undefined;
+  }
+  
+  storageManager = undefined;
+  
+  console.log('[Commentary] Extension deactivated');
 }

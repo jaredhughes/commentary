@@ -9,8 +9,11 @@ import { AgentClient } from '../agent/client';
 import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { Note } from '../types';
+import { DocumentNavigationService } from './documentNavigation';
 
 export class CommandManager {
+  private navigationService: DocumentNavigationService;
+
   constructor(
     private context: vscode.ExtensionContext,
     private storage: StorageManager,
@@ -18,7 +21,10 @@ export class CommandManager {
     private commentsView: CommentsViewProvider,
     private agentClient: AgentClient,
     private webviewProvider: MarkdownWebviewProvider
-  ) {}
+  ) {
+    // Initialize navigation service with default timing
+    this.navigationService = new DocumentNavigationService(webviewProvider, overlayHost);
+  }
 
   registerCommands(): void {
     // Edit comment from sidebar (click behavior)
@@ -27,45 +33,16 @@ export class CommandManager {
         if (!note || !note.note) {
           return;
         }
-        const documentUri = note.note.file;
-
-        // Check if the document is already open in a webview panel
-        const existingPanel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
-
-        if (!existingPanel) {
-          // Document not open - open it first
-          const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(documentUri));
-          await this.webviewProvider.openMarkdown(doc);
-
-          // Wait longer for the webview to initialize and highlights to paint
-          await new Promise(resolve => setTimeout(resolve, 800));
-        } else {
-          // Document already open - just reveal the panel
-          existingPanel.reveal(vscode.ViewColumn.One, true);
-
-          // Still wait a bit for any pending updates
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        // Get the webview panel and show the edit bubble
-        const panel = (this.overlayHost as unknown as { webviewPanels: Map<string, vscode.WebviewPanel> }).webviewPanels?.get(documentUri);
-        if (panel) {
-          // Use different message type for document-level comments
-          const messageType = note.note.isDocumentLevel ? 'showEditBubbleForDocument' : 'showEditBubble';
-          await panel.webview.postMessage({
-            type: messageType,
-            note: note.note,
-          });
-        }
+        
+        // Use the navigation service to handle all the complexity
+        await this.navigationService.navigateToComment(note.note, true);
       })
     );
 
     // Open/focus document from sidebar (click on file item)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.openDocument', async (fileUri: string) => {
-        // Open the document in Commentary webview (rendered mode)
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(fileUri));
-        await this.webviewProvider.openMarkdown(doc);
+        await this.navigationService.openDocument(fileUri);
       })
     );
 
@@ -153,6 +130,11 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendToAgentCursor', sendToAgentHandler)
     );
 
+    // Send comment to agent (VS Code-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentVSCode', sendToAgentHandler)
+    );
+
     // Send all comments to agent (across all documents) - shared handler
     const sendAllToAgentHandler = async () => {
       // Get all comments across all documents
@@ -186,55 +168,11 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendAllToAgentCursor', sendAllToAgentHandler)
     );
 
-    // Export comments
+    // Send all comments to agent (VS Code-specific)
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.exportComments', async () => {
-        try {
-          const json = await this.storage.exportNotes();
-          const uri = await vscode.window.showSaveDialog({
-            filters: { JSON: ['json'] },
-            defaultUri: vscode.Uri.file('commentary-export.json'),
-          });
-
-          if (uri) {
-            await vscode.workspace.fs.writeFile(uri, Buffer.from(json, 'utf8'));
-            vscode.window.showInformationMessage('Comments exported successfully');
-          }
-        } catch (error) {
-          vscode.window.showErrorMessage(`Export failed: ${error}`);
-        }
-      })
+      vscode.commands.registerCommand('commentary.sendAllToAgentVSCode', sendAllToAgentHandler)
     );
 
-    // Import comments
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.importComments', async () => {
-        try {
-          const uris = await vscode.window.showOpenDialog({
-            filters: { JSON: ['json'] },
-            canSelectMany: false,
-          });
-
-          if (uris && uris.length > 0) {
-            const content = await vscode.workspace.fs.readFile(uris[0]);
-            const json = Buffer.from(content).toString('utf8');
-            await this.storage.importNotes(json);
-            await this.overlayHost.refreshPreview();
-            this.commentsView.refresh();
-            vscode.window.showInformationMessage('Comments imported successfully');
-          }
-        } catch (error) {
-          vscode.window.showErrorMessage(`Import failed: ${error}`);
-        }
-      })
-    );
-
-    // Refresh comments view
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.refreshComments', () => {
-        this.commentsView.refresh();
-      })
-    );
 
     // Configure AI agent (new unified command)
     this.context.subscriptions.push(
@@ -259,6 +197,11 @@ export class CommandManager {
             label: '$(comment-discussion) Cursor',
             value: 'cursor',
             description: 'Manual chat workflow (no additional config needed)',
+          },
+          {
+            label: '$(code) VS Code Chat',
+            value: 'vscode',
+            description: 'VS Code built-in Chat/Agent (requires manual paste)',
           },
           {
             label: '$(globe) OpenAI',
@@ -326,7 +269,7 @@ export class CommandManager {
             if (!claudeOption || claudeOption.value === 'done') {
               configuring = false;
               const status = hasApiKey ? 'API key configured (primary)' : `CLI configured: "${currentCommand}"`;
-              vscode.window.showInformationMessage(`✅ Claude configured! ${status}`);
+              vscode.window.showInformationMessage(`? Claude configured! ${status}`);
               break;
             }
 
@@ -348,7 +291,7 @@ export class CommandManager {
               if (command) {
                 await config.update('claudeCommand', command, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  `✅ Claude CLI command updated: "${command}"`
+                  `? Claude CLI command updated: "${command}"`
                 );
               }
 
@@ -393,7 +336,7 @@ export class CommandManager {
               if (apiKey) {
                 await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  '✅ Claude API key configured! This will be the primary method (CLI as fallback).'
+                  '? Claude API key configured! This will be the primary method (CLI as fallback).'
                 );
               }
             }
@@ -404,7 +347,7 @@ export class CommandManager {
           await config.update('provider', 'cursor', vscode.ConfigurationTarget.Workspace);
 
           vscode.window.showInformationMessage(
-            '✅ Cursor configured! Comments will open in Cursor chat (requires manual paste).'
+            '? Cursor configured! Comments will open in Cursor chat (requires manual paste).'
           );
 
         } else if (newProvider === 'openai') {
@@ -430,7 +373,7 @@ export class CommandManager {
           await config.update('provider', 'openai', vscode.ConfigurationTarget.Workspace);
 
           vscode.window.showInformationMessage(
-            '✅ OpenAI configured! (Note: Full OpenAI integration coming soon)'
+            '? OpenAI configured! (Note: Full OpenAI integration coming soon)'
           );
 
         } else if (newProvider === 'custom') {
@@ -460,19 +403,19 @@ export class CommandManager {
           await config.update('provider', 'custom', vscode.ConfigurationTarget.Workspace);
 
           vscode.window.showInformationMessage(
-            '✅ Custom endpoint configured!'
+            '? Custom endpoint configured!'
+          );
+        } else if (newProvider === 'vscode') {
+          // VS Code Chat requires no additional config
+          await config.update('provider', 'vscode', vscode.ConfigurationTarget.Workspace);
+
+          vscode.window.showInformationMessage(
+            '? VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
           );
         }
       })
     );
 
-    // Toggle AI agent provider (legacy - kept for backwards compatibility)
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleAgentProvider', async () => {
-        // Redirect to new configure command
-        await vscode.commands.executeCommand('commentary.configureAgent');
-      })
-    );
 
     // Edit comment
     this.context.subscriptions.push(
@@ -582,6 +525,13 @@ export class CommandManager {
       })
     );
 
+    // Toggle expand/collapse all
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.toggleExpandCollapse', async () => {
+        await this.commentsView.toggleExpandCollapseAll();
+      })
+    );
+
     // Debug: List available commands (helps find Cursor chat command)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.listAvailableCommands', async () => {
@@ -603,14 +553,14 @@ export class CommandManager {
 
         if (relevantCommands.length > 0) {
           relevantCommands.forEach(cmd => {
-            outputChannel.appendLine(`• ${cmd}`);
+            outputChannel.appendLine(`? ${cmd}`);
           });
         } else {
           outputChannel.appendLine('No chat/AI commands found');
           outputChannel.appendLine('');
           outputChannel.appendLine('All available commands:');
           allCommands.slice(0, 50).forEach(cmd => {
-            outputChannel.appendLine(`• ${cmd}`);
+            outputChannel.appendLine(`? ${cmd}`);
           });
           outputChannel.appendLine(`... and ${allCommands.length - 50} more`);
         }

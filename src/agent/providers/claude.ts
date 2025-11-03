@@ -1,0 +1,166 @@
+/**
+ * Pure Claude provider logic
+ * No VS Code dependencies - fully testable
+ */
+
+import * as path from 'path';
+import * as os from 'os';
+import { AgentRequest } from '../../types';
+import { ProviderStrategy, ProviderConfig, TerminalCommand } from './types';
+
+export class ClaudeProvider implements ProviderStrategy {
+  canUse(config: ProviderConfig): boolean {
+    return config.provider === 'claude' && !!(config.claudeCliPath || config.claudeApiKey);
+  }
+
+  getPreferredMethod(config: ProviderConfig): 'api' | 'cli' | 'clipboard' | 'chat' {
+    // Prefer API if available
+    if (config.claudeApiKey) {
+      return 'api';
+    }
+    
+    // Then CLI if available
+    if (config.claudeCliPath) {
+      return 'cli';
+    }
+    
+    // Fallback to clipboard
+    return 'clipboard';
+  }
+
+  buildTerminalCommand(
+    prompt: string,
+    request: AgentRequest,
+    config: ProviderConfig
+  ): TerminalCommand | null {
+    if (!config.claudeCliPath) {
+      return null;
+    }
+
+    // Get the file being commented on for context
+    const firstNote = request.contexts[0]?.note;
+    if (!firstNote) {
+      return null;
+    }
+
+    const fileUri = firstNote.file.replace('file://', '');
+    
+    // Build prompt with file context
+    const promptWithFile = `I have comments on the file: ${fileUri}
+
+${prompt}
+
+Please review the comments and suggest edits.`;
+
+    // Create temp file path
+    const tempDir = os.tmpdir();
+    const tempFileName = `commentary-claude-${Date.now()}.md`;
+    const tempFilePath = path.join(tempDir, tempFileName);
+
+    // Claude Code CLI command
+    // The actual writing of the temp file happens in the adapter layer
+    return {
+      command: config.claudeCliPath,
+      args: [tempFilePath],
+      workingDirectory: path.dirname(fileUri),
+      env: {
+        commentaryTempFile: tempFilePath,
+        commentaryPrompt: promptWithFile
+      }
+    };
+  }
+
+  getClipboardText(
+    prompt: string,
+    request: AgentRequest,
+    _config: ProviderConfig
+  ): string {
+    const commentCount = request.contexts.length;
+    const fileInfo = request.contexts[0]?.note?.file || 'Unknown file';
+    
+    return `# Claude Review Request (${commentCount} comment${commentCount === 1 ? '' : 's'})
+
+File: ${fileInfo}
+
+${prompt}
+
+---
+[Copied to clipboard - paste into Claude]
+`;
+  }
+
+  getSuccessMessage(
+    request: AgentRequest,
+    method: 'api' | 'cli' | 'clipboard' | 'chat'
+  ): string {
+    const count = request.contexts.length;
+    const commentText = `${count} comment${count === 1 ? '' : 's'}`;
+
+    switch (method) {
+      case 'api':
+        return `?? Sending ${commentText} to Claude API`;
+      case 'cli':
+        return `?? Opening Claude Code with ${commentText}`;
+      case 'clipboard':
+        return `?? Copied ${commentText} to clipboard for Claude`;
+      default:
+        return `? Sent ${commentText} to Claude`;
+    }
+  }
+
+  getChatCommand(_config: ProviderConfig): string | null {
+    // Claude doesn't have a built-in VS Code chat command
+    return null;
+  }
+}
+
+/**
+ * Pure helper: Build temp file content for Claude CLI
+ */
+export function buildClaudeTempFileContent(
+  prompt: string,
+  request: AgentRequest
+): { content: string; fileName: string } {
+  const firstNote = request.contexts[0]?.note;
+  const fileUri = firstNote?.file?.replace('file://', '') || 'Unknown file';
+  
+  const content = `I have comments on the file: ${fileUri}
+
+${prompt}
+
+Please review the comments and suggest edits.`;
+
+  const fileName = `commentary-claude-${Date.now()}.md`;
+
+  return { content, fileName };
+}
+
+/**
+ * Pure helper: Validate Claude API key format
+ */
+export function isValidClaudeApiKey(apiKey: string | undefined): boolean {
+  if (!apiKey) {
+    return false;
+  }
+  
+  // Claude API keys typically start with 'sk-ant-'
+  return apiKey.startsWith('sk-ant-') && apiKey.length > 20;
+}
+
+/**
+ * Pure helper: Get default Claude CLI paths by platform
+ */
+export function getDefaultClaudeCliPath(): string | null {
+  const platform = process.platform;
+  
+  switch (platform) {
+    case 'darwin': // macOS
+      return '/usr/local/bin/claude';
+    case 'linux':
+      return '/usr/bin/claude';
+    case 'win32': // Windows
+      return 'C:\\Program Files\\Claude\\claude.exe';
+    default:
+      return null;
+  }
+}
