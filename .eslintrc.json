@@ -8,6 +8,7 @@
   "plugins": ["@typescript-eslint"],
   "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   "rules": {
+    "no-warning-comments": ["error", { "terms": ["eslint-disable"], "location": "anywhere" }],
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/naming-convention": [
       "warn",
