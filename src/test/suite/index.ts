@@ -9,7 +9,9 @@ export function run(): Promise<void> {
     color: true,
   });
 
-  const testsRoot = path.resolve(__dirname, '..');
+  // Tests are now located throughout the src/ directory as sibling files
+  // After compilation, they'll be in out/ directory
+  const testsRoot = path.resolve(__dirname, '../..');
 
   return new Promise((resolve, reject) => {
     glob('**/**.test.js', { cwd: testsRoot }).then((files) => {

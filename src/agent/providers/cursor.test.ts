@@ -3,9 +3,9 @@
  */
 
 import * as assert from 'assert';
-import { CursorProvider, getCursorChatCommands, buildCursorTempFileContent } from '../../../agent/providers/cursor';
-import { ProviderConfig } from '../../../agent/providers/types';
-import { AgentRequest, Note } from '../../../types';
+import { CursorProvider, getCursorChatCommands, buildCursorTempFileContent } from './cursor';
+import { ProviderConfig } from './types';
+import { AgentRequest, Note } from '../../types';
 
 suite('Cursor Provider', () => {
   let provider: CursorProvider;

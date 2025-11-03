@@ -5,9 +5,9 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { OverlayHost } from '../../preview/overlayHost';
-import { StorageManager } from '../../storage';
-import { MessageType, Note, PreviewMessage, SerializedSelection } from '../../types';
+import { OverlayHost } from './overlayHost';
+import { StorageManager } from '../storage';
+import { MessageType, Note, PreviewMessage, SerializedSelection } from '../types';
 
 // Mock panel type for testing
 type MockWebview = Pick<vscode.Webview, 'postMessage'>;

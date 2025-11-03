@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { WorkspaceStorage } from '../../storage/workspaceStorage';
-import { Note } from '../../types';
+import { WorkspaceStorage } from './storage/workspaceStorage';
+import { Note } from './types';
 
 suite('Commentary Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');

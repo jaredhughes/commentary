@@ -8,7 +8,7 @@ import {
   selectProvider,
   getProviderDisplayName,
   validateConfig
-} from '../../../agent/providers/types';
+} from './types';
 
 suite('Provider Types and Utilities', () => {
   

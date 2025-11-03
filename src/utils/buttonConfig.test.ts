@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from '../../utils/buttonConfig';
+import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from './buttonConfig';
 
 suite('Button Configuration Utils', () => {
   

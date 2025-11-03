@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { AgentClient } from '../../agent/client';
-import { PayloadBuilder } from '../../agent/payload';
-import { Note } from '../../types';
-import { getProviderDisplayName } from '../../agent/providers/types';
-import { MockProviderAdapter } from '../mocks/mockProviderAdapter';
-import { ProviderAdapter } from '../../agent/providerAdapter';
+import { AgentClient } from './client';
+import { PayloadBuilder } from './payload';
+import { Note } from '../types';
+import { getProviderDisplayName } from './providers/types';
+import { MockProviderAdapter } from '../test/mocks/mockProviderAdapter';
+import { ProviderAdapter } from './providerAdapter';
 
 suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;

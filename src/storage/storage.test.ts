@@ -6,9 +6,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as os from 'os';
-import { WorkspaceStorage } from '../../storage/workspaceStorage';
-import { SidecarStorage } from '../../storage/sidecarStorage';
-import { Note } from '../../types';
+import { WorkspaceStorage } from './workspaceStorage';
+import { SidecarStorage } from './sidecarStorage';
+import { Note } from '../types';
 
 // Mock workspace state for testing
 class MockMemento implements vscode.Memento {
