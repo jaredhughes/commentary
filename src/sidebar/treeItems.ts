@@ -63,7 +63,8 @@ export class FileTreeItem extends vscode.TreeItem {
     } else {
       this.tooltip = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
       this.description = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
-      this.iconPath = new vscode.ThemeIcon('file');
+      // Use comment-discussion icon to clearly indicate there are comments
+      this.iconPath = new vscode.ThemeIcon('comment-discussion', new vscode.ThemeColor('charts.yellow'));
     }
 
     this.contextValue = 'file';
