@@ -24,6 +24,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   setTreeView(treeView: vscode.TreeView<vscode.TreeItem>): void {
     this.treeView = treeView;
+    this.updateEmptyMessage(); // Set initial message
   }
 
   refresh(): void {
@@ -34,12 +35,30 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Update context for button visibility (fire and forget)
     this.updateContext();
+
+    // Update empty state message
+    this.updateEmptyMessage();
   }
 
   private async updateContext(): Promise<void> {
     const allNotes = await this.storage.getAllNotes();
     const hasComments = Array.from(allNotes.values()).some(notes => notes.length > 0);
     await vscode.commands.executeCommand('setContext', 'commentary.hasComments', hasComments);
+  }
+
+  private async updateEmptyMessage(): Promise<void> {
+    if (!this.treeView) {
+      return;
+    }
+
+    const allNotes = await this.storage.getAllNotes();
+    const hasComments = Array.from(allNotes.values()).some(notes => notes.length > 0);
+
+    if (hasComments) {
+      this.treeView.message = undefined;
+    } else {
+      this.treeView.message = 'No comments yet.\n\nOpen a Markdown file and select text in the preview to add a comment.';
+    }
   }
 
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {

@@ -63,13 +63,13 @@
       },
       {
         "command": "commentary.sendToAgentClaude",
-        "title": "Send to Agent",
+        "title": "Send to Claude",
         "category": "Commentary",
         "icon": "$(send)"
       },
       {
         "command": "commentary.sendToAgentCursor",
-        "title": "Copy for Agent",
+        "title": "Copy for Cursor",
         "category": "Commentary",
         "icon": "$(copy)"
       },
@@ -81,25 +81,25 @@
       },
       {
         "command": "commentary.sendAllToAgent",
-        "title": "Send all to agent",
+        "title": "Send All to Agent",
         "category": "Commentary",
         "icon": "$(send)"
       },
       {
         "command": "commentary.sendAllToAgentClaude",
-        "title": "Send all to agent",
+        "title": "Send All to Claude",
         "category": "Commentary",
         "icon": "$(send)"
       },
       {
         "command": "commentary.sendAllToAgentCursor",
-        "title": "Copy all for agent",
+        "title": "Copy All for Cursor",
         "category": "Commentary",
         "icon": "$(copy)"
       },
       {
         "command": "commentary.sendAllToAgentVSCode",
-        "title": "Send all to VS Code Chat",
+        "title": "Send All to VS Code Chat",
         "category": "Commentary",
         "icon": "$(send)"
       },
