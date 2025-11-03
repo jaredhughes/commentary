@@ -27,17 +27,26 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get agent button text and icon based on provider
    */
   function getAgentButtonConfig() {
-    const provider = window.commentaryAgentProvider || 'cursor';
-    const isClaude = provider === 'claude';
-
-    console.log('[OVERLAY] getAgentButtonConfig - provider:', provider, 'isClaude:', isClaude);
-
-    return {
-      icon: isClaude ? '<i class="codicon codicon-sparkle"></i>' : '<i class="codicon codicon-copy"></i>',
-      text: isClaude ? 'Send to agent' : 'Copy for agent',
-      tooltip: isClaude
-        ? 'Send comment to Claude Code via terminal'
-        : 'Copy comment to clipboard and open Cursor chat'
+    return window.commentaryButtonConfigs?.agent || {
+      icon: '<i class="codicon codicon-copy"></i>',
+      text: 'Copy for agent',
+      tooltip: 'Copy comment to clipboard'
+    };
+  }
+  
+  function getSaveButtonConfig() {
+    return window.commentaryButtonConfigs?.save || {
+      icon: '<i class="codicon codicon-save"></i>',
+      text: 'Save',
+      tooltip: 'Save comment'
+    };
+  }
+  
+  function getDeleteButtonConfig() {
+    return window.commentaryButtonConfigs?.delete || {
+      icon: '<i class="codicon codicon-trash"></i>',
+      text: '',
+      tooltip: 'Delete this comment'
     };
   }
 
