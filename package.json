@@ -6,6 +6,11 @@
   "publisher": "jaredhughes",
   "license": "MIT",
   "icon": "images/icon.png",
+  "preview": true,
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jaredhughes/commentary"
