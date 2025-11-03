@@ -1,12 +1,30 @@
 # 📝 Commentary
 
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jaredhughes/commentary?utm_source=oss&utm_medium=github&utm_campaign=jaredhughes%2Fcommentary&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+[![CI](https://github.com/jaredhughes/commentary/workflows/CI/badge.svg)](https://github.com/jaredhughes/commentary/actions)
 
-**Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.**
+**Inline comments for rendered Markdown in VS Code. Select text, annotate, review, and send to your AI agent—without touching the source file.**
 
-## Overview
+> ⚠️ **Early Preview**: Commentary is in active development. While core features are stable, the extension is not yet published to the marketplace. Install from source or check back soon for the official release.
 
-Commentary brings Google Docs-style commenting to rendered Markdown inside VS Code. It keeps you in a doc-first flow: read exactly what your readers will see, select text or comment on the entire document, and keep writing. Comments live outside your files, can be themed with 19 beautiful CSS styles, and can be shipped to an AI agent to draft improvements—all without leaving your editor or opening a PR.
+## Why Commentary?
+
+**Stay in flow while reviewing your Markdown.** Commentary brings Google Docs-style commenting to rendered Markdown previews in VS Code. Review your documentation exactly as readers will see it, add inline comments without editing source files, and send feedback directly to your AI agent for implementation.
+
+### Perfect For
+
+- **Documentation writers** reviewing drafts before publishing
+- **Technical writers** collecting editorial feedback
+- **Content reviewers** annotating without git commits
+- **AI-assisted workflows** iterating with Claude, Cursor, or ChatGPT
+
+### Key Benefits
+
+✅ **Non-destructive** - Comments live outside your files (no merge conflicts)
+✅ **Visual editing** - See formatted output while you annotate
+✅ **AI integration** - Send comments to Claude, Cursor, or custom agents
+✅ **Beautiful themes** - 19 professional CSS themes included
+✅ **Shareable** - Optional git-tracked sidecar storage
 
 ## Features
 
@@ -94,7 +112,13 @@ Send comments to your AI agent with comprehensive context:
 
 ## Installation
 
-### From Source
+### 📦 From VS Code Marketplace
+
+*(Coming soon)*
+
+Search for "Commentary" in the Extensions view (`Cmd+Shift+X` / `Ctrl+Shift+X`) or install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/vscode).
+
+### 🔧 From Source (Developers)
 
 ```bash
 git clone https://github.com/jaredhughes/commentary
@@ -104,10 +128,6 @@ npm run compile
 ```
 
 Press `F5` in VS Code to launch the Extension Development Host.
-
-### From Marketplace
-
-*(Coming soon)*
 
 ---
 
@@ -315,7 +335,8 @@ Set breakpoints in TypeScript source files. The debugger will attach automatical
 
 ```bash
 npm test                 # Run all tests
-npm run lint             # ESLint + TypeScript checking
+npm run validate         # Lint + type check (pre-push validation)
+npm run lint             # ESLint only
 ```
 
 **Test Coverage:**
@@ -324,6 +345,11 @@ npm run lint             # ESLint + TypeScript checking
 - All AI provider configurations
 - Storage operations (save, retrieve, delete, export, import)
 - Theme and configuration management
+
+**CI/CD:**
+- Automated linting, type checking, and tests on every PR
+- Pre-push git hooks catch issues before pushing
+- Multi-platform testing (macOS, Linux, Windows)
 
 ---
 
@@ -363,6 +389,56 @@ See [LICENSE](LICENSE) file for details.
 - markdown-it ecosystem for Markdown rendering
 - VS Code webview API for preview integration
 - Open source CSS framework maintainers
+
+---
+
+## 🚀 Quick Start
+
+1. **Install** Commentary from the marketplace (or build from source)
+2. **Open** a Markdown file in VS Code
+3. **Open preview** with `Cmd+K V` / `Ctrl+K V`
+4. **Select text** in the rendered preview
+5. **Type your comment** in the bubble that appears
+6. **Save** with `Cmd+Enter` / `Ctrl+Enter`
+
+View all comments in the Commentary sidebar (`Cmd+Shift+C` / `Ctrl+Shift+C`).
+
+---
+
+## 📊 Project Status
+
+- **Version**: 0.9.7 (pre-release)
+- **License**: MIT
+- **CI Status**: [![CI](https://github.com/jaredhughes/commentary/workflows/CI/badge.svg)](https://github.com/jaredhughes/commentary/actions)
+- **Test Coverage**: Core features, storage, agent integrations
+- **Platform Support**: macOS, Linux, Windows
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please open an issue first to discuss changes.
+
+**Development workflow:**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run `npm run validate` (lint + type check)
+5. Run `npm test` to verify tests pass
+6. Submit a pull request
+
+**Code Quality:**
+- ESLint + TypeScript strict mode
+- Pre-push hooks catch issues automatically
+- CI validates all PRs (lint, types, tests, build)
+
+---
+
+## 📄 License
+
+MIT License - Copyright (c) 2025 Jared Hughes
+
+See [LICENSE](LICENSE) file for details.
 
 ---
 
