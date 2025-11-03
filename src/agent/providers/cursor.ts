@@ -65,16 +65,15 @@ Please review the above comments and provide suggestions for improving the docum
       workingDirectory: path.dirname(fileUri),
       env: {
         // Pass temp file path and prompt as env vars for cleanup
-        COMMENTARY_TEMP_FILE: tempFilePath,
-        COMMENTARY_PROMPT: promptWithContext
+        commentaryTempFile: tempFilePath,
+        commentaryPrompt: promptWithContext
       }
     };
   }
 
   getClipboardText(
     prompt: string,
-    request: AgentRequest,
-    _config: ProviderConfig
+    request: AgentRequest
   ): string {
     // For clipboard method, include clear instructions
     const commentCount = request.contexts.length;
@@ -110,7 +109,7 @@ ${prompt}
     }
   }
 
-  getChatCommand(_config: ProviderConfig): string | null {
+  getChatCommand(): string | null {
     // Cursor chat commands (in order of preference)
     // We return the first one to try - the adapter will try alternatives
     return 'aichat.newchataction';

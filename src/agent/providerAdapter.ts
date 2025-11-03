@@ -126,8 +126,8 @@ export class ProviderAdapter {
     }
 
     // Write temp file if needed
-    if (command.env?.COMMENTARY_TEMP_FILE && command.env?.COMMENTARY_PROMPT) {
-      fs.writeFileSync(command.env.COMMENTARY_TEMP_FILE, command.env.COMMENTARY_PROMPT, 'utf-8');
+    if (command.env?.commentaryTempFile && command.env?.commentaryPrompt) {
+      fs.writeFileSync(command.env.commentaryTempFile, command.env.commentaryPrompt, 'utf-8');
     }
 
     // Get or create terminal
@@ -144,8 +144,8 @@ export class ProviderAdapter {
     }
 
     // Schedule cleanup of temp file
-    if (command.env?.COMMENTARY_TEMP_FILE) {
-      this.scheduleCleanup(command.env.COMMENTARY_TEMP_FILE);
+    if (command.env?.commentaryTempFile) {
+      this.scheduleCleanup(command.env.commentaryTempFile);
     }
 
     return {

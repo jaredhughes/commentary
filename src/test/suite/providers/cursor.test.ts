@@ -111,8 +111,8 @@ suite('Cursor Provider', () => {
       assert.ok(command!.args.includes('--wait'));
       assert.ok(command!.args[1].includes('commentary-cursor'));
       assert.ok(command!.env);
-      assert.ok(command!.env.COMMENTARY_TEMP_FILE);
-      assert.ok(command!.env.COMMENTARY_PROMPT);
+      assert.ok(command!.env.commentaryTempFile);
+      assert.ok(command!.env.commentaryPrompt);
     });
     
     test('should return null when CLI path is missing', () => {
@@ -145,7 +145,7 @@ suite('Cursor Provider', () => {
         enabled: true
       };
       
-      const text = provider.getClipboardText('test prompt', mockRequest, config);
+      const text = provider.getClipboardText('test prompt', mockRequest);
       
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
@@ -162,7 +162,7 @@ suite('Cursor Provider', () => {
         contexts: [mockRequest.contexts[0], mockRequest.contexts[0]]
       };
       
-      const text = provider.getClipboardText('test prompt', multiRequest, config);
+      const text = provider.getClipboardText('test prompt', multiRequest);
       assert.ok(text.includes('2 comments'));
     });
   });
@@ -193,7 +193,7 @@ suite('Cursor Provider', () => {
         enabled: true
       };
       
-      const command = provider.getChatCommand(config);
+      const command = provider.getChatCommand();
       assert.strictEqual(command, 'aichat.newchataction');
     });
   });

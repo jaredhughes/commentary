@@ -14,7 +14,7 @@ Extract all business logic from `AgentClient` into pure, testable functions that
 ### 1. Pure Business Logic Layer (`src/agent/providers/`)
 Extract provider-specific logic into pure functions:
 
-```
+```text
 src/agent/providers/
 ??? types.ts              # Provider interfaces and types
 ??? claude.ts             # Pure Claude logic
@@ -27,7 +27,7 @@ src/agent/providers/
 ### 2. Command Builders (`src/agent/commands/`)
 Pure functions that build terminal commands:
 
-```
+```text
 src/agent/commands/
 ??? claudeCommand.ts      # Build Claude CLI commands
 ??? cursorCommand.ts      # Build Cursor CLI commands

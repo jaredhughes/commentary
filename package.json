@@ -5,11 +5,6 @@
   "version": "0.9.7",
   "publisher": "jaredhughes",
   "license": "MIT",
-  "icon": "icon.png",
-  "galleryBanner": {
-    "color": "#1a1f2e",
-    "theme": "dark"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jaredhughes/commentary"

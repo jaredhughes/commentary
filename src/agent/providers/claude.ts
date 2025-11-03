@@ -64,8 +64,8 @@ Please review the comments and suggest edits.`;
       args: [tempFilePath],
       workingDirectory: path.dirname(fileUri),
       env: {
-        COMMENTARY_TEMP_FILE: tempFilePath,
-        COMMENTARY_PROMPT: promptWithFile
+        commentaryTempFile: tempFilePath,
+        commentaryPrompt: promptWithFile
       }
     };
   }
