@@ -60,7 +60,7 @@ export class PreviewBridge {
    */
   async paintHighlights(notes: Note[]): Promise<void> {
     await this.sendToPreview({
-      type: HostMessageType.PaintHighlights,
+      type: HostMessageType.paintHighlights,
       notes,
     });
   }
@@ -70,7 +70,7 @@ export class PreviewBridge {
    */
   async removeHighlight(noteId: string): Promise<void> {
     await this.sendToPreview({
-      type: HostMessageType.RemoveHighlight,
+      type: HostMessageType.removeHighlight,
       noteId,
     });
   }
@@ -80,7 +80,7 @@ export class PreviewBridge {
    */
   async scrollToHighlight(noteId: string): Promise<void> {
     await this.sendToPreview({
-      type: HostMessageType.ScrollToHighlight,
+      type: HostMessageType.scrollToHighlight,
       noteId,
     });
   }
@@ -90,7 +90,7 @@ export class PreviewBridge {
    */
   async clearAllHighlights(): Promise<void> {
     await this.sendToPreview({
-      type: HostMessageType.ClearAllHighlights,
+      type: HostMessageType.clearAllHighlights,
     });
   }
 }

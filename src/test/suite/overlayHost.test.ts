@@ -126,7 +126,7 @@ suite('OverlayHost Tests', () => {
   suite('Save Comment Handler', () => {
     test('Should save new comment', async () => {
       const message: PreviewMessage & { documentUri?: string } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: 'test', prefix: '', suffix: '' },
           position: { start: 0, end: 4 },
@@ -146,7 +146,7 @@ suite('OverlayHost Tests', () => {
 
     test('Should save document-level comment', async () => {
       const message: PreviewMessage & { documentUri?: string, isDocumentLevel?: boolean } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: '[Entire Document]', prefix: '', suffix: '' },
           position: { start: 0, end: 0 },
@@ -169,7 +169,7 @@ suite('OverlayHost Tests', () => {
     test('Should update existing document-level comment', async () => {
       // Save initial document comment
       const initialMessage: PreviewMessage & { documentUri?: string, isDocumentLevel?: boolean } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: '[Entire Document]', prefix: '', suffix: '' },
           position: { start: 0, end: 0 },
@@ -185,7 +185,7 @@ suite('OverlayHost Tests', () => {
 
       // Try to save another document comment
       const updateMessage: PreviewMessage & { documentUri?: string, isDocumentLevel?: boolean } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: '[Entire Document]', prefix: '', suffix: '' },
           position: { start: 0, end: 0 },
@@ -218,7 +218,7 @@ suite('OverlayHost Tests', () => {
 
       // Update it
       const message: PreviewMessage & { noteId?: string, commentText?: string, documentUri?: string } = {
-        type: MessageType.UpdateComment,
+        type: MessageType.updateComment,
         noteId: 'test-1',
         commentText: 'Updated',
         documentUri: 'file:///test.md',
@@ -248,7 +248,7 @@ suite('OverlayHost Tests', () => {
 
       // Delete it
       const message: PreviewMessage & { noteId?: string, documentUri?: string } = {
-        type: MessageType.DeleteComment,
+        type: MessageType.deleteComment,
         noteId: 'test-1',
         documentUri: 'file:///test.md',
       };
@@ -272,7 +272,7 @@ suite('OverlayHost Tests', () => {
         selection?: SerializedSelection,
         commentText?: string
       } = {
-        type: MessageType.SaveAndSubmitToAgent,
+        type: MessageType.saveAndSubmitToAgent,
         selection: {
           quote: { exact: 'test', prefix: '', suffix: '' },
           position: { start: 0, end: 4 },
@@ -312,7 +312,7 @@ suite('OverlayHost Tests', () => {
         selection?: SerializedSelection,
         commentText?: string
       } = {
-        type: MessageType.SaveAndSubmitToAgent,
+        type: MessageType.saveAndSubmitToAgent,
         noteId: 'test-1',
         selection: {
           quote: { exact: 'test', prefix: '', suffix: '' },
@@ -346,7 +346,7 @@ suite('OverlayHost Tests', () => {
       };
 
       const message: PreviewMessage & { documentUri?: string } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: 'test', prefix: '', suffix: '' },
           position: { start: 0, end: 4 },
@@ -369,7 +369,7 @@ suite('OverlayHost Tests', () => {
       });
 
       const message: PreviewMessage & { documentUri?: string } = {
-        type: MessageType.SaveComment,
+        type: MessageType.saveComment,
         selection: {
           quote: { exact: 'test', prefix: '', suffix: '' },
           position: { start: 0, end: 4 },

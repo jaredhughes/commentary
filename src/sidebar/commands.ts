@@ -141,7 +141,7 @@ export class CommandManager {
       const allNotes = await this.storage.getAllNotes();
       const notes: Note[] = [];
 
-      for (const [fileUri, fileNotes] of allNotes.entries()) {
+      for (const [, fileNotes] of allNotes.entries()) {
         notes.push(...fileNotes);
       }
 

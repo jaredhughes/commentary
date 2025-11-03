@@ -4,7 +4,6 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ICommentStorage, Note } from '../types';
 
 const COMMENTS_DIR = '.comments';
@@ -130,7 +129,7 @@ export class SidecarStorage implements ICommentStorage {
     try {
       const parsed = JSON.parse(data) as Record<string, Note[]>;
 
-      for (const [fileUri, notes] of Object.entries(parsed)) {
+      for (const [, notes] of Object.entries(parsed)) {
         for (const note of notes) {
           await this.saveNote(note);
         }

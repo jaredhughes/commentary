@@ -78,7 +78,7 @@ Current file content:
 ${originalContent}`;
 
           // Call Claude API
-          const response = await client.messages.create({
+          const requestParams: Anthropic.MessageCreateParams = {
             model: model,
             max_tokens: 8000,
             messages: [
@@ -87,7 +87,8 @@ ${originalContent}`;
                 content: fullPrompt,
               },
             ],
-          });
+          };
+          const response = await client.messages.create(requestParams);
 
           progress.report({ message: 'Applying edits...' });
 

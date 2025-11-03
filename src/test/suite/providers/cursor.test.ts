@@ -140,28 +140,18 @@ suite('Cursor Provider', () => {
   
   suite('getClipboardText', () => {
     test('should format clipboard text with comment count', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const text = provider.getClipboardText('test prompt', mockRequest);
-      
+
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
       assert.ok(text.includes('file:///test/file.md'));
     });
-    
+
     test('should pluralize comments correctly', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const multiRequest: AgentRequest = {
         contexts: [mockRequest.contexts[0], mockRequest.contexts[0]]
       };
-      
+
       const text = provider.getClipboardText('test prompt', multiRequest);
       assert.ok(text.includes('2 comments'));
     });
@@ -188,11 +178,6 @@ suite('Cursor Provider', () => {
   
   suite('getChatCommand', () => {
     test('should return Cursor chat command', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const command = provider.getChatCommand();
       assert.strictEqual(command, 'aichat.newchataction');
     });

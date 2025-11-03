@@ -4,7 +4,6 @@
 
 import * as assert from 'assert';
 import {
-  ProviderType,
   ProviderConfig,
   selectProvider,
   getProviderDisplayName,
