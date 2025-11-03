@@ -438,6 +438,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts --max-warnings 100",
     "test": "node ./out/test/runTest.js",
+    "validate": "npm run lint && tsc --noEmit",
     "prepare": "husky"
   },
   "devDependencies": {
