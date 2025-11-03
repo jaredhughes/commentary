@@ -108,11 +108,26 @@ export class CommandManager {
         return;
       }
 
-      await this.agentClient.sendSingleComment(note);
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Commentary',
+            cancellable: false
+          },
+          async (progress) => {
+            progress.report({ message: 'Sending comment to agent...' });
+            await this.agentClient.sendSingleComment(note);
+          }
+        );
 
-      // Delete the comment after sending
-      await this.storage.deleteNote(note.id, note.file);
-      this.commentsView.refresh();
+        // Delete the comment after sending
+        await this.storage.deleteNote(note.id, note.file);
+        this.commentsView.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to send comment: ${message}`);
+      }
     };
 
     // Send comment to agent (generic)
@@ -150,7 +165,24 @@ export class CommandManager {
         return;
       }
 
-      await this.agentClient.sendMultipleComments(notes);
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Commentary',
+            cancellable: false
+          },
+          async (progress) => {
+            progress.report({
+              message: `Sending ${notes.length} comment${notes.length === 1 ? '' : 's'} to agent...`
+            });
+            await this.agentClient.sendMultipleComments(notes);
+          }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to send comments: ${message}`);
+      }
     };
 
     // Generic command (for command palette)
