@@ -416,13 +416,6 @@ export class CommandManager {
       })
     );
 
-    // Toggle AI agent provider (legacy - kept for backwards compatibility)
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleAgentProvider', async () => {
-        // Redirect to new configure command
-        await vscode.commands.executeCommand('commentary.configureAgent');
-      })
-    );
 
     // Edit comment
     this.context.subscriptions.push(

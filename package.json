@@ -126,12 +126,6 @@
         "icon": "$(settings-gear)"
       },
       {
-        "command": "commentary.toggleAgentProvider",
-        "title": "Configure Agent...",
-        "category": "Commentary",
-        "icon": "$(gear)"
-      },
-      {
         "command": "commentary.editComment",
         "title": "Edit Comment",
         "category": "Commentary",
@@ -227,10 +221,6 @@
         },
         {
           "command": "commentary.deleteAllComments",
-          "when": "true"
-        },
-        {
-          "command": "commentary.toggleAgentProvider",
           "when": "true"
         },
         {
