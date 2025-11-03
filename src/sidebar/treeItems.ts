@@ -63,7 +63,7 @@ export class FileTreeItem extends vscode.TreeItem {
     } else {
       this.tooltip = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
       this.description = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
-      this.iconPath = new vscode.ThemeIcon('markdown', new vscode.ThemeColor('charts.blue'));
+      this.iconPath = new vscode.ThemeIcon('file');
     }
 
     this.contextValue = 'file';

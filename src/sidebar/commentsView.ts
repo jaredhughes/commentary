@@ -270,33 +270,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.isExpanded = !this.isExpanded;
     console.log('[CommentsView] Toggle state:', this.isExpanded ? 'EXPANDED' : 'COLLAPSED');
     
-    // If we have a tree view, we can programmatically expand/collapse items
-    if (this.treeView && this.folderTree) {
-      const allFileItems = this.getAllFileItems(this.folderTree);
-      console.log('[CommentsView] Found', allFileItems.length, 'file items to toggle');
-      
-      // Filter to only files with comments
-      const filesWithComments = allFileItems.filter(item => item.noteCount > 0);
-      console.log('[CommentsView] Toggling', filesWithComments.length, 'files with comments');
-      
-      // Expand or collapse each file item
-      for (const fileItem of filesWithComments) {
-        try {
-          if (this.isExpanded) {
-            // Expand: reveal with expand level 1 (show the file's children)
-            await this.treeView.reveal(fileItem, { expand: 1, select: false, focus: false });
-          } else {
-            // Collapse: reveal with expand level 0 (collapse the file)
-            await this.treeView.reveal(fileItem, { expand: false, select: false, focus: false });
-          }
-        } catch (error) {
-          // Ignore errors - item might not be visible yet
-          console.log('[CommentsView] Could not toggle item:', error);
-        }
-      }
-    }
-    
-    // Force full refresh to update all collapsible states
+    // Force full refresh to rebuild all tree items with new collapsible states
     this.folderTree = null;
     this._onDidChangeTreeData.fire(undefined);
   }
