@@ -16,6 +16,29 @@ type MockPanel = {
   webview: MockWebview;
 };
 
+// Mock Memento for testing
+class MockMemento implements vscode.Memento {
+  private storage = new Map<string, unknown>();
+  
+  keys(): readonly string[] {
+    return Array.from(this.storage.keys());
+  }
+  
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
+  get<T>(key: string, defaultValue?: T): T | undefined {
+    return (this.storage.get(key) as T) ?? defaultValue;
+  }
+  
+  async update(key: string, value: unknown): Promise<void> {
+    this.storage.set(key, value);
+  }
+  
+  setKeysForSync(_keys: string[]): void {
+    // Mock implementation
+  }
+}
+
 suite('OverlayHost Tests', () => {
   let context: vscode.ExtensionContext;
   let storage: StorageManager;
@@ -32,11 +55,26 @@ suite('OverlayHost Tests', () => {
   }
 
   suiteSetup(() => {
-    const ext = vscode.extensions.getExtension('jaredhughes.commentary');
-    if (!ext) {
-      throw new Error('Extension not found');
-    }
-    context = ext.exports?.context || ext;
+    // Create mock context
+    context = {
+      subscriptions: [],
+      workspaceState: new MockMemento(),
+      globalState: new MockMemento(),
+      extensionUri: vscode.Uri.file('/test'),
+      extensionPath: '/test',
+      asAbsolutePath: (relativePath: string) => `/test/${relativePath}`,
+      storageUri: vscode.Uri.file('/test/storage'),
+      globalStorageUri: vscode.Uri.file('/test/globalStorage'),
+      logUri: vscode.Uri.file('/test/log'),
+      extensionMode: vscode.ExtensionMode.Test,
+      extension: {} as vscode.Extension<unknown>,
+      secrets: {} as vscode.SecretStorage,
+      environmentVariableCollection: {} as vscode.GlobalEnvironmentVariableCollection,
+      languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
+      storagePath: '/test/storage',
+      globalStoragePath: '/test/globalStorage',
+      logPath: '/test/log',
+    } as unknown as vscode.ExtensionContext;
   });
 
   setup(() => {
@@ -47,8 +85,12 @@ suite('OverlayHost Tests', () => {
 
   teardown(async () => {
     // Clean up test data
-    await context.workspaceState.update('commentary.notes', undefined);
-    overlayHost.dispose();
+    if (context && context.workspaceState) {
+      await context.workspaceState.update('commentary.notes', undefined);
+    }
+    if (overlayHost) {
+      overlayHost.dispose();
+    }
   });
 
   suite('Webview Registration', () => {

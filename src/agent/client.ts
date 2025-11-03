@@ -14,9 +14,12 @@ export class AgentClient {
   private adapter: ProviderAdapter;
   private apiIntegration: ApiIntegration;
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(
+    private context: vscode.ExtensionContext,
+    adapter?: ProviderAdapter
+  ) {
     this.outputChannel = vscode.window.createOutputChannel('Commentary Agent');
-    this.adapter = new ProviderAdapter(context);
+    this.adapter = adapter || new ProviderAdapter(context);
     this.apiIntegration = new ApiIntegration(context);
   }
 

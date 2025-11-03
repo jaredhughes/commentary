@@ -4,12 +4,16 @@ import { AgentClient } from '../../agent/client';
 import { PayloadBuilder } from '../../agent/payload';
 import { Note } from '../../types';
 import { getProviderDisplayName } from '../../agent/providers/types';
+import { MockProviderAdapter } from '../mocks/mockProviderAdapter';
+import { ProviderAdapter } from '../../agent/providerAdapter';
 
 suite('Agent Client Tests', () => {
   let mockContext: vscode.ExtensionContext;
   let client: AgentClient;
+  let mockAdapter: MockProviderAdapter;
 
   setup(() => {
+    mockAdapter = new MockProviderAdapter();
     mockContext = {
       subscriptions: [],
       workspaceState: {
@@ -37,7 +41,7 @@ suite('Agent Client Tests', () => {
       logPath: '/test/log',
     } as unknown as vscode.ExtensionContext;
 
-    client = new AgentClient(mockContext);
+    client = new AgentClient(mockContext, mockAdapter as unknown as ProviderAdapter);
   });
 
   teardown(() => {
