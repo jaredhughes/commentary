@@ -14,7 +14,6 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
-  private isExpanded: boolean = true; // Track expand/collapse state
   private folderTree: FolderNode | null = null; // Cache the folder tree
 
   constructor(
@@ -109,10 +108,11 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Add root-level files
     for (const file of this.folderTree.files) {
+      // Files with comments are always expanded, files without comments are not collapsible
       const collapsibleState = file.commentCount > 0
-        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+        ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
-      
+
       items.push(new FileTreeItem(
         file.uri,
         file.fileName,
@@ -163,10 +163,11 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Add files
     for (const file of folderNode.files) {
+      // Files with comments are always expanded, files without comments are not collapsible
       const collapsibleState = file.commentCount > 0
-        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+        ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
-      
+
       items.push(new FileTreeItem(
         file.uri,
         file.fileName,
@@ -278,47 +279,5 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       count += subfolder.files.length + this.countSubfolderFiles(subfolder);
     }
     return count;
-  }
-
-  /**
-   * Toggle expand/collapse state for all file items that have comments
-   * This expands/collapses files, not folders
-   */
-  async toggleExpandCollapseAll(): Promise<void> {
-    // Toggle state
-    this.isExpanded = !this.isExpanded;
-    console.log('[CommentsView] Toggle state:', this.isExpanded ? 'EXPANDED' : 'COLLAPSED');
-    
-    // Force full refresh to rebuild all tree items with new collapsible states
-    this.folderTree = null;
-    this._onDidChangeTreeData.fire(undefined);
-  }
-  
-  /**
-   * Get all file items from the folder tree (recursively)
-   */
-  private getAllFileItems(folder: FolderNode): FileTreeItem[] {
-    const items: FileTreeItem[] = [];
-    
-    // Add files from this folder
-    for (const file of folder.files) {
-      const collapsibleState = file.commentCount > 0
-        ? (this.isExpanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
-        : vscode.TreeItemCollapsibleState.None;
-      
-      items.push(new FileTreeItem(
-        file.uri,
-        file.fileName,
-        file.commentCount,
-        collapsibleState
-      ));
-    }
-    
-    // Recursively add files from subfolders
-    for (const subfolder of folder.subfolders.values()) {
-      items.push(...this.getAllFileItems(subfolder));
-    }
-    
-    return items;
   }
 }

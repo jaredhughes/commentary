@@ -645,13 +645,6 @@ export class CommandManager {
       })
     );
 
-    // Toggle expand/collapse all
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleExpandCollapse', async () => {
-        await this.commentsView.toggleExpandCollapseAll();
-      })
-    );
-
     // Debug: List available commands (helps find Cursor chat command)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.listAvailableCommands', async () => {

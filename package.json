@@ -115,12 +115,6 @@
         "category": "Commentary"
       },
       {
-        "command": "commentary.toggleExpandCollapse",
-        "title": "Toggle Expand/Collapse All",
-        "category": "Commentary",
-        "icon": "$(expand-all)"
-      },
-      {
         "command": "commentary.configureAgent",
         "title": "Configure Agent...",
         "category": "Commentary",
@@ -273,29 +267,24 @@
       ],
       "view/title": [
         {
-          "command": "commentary.toggleExpandCollapse",
-          "when": "view == commentary.commentsView",
-          "group": "navigation@1"
-        },
-        {
           "command": "commentary.sendAllToAgentClaude",
           "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == claude",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "commentary.sendAllToAgentCursor",
           "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == cursor",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "commentary.sendAllToAgentVSCode",
           "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == vscode",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "commentary.deleteAllComments",
           "when": "view == commentary.commentsView && commentary.hasComments",
-          "group": "navigation@3"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
