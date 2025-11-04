@@ -71,10 +71,6 @@ suite('Agent Client Tests', () => {
       assert.strictEqual(getProviderDisplayName('cursor'), 'Cursor');
     });
 
-    test('Should return correct display name for openai', () => {
-      assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
-    });
-
     test('Should return correct display name for custom', () => {
       assert.strictEqual(getProviderDisplayName('custom'), 'AI Agent');
     });

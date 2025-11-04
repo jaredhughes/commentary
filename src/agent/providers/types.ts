@@ -8,7 +8,7 @@ import { AgentRequest } from '../../types';
 /**
  * Supported provider types
  */
-export type ProviderType = 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+export type ProviderType = 'claude' | 'cursor' | 'vscode' | 'custom';
 
 /**
  * Provider configuration (from settings)
@@ -25,11 +25,7 @@ export interface ProviderConfig {
   // Cursor-specific
   cursorCliPath?: string;
   cursorInteractive?: boolean;
-  
-  // OpenAI-specific
-  openaiApiKey?: string;
-  openaiModel?: string;
-  
+
   // Custom provider
   customEndpoint?: string;
   customApiKey?: string;
@@ -123,8 +119,6 @@ export function getProviderDisplayName(provider: ProviderType): string {
       return 'Claude';
     case 'cursor':
       return 'Cursor';
-    case 'openai':
-      return 'OpenAI';
     case 'vscode':
       return 'VS Code Chat';
     case 'custom':
@@ -157,13 +151,7 @@ export function validateConfig(config: ProviderConfig): { valid: boolean; errors
         errors.push('Cursor requires CLI path configuration');
       }
       break;
-    
-    case 'openai':
-      if (!config.openaiApiKey) {
-        errors.push('OpenAI requires API key');
-      }
-      break;
-    
+
     case 'custom':
       if (!config.customEndpoint) {
         errors.push('Custom provider requires endpoint URL');

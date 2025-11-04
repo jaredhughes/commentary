@@ -43,11 +43,7 @@ suite('Provider Types and Utilities', () => {
     test('should return Cursor for cursor', () => {
       assert.strictEqual(getProviderDisplayName('cursor'), 'Cursor');
     });
-    
-    test('should return OpenAI for openai', () => {
-      assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
-    });
-    
+
     test('should return VS Code Chat for vscode', () => {
       assert.strictEqual(getProviderDisplayName('vscode'), 'VS Code Chat');
     });
@@ -110,32 +106,10 @@ suite('Provider Types and Utilities', () => {
         provider: 'cursor',
         enabled: true
       };
-      
+
       const result = validateConfig(config);
       assert.strictEqual(result.valid, false);
       assert.ok(result.errors[0].includes('CLI path'));
-    });
-    
-    test('should validate OpenAI with API key', () => {
-      const config: ProviderConfig = {
-        provider: 'openai',
-        enabled: true,
-        openaiApiKey: 'sk-test-key'
-      };
-      
-      const result = validateConfig(config);
-      assert.strictEqual(result.valid, true);
-    });
-    
-    test('should invalidate OpenAI without API key', () => {
-      const config: ProviderConfig = {
-        provider: 'openai',
-        enabled: true
-      };
-      
-      const result = validateConfig(config);
-      assert.strictEqual(result.valid, false);
-      assert.ok(result.errors[0].includes('API key'));
     });
     
     test('should validate custom with endpoint', () => {

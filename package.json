@@ -374,14 +374,12 @@
           "enum": [
             "claude",
             "cursor",
-            "openai",
             "custom",
             "vscode"
           ],
           "enumDescriptions": [
             "Claude Code CLI or API",
             "Cursor chat interface",
-            "OpenAI API",
             "Custom API endpoint",
             "VS Code built-in Chat/Agent"
           ],

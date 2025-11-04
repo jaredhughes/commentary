@@ -39,7 +39,7 @@ export class ProviderAdapter {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     
     return {
-      provider: config.get<'claude' | 'cursor' | 'openai' | 'vscode' | 'custom'>('provider', 'cursor'),
+      provider: config.get<'claude' | 'cursor' | 'vscode' | 'custom'>('provider', 'cursor'),
       enabled: config.get<boolean>('enabled', true),
       model: config.get<string>('model'),
       
@@ -50,11 +50,7 @@ export class ProviderAdapter {
       // Cursor
       cursorCliPath: config.get<string>('cursorCliPath', '/usr/local/bin/cursor'),
       cursorInteractive: config.get<boolean>('cursorInteractive', true),
-      
-      // OpenAI
-      openaiApiKey: config.get<string>('openaiApiKey'),
-      openaiModel: config.get<string>('openaiModel'),
-      
+
       // Custom
       customEndpoint: config.get<string>('customEndpoint'),
       customApiKey: config.get<string>('customApiKey')

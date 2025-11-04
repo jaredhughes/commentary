@@ -300,7 +300,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const themeName = this.getThemeName();
     
     // Get button configurations from our pure utility
-    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
 
     // Check if Cursor CLI is configured

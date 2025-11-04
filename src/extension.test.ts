@@ -69,7 +69,7 @@ suite('Commentary Extension Test Suite', () => {
     assert.ok(providerConfig);
     assert.ok(providerConfig.enum.includes('cursor'));
     assert.ok(providerConfig.enum.includes('claude'));
-    assert.ok(providerConfig.enum.includes('openai'));
+    assert.ok(providerConfig.enum.includes('vscode'));
     assert.ok(providerConfig.enum.includes('custom'));
   });
 

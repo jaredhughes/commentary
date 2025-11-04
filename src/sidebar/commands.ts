@@ -236,11 +236,6 @@ export class CommandManager {
             description: '📋 Clipboard only (requires manual paste)',
           },
           {
-            label: '$(globe) OpenAI',
-            value: 'openai',
-            description: 'OpenAI API integration (coming soon)',
-          },
-          {
             label: '$(tools) Custom',
             value: 'custom',
             description: 'Custom API endpoint',
@@ -469,32 +464,6 @@ export class CommandManager {
               );
             }
           }
-
-        } else if (newProvider === 'openai') {
-          // Prompt for OpenAI API key
-          const apiKey = await vscode.window.showInputBox({
-            prompt: 'Enter your OpenAI API key',
-            placeHolder: 'sk-...',
-            password: true,
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-              if (!value || value.trim().length === 0) {
-                return 'API key cannot be empty';
-              }
-              return null;
-            }
-          });
-
-          if (!apiKey) {
-            return;
-          }
-
-          await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-          await config.update('provider', 'openai', vscode.ConfigurationTarget.Workspace);
-
-          vscode.window.showInformationMessage(
-            '? OpenAI configured! (Note: Full OpenAI integration coming soon)'
-          );
 
         } else if (newProvider === 'custom') {
           // Prompt for custom endpoint

@@ -31,14 +31,6 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('terminal'));
     });
     
-    test('returns copy icon for OpenAI provider', () => {
-      const config = getAgentButtonConfig('openai');
-      
-      assert.ok(config.icon.includes('codicon-copy'));
-      assert.strictEqual(config.text, 'Copy for agent');
-      assert.ok(config.tooltip.includes('OpenAI'));
-    });
-    
     test('returns chat icon for VS Code provider', () => {
       const config = getAgentButtonConfig('vscode');
       
@@ -66,7 +58,7 @@ suite('Button Configuration Utils', () => {
     });
     
     test('all configs include valid codicon class', () => {
-      const providers = ['claude', 'cursor', 'openai', 'vscode', 'custom'] as const;
+      const providers = ['claude', 'cursor', 'vscode', 'custom'] as const;
       
       for (const provider of providers) {
         const config = getAgentButtonConfig(provider);
