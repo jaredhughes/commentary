@@ -13,12 +13,22 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('Claude'));
     });
     
-    test('returns copy icon for Cursor provider', () => {
-      const config = getAgentButtonConfig('cursor');
-      
+    test('returns copy icon for Cursor provider without CLI', () => {
+      const config = getAgentButtonConfig('cursor', false);
+
       assert.ok(config.icon.includes('codicon-copy'));
       assert.strictEqual(config.text, 'Copy for agent');
       assert.ok(config.tooltip.includes('Cursor'));
+      assert.ok(config.tooltip.includes('clipboard'));
+    });
+
+    test('returns terminal icon for Cursor provider with CLI', () => {
+      const config = getAgentButtonConfig('cursor', true);
+
+      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('Cursor Agent'));
+      assert.ok(config.tooltip.includes('terminal'));
     });
     
     test('returns copy icon for OpenAI provider', () => {

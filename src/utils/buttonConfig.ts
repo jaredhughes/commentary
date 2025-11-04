@@ -14,9 +14,10 @@ export interface ButtonConfig {
 /**
  * Get button configuration for the AI agent based on provider
  * @param provider - The configured AI agent provider
+ * @param hasCursorCli - Whether Cursor CLI is configured (only relevant for cursor provider)
  * @returns Button configuration with icon HTML, text, and tooltip
  */
-export function getAgentButtonConfig(provider: AgentProvider): ButtonConfig {
+export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: boolean = false): ButtonConfig {
   switch (provider) {
     case 'claude':
       return {
@@ -24,35 +25,44 @@ export function getAgentButtonConfig(provider: AgentProvider): ButtonConfig {
         text: 'Send to agent',
         tooltip: 'Send comment to Claude Code via terminal'
       };
-    
+
     case 'cursor':
-      return {
-        icon: '<i class="codicon codicon-copy"></i>',
-        text: 'Copy for agent',
-        tooltip: 'Copy comment to clipboard and open Cursor chat'
-      };
-    
+      // Different icon/text based on whether CLI is configured
+      if (hasCursorCli) {
+        return {
+          icon: '<i class="codicon codicon-terminal"></i>',
+          text: 'Send to agent',
+          tooltip: 'Send comment to Cursor Agent via terminal'
+        };
+      } else {
+        return {
+          icon: '<i class="codicon codicon-copy"></i>',
+          text: 'Copy for agent',
+          tooltip: 'Copy comment to clipboard for Cursor chat'
+        };
+      }
+
     case 'openai':
       return {
         icon: '<i class="codicon codicon-copy"></i>',
         text: 'Copy for agent',
         tooltip: 'Copy comment to clipboard for OpenAI'
       };
-    
+
     case 'vscode':
       return {
         icon: '<i class="codicon codicon-comment-discussion"></i>',
         text: 'Send to chat',
         tooltip: 'Send comment to VS Code Chat'
       };
-    
+
     case 'custom':
       return {
         icon: '<i class="codicon codicon-send"></i>',
         text: 'Send to agent',
         tooltip: 'Send comment to custom agent'
       };
-    
+
     default:
       // Fallback for unknown providers
       return {
