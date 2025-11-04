@@ -60,6 +60,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         }
         // Refresh webviews when theme changes
         if (e.affectsConfiguration('commentary.theme')) {
+          const config = vscode.workspace.getConfiguration('commentary');
+          const newTheme = config.get<string>('theme.name', 'simple');
+          console.log('[MarkdownWebview] Theme config changed, refreshing all webviews. New theme:', newTheme);
           this.refreshAllWebviews();
         }
       })
@@ -223,16 +226,19 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
    * Refresh all open webviews (e.g., when theme changes)
    */
   async refreshAllWebviews(): Promise<void> {
-    console.log('[MarkdownWebviewProvider] Refreshing all webviews');
+    console.log('[MarkdownWebviewProvider] Refreshing all webviews. Panel count:', this.panels.size);
     for (const [uriString, panel] of this.panels.entries()) {
       try {
+        console.log('[MarkdownWebviewProvider] Refreshing webview:', uriString);
         const uri = vscode.Uri.parse(uriString);
         const document = await vscode.workspace.openTextDocument(uri);
         this.updateContent(panel, document);
+        console.log('[MarkdownWebviewProvider] Webview refreshed successfully:', uriString);
       } catch (error) {
         console.error(`Failed to refresh webview for ${uriString}:`, error);
       }
     }
+    console.log('[MarkdownWebviewProvider] All webviews refreshed');
   }
 
   /**
@@ -284,12 +290,15 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       configuredTheme: config.get<string>('theme.name'),
       extensionUri: this.context.extensionUri.toString(),
     });
-    
+
+    // Add cache-busting query parameter to force fresh CSS load on theme change
+    const cacheBuster = Date.now();
     const themeUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );
-    
-    console.log('[MarkdownWebview] Theme URI:', themeUri.toString());
+    const themeUriWithCache = `${themeUri.toString()}?v=${cacheBuster}`;
+
+    console.log('[MarkdownWebview] Theme URI:', themeUriWithCache);
 
     // Determine if theme is dark for syntax highlighting
     // Simple theme looks better with dark syntax highlighting
@@ -298,11 +307,12 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const highlightUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', highlightTheme)
     );
-    
+    const highlightUriWithCache = `${highlightUri.toString()}?v=${cacheBuster}`;
+
     console.log('[MarkdownWebview] Syntax highlighting:', {
       isDarkTheme,
       highlightTheme,
-      highlightUri: highlightUri.toString(),
+      highlightUri: highlightUriWithCache,
     });
 
     // Generate nonce for security
@@ -349,10 +359,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->
-  <link rel="stylesheet" href="${themeUri}" data-theme-name="${themeName}">
+  <link rel="stylesheet" href="${themeUriWithCache}" data-theme-name="${themeName}">
 
   <!-- Syntax Highlighting CSS -->
-  <link rel="stylesheet" href="${highlightUri}" data-highlight-theme="${highlightTheme}">
+  <link rel="stylesheet" href="${highlightUriWithCache}" data-highlight-theme="${highlightTheme}">
 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
@@ -361,9 +371,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     // Debug theme loading
     console.log('[Commentary Webview] Theme loading:', {
       theme: '${themeName}',
-      themeUri: '${themeUri}',
+      themeUri: '${themeUriWithCache}',
       highlightTheme: '${highlightTheme}',
-      highlightUri: '${highlightUri}',
+      highlightUri: '${highlightUriWithCache}',
       isDarkTheme: ${isDarkTheme},
     });
     
