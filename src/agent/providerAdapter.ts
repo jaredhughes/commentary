@@ -45,10 +45,10 @@ export class ProviderAdapter {
       
       // Claude
       claudeApiKey: config.get<string>('claudeApiKey'),
-      claudeCliPath: config.get<string>('claudeCliPath', '/usr/local/bin/claude'),
-      
+      claudeCliPath: config.get<string>('claudeCliPath', 'claude'),
+
       // Cursor
-      cursorCliPath: config.get<string>('cursorCliPath', '/usr/local/bin/cursor'),
+      cursorCliPath: config.get<string>('cursorCliPath', 'cursor-agent'),
       cursorInteractive: config.get<boolean>('cursorInteractive', true),
 
       // Custom

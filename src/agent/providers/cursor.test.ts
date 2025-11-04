@@ -105,11 +105,10 @@ suite('Cursor Provider', () => {
       };
       
       const command = provider.buildTerminalCommand('test prompt', mockRequest, config);
-      
+
       assert.ok(command);
       assert.strictEqual(command!.command, '/usr/local/bin/cursor');
-      assert.ok(command!.args.includes('--wait'));
-      assert.ok(command!.args[1].includes('commentary-cursor'));
+      assert.ok(command!.args[0].includes('commentary-cursor'));
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
       assert.ok(command!.env.commentaryPrompt);

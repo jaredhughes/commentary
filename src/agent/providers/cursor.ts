@@ -58,10 +58,7 @@ Please review the above comments and provide suggestions for improving the docum
 
     return {
       command: config.cursorCliPath,
-      args: [
-        '--wait',  // Wait for editor to close
-        tempFilePath
-      ],
+      args: [tempFilePath],
       workingDirectory: path.dirname(fileUri),
       env: {
         // Pass temp file path and prompt as env vars for cleanup
