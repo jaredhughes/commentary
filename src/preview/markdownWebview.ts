@@ -259,6 +259,27 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * Get the theme name to use, with fallback to system color scheme
+   */
+  private getThemeName(): string {
+    const config = vscode.workspace.getConfiguration('commentary.theme');
+    const currentTheme = config.inspect<string>('name');
+
+    // If user has explicitly set a theme (workspace or global), use it
+    if (currentTheme?.workspaceValue || currentTheme?.globalValue) {
+      return config.get<string>('name', 'simple');
+    }
+
+    // Otherwise, fall back to system color scheme
+    const colorTheme = vscode.window.activeColorTheme;
+    const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
+      ? 'water-dark'
+      : 'water-light';
+
+    return defaultTheme;
+  }
+
+  /**
    * Generate HTML for webview
    */
   private getHtmlForWebview(
@@ -273,10 +294,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const overlayStyleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'overlay.css')
     );
-    
+
     // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
-    const themeName = config.get<string>('theme.name', 'simple');
+    const themeName = this.getThemeName();
     
     // Get button configurations from our pure utility
     const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';

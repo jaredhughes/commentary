@@ -46,22 +46,6 @@ export function activate(context: vscode.ExtensionContext) {
 function activateInternal(context: vscode.ExtensionContext) {
   console.log('[Commentary] Extension is now active');
 
-  // Set default theme based on system color scheme (only if not already configured)
-  const config = vscode.workspace.getConfiguration('commentary.theme');
-  const currentTheme = config.inspect<string>('name');
-
-  // Only set default if user hasn't explicitly configured a theme
-  if (!currentTheme?.workspaceValue && !currentTheme?.globalValue) {
-    const colorTheme = vscode.window.activeColorTheme;
-    const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
-      ? 'water-dark'
-      : 'water-light';
-
-    console.log(`Setting default theme based on color scheme: ${defaultTheme}`);
-    // Set as workspace value so it's not persisted globally
-    config.update('name', defaultTheme, vscode.ConfigurationTarget.Workspace);
-  }
-
   // Initialize storage
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
   storageManager = new StorageManager(context, workspaceRoot);
