@@ -221,24 +221,24 @@ export class CommandManager {
 
         const providers: ProviderOption[] = [
           {
-            label: '$(sparkle) Claude API',
+            label: '$(sparkle) Claude',
             value: 'claude',
-            description: 'Automatic document editing via Anthropic API',
+            description: '✨ API (auto-edit) → CLI (terminal) → clipboard (fallback)',
           },
           {
             label: '$(comment-discussion) Cursor',
             value: 'cursor',
-            description: 'Manual chat workflow (clipboard) or CLI (cursor-agent)',
+            description: '🔧 CLI (cursor-agent, auto-edit) → clipboard (fallback)',
           },
           {
             label: '$(code) VS Code Chat',
             value: 'vscode',
-            description: 'VS Code built-in Chat/Agent (requires manual paste)',
+            description: '📋 Clipboard only (requires manual paste)',
           },
           {
             label: '$(globe) OpenAI',
             value: 'openai',
-            description: 'OpenAI API integration',
+            description: 'OpenAI API integration (coming soon)',
           },
           {
             label: '$(tools) Custom',

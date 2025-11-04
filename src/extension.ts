@@ -11,6 +11,7 @@ import { CommandManager } from './sidebar/commands';
 import { AgentClient } from './agent/client';
 import { MarkdownWebviewProvider } from './preview/markdownWebview';
 import { CommentaryFileDecorationProvider } from './decorations/fileDecorationProvider';
+import { detectOptimalProvider, getProviderSetupMessage } from './agent/providerDetection';
 
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
@@ -57,7 +58,45 @@ function activateInternal(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('setContext', 'commentary.agentProvider', provider);
     console.log('[Extension] Set commentary.agentProvider context to:', provider);
   };
-  updateProviderContext();
+
+  // Smart provider detection (async, non-blocking)
+  detectOptimalProvider().then(async (detection) => {
+    console.log('[Commentary] Provider detection result:', detection);
+
+    const agentConfig = vscode.workspace.getConfiguration('commentary.agent');
+    const currentProvider = agentConfig.inspect<string>('provider');
+
+    // Only auto-configure if user hasn't explicitly set a provider
+    if (!currentProvider?.workspaceValue && !currentProvider?.globalValue) {
+      // Set the detected provider as workspace setting (doesn't persist globally)
+      await agentConfig.update('provider', detection.provider, vscode.ConfigurationTarget.Workspace);
+      console.log('[Commentary] Auto-configured provider:', detection.provider, '-', detection.reason);
+
+      // Show notification about detection (dismissible, non-intrusive)
+      const message = getProviderSetupMessage(detection);
+      if (detection.capabilities.requiresClipboard) {
+        // Show more prominent message if falling back to clipboard
+        const action = await vscode.window.showInformationMessage(
+          message,
+          'Configure Agent',
+          'Dismiss'
+        );
+        if (action === 'Configure Agent') {
+          await vscode.commands.executeCommand('commentary.configureAgent');
+        }
+      } else {
+        // Just log success for CLI/API methods
+        console.log('[Commentary]', message);
+      }
+    }
+
+    // Update context key
+    updateProviderContext();
+  }).catch((error) => {
+    console.error('[Commentary] Provider detection failed:', error);
+    // Fallback to manual context update
+    updateProviderContext();
+  });
 
   // Listen for provider configuration changes and update context
   context.subscriptions.push(
