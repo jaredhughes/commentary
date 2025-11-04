@@ -15,6 +15,7 @@ import {
 } from './providers/types';
 import { ClaudeProvider } from './providers/claude';
 import { CursorProvider, getCursorChatCommands } from './providers/cursor';
+import { OpenAIProvider } from './providers/openai';
 
 /**
  * Adapter that bridges pure provider logic with VS Code APIs
@@ -30,6 +31,7 @@ export class ProviderAdapter {
     // Register all providers
     this.providers.set('claude', new ClaudeProvider());
     this.providers.set('cursor', new CursorProvider());
+    this.providers.set('openai', new OpenAIProvider());
   }
 
   /**
@@ -39,10 +41,10 @@ export class ProviderAdapter {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     
     return {
-      provider: config.get<'claude' | 'cursor' | 'vscode' | 'custom'>('provider', 'cursor'),
+      provider: config.get<'claude' | 'cursor' | 'openai' | 'vscode' | 'custom'>('provider', 'cursor'),
       enabled: config.get<boolean>('enabled', true),
       model: config.get<string>('model'),
-      
+
       // Claude
       claudeApiKey: config.get<string>('claudeApiKey'),
       claudeCliPath: config.get<string>('claudeCliPath', 'claude'),
@@ -50,6 +52,10 @@ export class ProviderAdapter {
       // Cursor
       cursorCliPath: config.get<string>('cursorCliPath', 'cursor-agent'),
       cursorInteractive: config.get<boolean>('cursorInteractive', true),
+
+      // OpenAI
+      openaiApiKey: config.get<string>('openaiApiKey'),
+      openaiModel: config.get<string>('openaiModel', 'gpt-4'),
 
       // Custom
       customEndpoint: config.get<string>('customEndpoint'),
@@ -217,19 +223,45 @@ export class ProviderAdapter {
    */
   private async sendViaApi(
     provider: ProviderStrategy,
-    _prompt: string,
+    prompt: string,
     request: AgentRequest,
-    _config: ProviderConfig,
-    _providerName: string
+    config: ProviderConfig,
+    providerName: string
   ): Promise<SendResult> {
-    const message = provider.getSuccessMessage(request, 'api');
-    vscode.window.showInformationMessage(message + ' (API integration coming soon)');
+    try {
+      // Call the provider's API method if it exists
+      let response: string | undefined;
 
-    return {
-      success: true,
-      method: 'api',
-      message
-    };
+      if (provider instanceof OpenAIProvider) {
+        response = await provider.callApi(prompt, config);
+      }
+      // Add Claude API support here in future
+      // else if (provider instanceof ClaudeProvider) {
+      //   response = await provider.callApi(prompt, config);
+      // }
+
+      if (response) {
+        // Show response in output channel
+        const outputChannel = vscode.window.createOutputChannel(`Commentary - ${providerName}`);
+        outputChannel.clear();
+        outputChannel.appendLine(`=== ${providerName} Response ===\n`);
+        outputChannel.appendLine(response);
+        outputChannel.show(true);
+      }
+
+      const message = provider.getSuccessMessage(request, 'api');
+      vscode.window.showInformationMessage(message);
+
+      return {
+        success: true,
+        method: 'api',
+        message
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`${providerName} API error: ${errorMessage}`);
+      throw error;
+    }
   }
 
   /**

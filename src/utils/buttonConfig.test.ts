@@ -31,17 +31,25 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('terminal'));
     });
     
+    test('returns rocket icon for OpenAI provider', () => {
+      const config = getAgentButtonConfig('openai');
+
+      assert.ok(config.icon.includes('codicon-rocket'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('OpenAI API'));
+    });
+
     test('returns chat icon for VS Code provider', () => {
       const config = getAgentButtonConfig('vscode');
-      
+
       assert.ok(config.icon.includes('codicon-comment-discussion'));
       assert.strictEqual(config.text, 'Send to chat');
       assert.ok(config.tooltip.includes('VS Code Chat'));
     });
-    
+
     test('returns send icon for custom provider', () => {
       const config = getAgentButtonConfig('custom');
-      
+
       assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('custom'));
@@ -58,15 +66,15 @@ suite('Button Configuration Utils', () => {
     });
     
     test('all configs include valid codicon class', () => {
-      const providers = ['claude', 'cursor', 'vscode', 'custom'] as const;
-      
+      const providers = ['claude', 'cursor', 'openai', 'vscode', 'custom'] as const;
+
       for (const provider of providers) {
         const config = getAgentButtonConfig(provider);
-        assert.ok(config.icon.includes('class="codicon'), 
+        assert.ok(config.icon.includes('class="codicon'),
           `${provider} should have codicon class`);
-        assert.ok(config.icon.startsWith('<i '), 
+        assert.ok(config.icon.startsWith('<i '),
           `${provider} icon should be an <i> tag`);
-        assert.ok(config.icon.endsWith('</i>'), 
+        assert.ok(config.icon.endsWith('</i>'),
           `${provider} icon should close with </i>`);
       }
     });

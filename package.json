@@ -374,12 +374,14 @@
           "enum": [
             "claude",
             "cursor",
+            "openai",
             "custom",
             "vscode"
           ],
           "enumDescriptions": [
             "Claude Code CLI or API",
             "Cursor chat interface",
+            "OpenAI ChatGPT API (GPT-4, GPT-3.5-turbo, o1)",
             "Custom API endpoint",
             "VS Code built-in Chat/Agent"
           ],
@@ -414,6 +416,30 @@
           "type": "boolean",
           "default": true,
           "description": "Use interactive mode for Cursor CLI (only used when provider is 'cursor')"
+        },
+        "commentary.agent.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key (required when provider is 'openai'). Get one at https://platform.openai.com/api-keys"
+        },
+        "commentary.agent.openaiModel": {
+          "type": "string",
+          "default": "gpt-4",
+          "enum": [
+            "gpt-4",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo",
+            "o1-preview",
+            "o1-mini"
+          ],
+          "enumDescriptions": [
+            "GPT-4 - Most capable, best for complex tasks",
+            "GPT-4 Turbo - Faster and cheaper than GPT-4",
+            "GPT-3.5 Turbo - Fast and economical",
+            "o1 Preview - Advanced reasoning model",
+            "o1 Mini - Faster reasoning model"
+          ],
+          "description": "OpenAI model to use (only used when provider is 'openai')"
         },
         "commentary.agent.claudeCommand": {
           "type": "string",

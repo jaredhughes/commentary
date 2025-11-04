@@ -44,10 +44,14 @@ suite('Provider Types and Utilities', () => {
       assert.strictEqual(getProviderDisplayName('cursor'), 'Cursor');
     });
 
+    test('should return OpenAI for openai', () => {
+      assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
+    });
+
     test('should return VS Code Chat for vscode', () => {
       assert.strictEqual(getProviderDisplayName('vscode'), 'VS Code Chat');
     });
-    
+
     test('should return AI Agent for custom', () => {
       assert.strictEqual(getProviderDisplayName('custom'), 'AI Agent');
     });
@@ -111,14 +115,37 @@ suite('Provider Types and Utilities', () => {
       assert.strictEqual(result.valid, false);
       assert.ok(result.errors[0].includes('CLI path'));
     });
-    
+
+    test('should validate OpenAI with API key', () => {
+      const config: ProviderConfig = {
+        provider: 'openai',
+        enabled: true,
+        openaiApiKey: 'sk-test123'
+      };
+
+      const result = validateConfig(config);
+      assert.strictEqual(result.valid, true);
+      assert.strictEqual(result.errors.length, 0);
+    });
+
+    test('should invalidate OpenAI without API key', () => {
+      const config: ProviderConfig = {
+        provider: 'openai',
+        enabled: true
+      };
+
+      const result = validateConfig(config);
+      assert.strictEqual(result.valid, false);
+      assert.ok(result.errors[0].includes('API key'));
+    });
+
     test('should validate custom with endpoint', () => {
       const config: ProviderConfig = {
         provider: 'custom',
         enabled: true,
         customEndpoint: 'https://api.example.com'
       };
-      
+
       const result = validateConfig(config);
       assert.strictEqual(result.valid, true);
     });
