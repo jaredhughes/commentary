@@ -228,7 +228,7 @@ export class CommandManager {
           {
             label: '$(comment-discussion) Cursor',
             value: 'cursor',
-            description: 'Manual chat workflow (no additional config needed)',
+            description: 'Manual chat workflow (clipboard) or CLI (cursor-agent)',
           },
           {
             label: '$(code) VS Code Chat',
@@ -375,12 +375,100 @@ export class CommandManager {
           }
 
         } else if (newProvider === 'cursor') {
-          // Cursor requires no additional config
+          // Set provider to Cursor
           await config.update('provider', 'cursor', vscode.ConfigurationTarget.Workspace);
 
-          vscode.window.showInformationMessage(
-            '? Cursor configured! Comments will open in Cursor chat (requires manual paste).'
-          );
+          // Show configuration menu (allows configuring both clipboard and CLI methods)
+          let configuring = true;
+          while (configuring) {
+            const currentCliPath = config.get<string>('cursorCliPath', '');
+            const hasCliPath = !!currentCliPath;
+            const isInteractive = config.get<boolean>('cursorInteractive', true);
+
+            const cursorOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Configure Cursor Agent CLI',
+                value: 'cli',
+                description: hasCliPath ? 'Currently configured' : 'Optional - for direct terminal integration',
+                detail: hasCliPath ? `Current: "${currentCliPath}" (interactive: ${isInteractive})` : 'Requires cursor-agent to be installed'
+              },
+              {
+                label: '$(copy) Use Clipboard Method',
+                value: 'clipboard',
+                description: hasCliPath ? 'Fallback method' : 'Default method (no setup required)',
+                detail: 'Copy comments to clipboard, paste into Cursor chat manually'
+              },
+              {
+                label: '$(check) Done',
+                value: 'done',
+                description: 'Finish configuration',
+                detail: ''
+              }
+            ], {
+              placeHolder: 'Configure Cursor integration method',
+              title: 'Commentary: Configure Cursor',
+            });
+
+            if (!cursorOption || cursorOption.value === 'done') {
+              configuring = false;
+              const status = hasCliPath
+                ? `Cursor Agent CLI configured: "${currentCliPath}" (clipboard as fallback)`
+                : 'Clipboard method (manual paste)';
+              vscode.window.showInformationMessage(`? Cursor configured! ${status}`);
+              break;
+            }
+
+            if (cursorOption.value === 'cli') {
+              // Configure Cursor Agent CLI path
+              const cliPath = await vscode.window.showInputBox({
+                prompt: 'Enter the path to cursor-agent command',
+                placeHolder: 'cursor-agent (or full path like /usr/local/bin/cursor-agent)',
+                value: currentCliPath || 'cursor-agent',
+                ignoreFocusOut: true,
+                validateInput: (value) => {
+                  if (!value || value.trim().length === 0) {
+                    return 'Path cannot be empty';
+                  }
+                  return null;
+                }
+              });
+
+              if (cliPath) {
+                await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
+
+                // Ask about interactive mode
+                const interactive = await vscode.window.showQuickPick([
+                  {
+                    label: 'Interactive Mode (Recommended)',
+                    value: true,
+                    description: 'Opens Cursor agent in terminal for conversational sessions'
+                  },
+                  {
+                    label: 'Non-Interactive Mode',
+                    value: false,
+                    description: 'Single-shot execution, returns response immediately'
+                  }
+                ], {
+                  placeHolder: 'Select cursor-agent mode',
+                  title: 'Cursor Agent Interaction Mode'
+                });
+
+                if (interactive !== undefined) {
+                  await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
+                  vscode.window.showInformationMessage(
+                    `? Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
+                  );
+                }
+              }
+
+            } else if (cursorOption.value === 'clipboard') {
+              // Clear CLI path to force clipboard method
+              await config.update('cursorCliPath', '', vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage(
+                '? Clipboard method selected. Comments will be copied for manual paste into Cursor chat.'
+              );
+            }
+          }
 
         } else if (newProvider === 'openai') {
           // Prompt for OpenAI API key
