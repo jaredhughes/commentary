@@ -258,9 +258,13 @@ function activateInternal(context: vscode.ExtensionContext) {
   // Watch for active editor changes to refresh preview
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (editor && editor.document.languageId === 'markdown') {
-        await overlayHost?.refreshPreview();
-        commentsViewProvider?.refresh();
+      try {
+        if (editor && editor.document.languageId === 'markdown') {
+          await overlayHost?.refreshPreview();
+          commentsViewProvider?.refresh();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidChangeActiveTextEditor:', error);
       }
     })
   );
@@ -268,10 +272,14 @@ function activateInternal(context: vscode.ExtensionContext) {
   // Watch for document changes to refresh preview
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument(async (event) => {
-      if (event.document.languageId === 'markdown') {
-        // Debounce: only refresh after 500ms of inactivity
-        // (In a real implementation, use a proper debounce)
-        await overlayHost?.refreshPreview();
+      try {
+        if (event.document.languageId === 'markdown') {
+          // Debounce: only refresh after 500ms of inactivity
+          // (In a real implementation, use a proper debounce)
+          await overlayHost?.refreshPreview();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidChangeTextDocument:', error);
       }
     })
   );
@@ -305,9 +313,14 @@ export function deactivate() {
   }
   
   if (commentsViewProvider) {
+    try {
+      commentsViewProvider.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing comments view provider:', e);
+    }
     commentsViewProvider = undefined;
   }
-  
+
   if (overlayHost) {
     try {
       overlayHost.dispose();
@@ -316,14 +329,18 @@ export function deactivate() {
     }
     overlayHost = undefined;
   }
-  
+
   if (markdownWebviewProvider) {
     // MarkdownWebviewProvider doesn't have dispose, but panels are managed by it
     markdownWebviewProvider = undefined;
   }
-  
-  // FileDecorationProvider doesn't need explicit disposal
+
   if (fileDecorationProvider) {
+    try {
+      fileDecorationProvider.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing file decoration provider:', e);
+    }
     fileDecorationProvider = undefined;
   }
   

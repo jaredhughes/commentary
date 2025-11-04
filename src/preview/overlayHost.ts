@@ -460,5 +460,6 @@ export class OverlayHost {
 
   dispose(): void {
     this.messageHandler.clear();
+    this.onNotesChangedEmitter.dispose();
   }
 }

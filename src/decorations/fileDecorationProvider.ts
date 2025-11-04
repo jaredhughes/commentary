@@ -50,4 +50,8 @@ export class CommentaryFileDecorationProvider implements vscode.FileDecorationPr
       color: new vscode.ThemeColor('charts.yellow'),
     };
   }
+
+  dispose(): void {
+    this._onDidChangeFileDecorations.dispose();
+  }
 }

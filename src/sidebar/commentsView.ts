@@ -280,4 +280,8 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     }
     return count;
   }
+
+  dispose(): void {
+    this._onDidChangeTreeData.dispose();
+  }
 }
