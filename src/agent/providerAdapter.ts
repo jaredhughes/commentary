@@ -267,25 +267,13 @@ export class ProviderAdapter {
 
   /**
    * Get or create terminal for provider
+   * Always creates a new terminal to avoid conflicts with active sessions
    */
   private async getOrCreateTerminal(providerId: string, providerName: string): Promise<vscode.Terminal> {
-    // Check if existing terminal is still alive
-    const existingTerminal = this.terminals.get(providerId);
-    if (existingTerminal) {
-      const allTerminals = vscode.window.terminals;
-      if (allTerminals.includes(existingTerminal)) {
-        // Terminal exists and is alive - clean it up for reuse
-        existingTerminal.sendText('\x03'); // Ctrl+C
-        await new Promise(resolve => setTimeout(resolve, 300));
-        existingTerminal.sendText('clear');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        return existingTerminal;
-      }
-    }
-
-    // Create new terminal
+    // Always create a new terminal to avoid conflicts with running interactive sessions
+    // (e.g., cursor-agent may still be active and Ctrl+C doesn't reliably exit it)
     const terminal = vscode.window.createTerminal({
-      name: `Commentary ? ${providerName}`,
+      name: `Commentary → ${providerName}`,
       hideFromUser: false
     });
 
