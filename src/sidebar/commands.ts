@@ -127,6 +127,7 @@ export class CommandManager {
         // Keep comment for manual methods (clipboard, chat) so user can track what to apply
         if (method === 'cli' || method === 'api') {
           await this.storage.deleteNote(note.id, note.file);
+          await this.overlayHost.refreshPreview();
           this.commentsView.refresh();
         }
       } catch (error) {
@@ -166,7 +167,7 @@ export class CommandManager {
       const allNotes = await this.storage.getAllNotes();
       const notes: Note[] = [];
 
-      for (const [, fileNotes] of allNotes.entries()) {
+      for (const fileNotes of allNotes.values()) {
         notes.push(...fileNotes);
       }
 
@@ -199,6 +200,7 @@ export class CommandManager {
           for (const note of notes) {
             await this.storage.deleteNote(note.id, note.file);
           }
+          await this.overlayHost.refreshPreview();
           this.commentsView.refresh();
         }
       } catch (error) {
@@ -456,8 +458,6 @@ export class CommandManager {
               });
 
               if (cliPath) {
-                await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
-
                 // Ask about interactive mode
                 const interactive = await vscode.window.showQuickPick([
                   {
@@ -476,6 +476,7 @@ export class CommandManager {
                 });
 
                 if (interactive !== undefined) {
+                  await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
                   await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
                   vscode.window.showInformationMessage(
                     `✓ Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`

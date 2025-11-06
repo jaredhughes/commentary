@@ -543,7 +543,6 @@
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-github-headings": "^2.0.1",
-    "markdown-it-task-lists": "^2.1.1",
-    "openai": "^6.7.0"
+    "markdown-it-task-lists": "^2.1.1"
   }
 }

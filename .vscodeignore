@@ -5,7 +5,6 @@
 # Source files (only compiled output in out/ is needed)
 src/**
 **/*.ts
-!out/**/*.ts
 **/*.map
 
 # Configuration files (development only)

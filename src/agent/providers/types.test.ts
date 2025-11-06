@@ -7,7 +7,8 @@ import {
   ProviderConfig,
   selectProvider,
   getProviderDisplayName,
-  validateConfig
+  validateConfig,
+  extractFileName
 } from './types';
 
 suite('Provider Types and Utilities', () => {
@@ -159,6 +160,48 @@ suite('Provider Types and Utilities', () => {
       const result = validateConfig(config);
       assert.strictEqual(result.valid, false);
       assert.ok(result.errors[0].includes('endpoint'));
+    });
+  });
+
+  suite('extractFileName', () => {
+    test('should extract filename from Unix path', () => {
+      assert.strictEqual(extractFileName('/home/user/documents/readme.md'), 'readme.md');
+    });
+
+    test('should extract filename from Windows path', () => {
+      assert.strictEqual(extractFileName('C:\\Documents\\Projects\\readme.md'), 'readme.md');
+    });
+
+    test('should extract filename from file:// URI', () => {
+      assert.strictEqual(extractFileName('file:///home/user/documents/readme.md'), 'readme.md');
+    });
+
+    test('should extract filename from mixed path separators', () => {
+      assert.strictEqual(extractFileName('C:\\Documents/Projects/readme.md'), 'readme.md');
+    });
+
+    test('should handle filename without path', () => {
+      assert.strictEqual(extractFileName('readme.md'), 'readme.md');
+    });
+
+    test('should handle Unknown file', () => {
+      assert.strictEqual(extractFileName('Unknown file'), 'Unknown file');
+    });
+
+    test('should handle empty string', () => {
+      assert.strictEqual(extractFileName(''), '');
+    });
+
+    test('should handle trailing slash', () => {
+      // Trailing slash results in empty string after split().pop()
+      // which falls back to original string
+      assert.strictEqual(extractFileName('/home/user/documents/'), '/home/user/documents/');
+    });
+
+    test('should handle trailing backslash', () => {
+      // Trailing backslash results in empty string after split().pop()
+      // which falls back to original string
+      assert.strictEqual(extractFileName('C:\\Documents\\Projects\\'), 'C:\\Documents\\Projects\\');
     });
   });
 });

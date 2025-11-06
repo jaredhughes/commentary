@@ -187,9 +187,9 @@ export function extractFileName(fileUri: string): string {
     return fileUri;
   }
 
-  // Extract filename from path (handles both file:// URIs and plain paths)
-  const fileName = fileUri.includes('/')
-    ? fileUri.split('/').pop() || fileUri
+  // Extract filename from path (handles both file:// URIs and plain paths, both / and \)
+  const fileName = fileUri.includes('/') || fileUri.includes('\\')
+    ? fileUri.split(/[/\\]/).pop() || fileUri
     : fileUri;
 
   return fileName;

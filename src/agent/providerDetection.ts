@@ -12,6 +12,8 @@
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { access, constants } from 'fs/promises';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -28,9 +30,29 @@ export interface ProviderDetectionResult {
 }
 
 /**
- * Check if a command exists in PATH
+ * Check if a command exists in PATH or as an absolute path
  */
 async function checkCommandExists(command: string): Promise<boolean> {
+  // If command looks like an absolute path, check file system directly
+  if (path.isAbsolute(command) || command.includes(path.sep)) {
+    try {
+      await access(command, constants.X_OK);
+      return true;
+    } catch {
+      // On Windows, executable permission check might fail, so just check existence
+      if (process.platform === 'win32') {
+        try {
+          await access(command, constants.F_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    }
+  }
+
+  // Otherwise, use shell lookup for commands in PATH
   try {
     const checkCommand = process.platform === 'win32'
       ? `where ${command}`
@@ -99,10 +121,13 @@ export async function detectOptimalProvider(): Promise<ProviderDetectionResult> 
   // Check API availability
   const claudeApiAvailable = hasClaudeApi();
 
-  // Check CLI availability
+  // Check CLI availability (respect configured paths)
+  const cursorCliPath = config.get<string>('cursorCliPath', 'cursor-agent');
+  const claudeCommand = config.get<string>('claudeCommand', 'claude');
+
   const [cursorAgentAvailable, claudeCliAvailable] = await Promise.all([
-    checkCommandExists('cursor-agent'),
-    checkCommandExists('claude')
+    checkCommandExists(cursorCliPath),
+    checkCommandExists(claudeCommand)
   ]);
 
   console.log('[Commentary] Provider detection:', {

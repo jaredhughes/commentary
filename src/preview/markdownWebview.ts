@@ -266,11 +266,19 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const currentTheme = config.inspect<string>('name');
 
     // If user has explicitly set a theme (workspace or global), use it
-    if (currentTheme?.workspaceValue || currentTheme?.globalValue) {
-      return config.get<string>('name', 'simple');
+    if (currentTheme?.workspaceValue !== undefined) {
+      return currentTheme.workspaceValue;
+    }
+    if (currentTheme?.globalValue !== undefined) {
+      return currentTheme.globalValue;
     }
 
-    // Otherwise, fall back to system color scheme
+    // Check if there's a configured default from package.json
+    if (currentTheme?.defaultValue !== undefined) {
+      return currentTheme.defaultValue;
+    }
+
+    // Fall back to system color scheme
     const colorTheme = vscode.window.activeColorTheme;
     const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
       ? 'water-dark'
@@ -322,7 +330,8 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     });
 
     // Add cache-busting query parameter to force fresh CSS load on theme change
-    const cacheBuster = Date.now();
+    // Use both timestamp and random component to ensure uniqueness
+    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const themeUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );
@@ -354,6 +363,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} data:;">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Commentary</title>
 
   <!-- Codicons for VS Code icons -->
