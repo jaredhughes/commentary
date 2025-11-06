@@ -137,12 +137,13 @@ export class ProviderAdapter {
     // Execute command
     await this.executeTerminalCommand(terminal, command);
 
-    // Show success message
+    // Show success message (don't await - let progress dismiss immediately)
     const message = provider.getSuccessMessage(request, 'cli');
-    const action = await vscode.window.showInformationMessage(message, 'View Terminal');
-    if (action === 'View Terminal') {
-      terminal.show();
-    }
+    vscode.window.showInformationMessage(message, 'View Terminal').then((action) => {
+      if (action === 'View Terminal') {
+        terminal.show();
+      }
+    });
 
     // Schedule cleanup of temp file
     if (command.env?.commentaryTempFile) {
