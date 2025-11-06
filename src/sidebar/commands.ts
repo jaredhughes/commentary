@@ -109,6 +109,8 @@ export class CommandManager {
       }
 
       try {
+        let method: 'cli' | 'api' | 'clipboard' | 'chat' | undefined;
+
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
@@ -117,13 +119,16 @@ export class CommandManager {
           },
           async (progress) => {
             progress.report({ message: 'Sending comment to agent...' });
-            await this.agentClient.sendSingleComment(note);
+            method = await this.agentClient.sendSingleComment(note);
           }
         );
 
-        // Delete the comment after sending
-        await this.storage.deleteNote(note.id, note.file);
-        this.commentsView.refresh();
+        // Only auto-delete if method applies changes automatically (CLI or API)
+        // Keep comment for manual methods (clipboard, chat) so user can track what to apply
+        if (method === 'cli' || method === 'api') {
+          await this.storage.deleteNote(note.id, note.file);
+          this.commentsView.refresh();
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Failed to send comment: ${message}`);
@@ -140,9 +145,14 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendToAgentClaude', sendToAgentHandler)
     );
 
-    // Send comment to agent (Cursor-specific)
+    // Send comment to agent (Cursor-specific - clipboard fallback)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendToAgentCursor', sendToAgentHandler)
+    );
+
+    // Send comment to agent (Cursor CLI-specific - terminal)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentCursorCli', sendToAgentHandler)
     );
 
     // Send comment to agent (VS Code-specific)
@@ -166,6 +176,8 @@ export class CommandManager {
       }
 
       try {
+        let method: 'cli' | 'api' | 'clipboard' | 'chat' | undefined;
+
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
@@ -176,9 +188,19 @@ export class CommandManager {
             progress.report({
               message: `Sending ${notes.length} comment${notes.length === 1 ? '' : 's'} to agent...`
             });
-            await this.agentClient.sendMultipleComments(notes);
+            method = await this.agentClient.sendMultipleComments(notes);
           }
         );
+
+        // Only auto-delete if method applies changes automatically (CLI or API)
+        // Keep comments for manual methods (clipboard, chat) so user can track what to apply
+        if (method === 'cli' || method === 'api') {
+          // Delete all comments that were sent
+          for (const note of notes) {
+            await this.storage.deleteNote(note.id, note.file);
+          }
+          this.commentsView.refresh();
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Failed to send comments: ${message}`);
@@ -195,9 +217,14 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendAllToAgentClaude', sendAllToAgentHandler)
     );
 
-    // Send all comments to agent (Cursor-specific)
+    // Send all comments to agent (Cursor-specific - clipboard fallback)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendAllToAgentCursor', sendAllToAgentHandler)
+    );
+
+    // Send all comments to agent (Cursor CLI-specific - terminal)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentCursorCli', sendAllToAgentHandler)
     );
 
     // Send all comments to agent (VS Code-specific)
@@ -260,8 +287,8 @@ export class CommandManager {
 
         // Step 2: Provider-specific configuration
         if (newProvider === 'claude') {
-          // Set provider to Claude
-          await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+          // Set provider to Claude (global, but workspace can override)
+          await config.update('provider', 'claude', vscode.ConfigurationTarget.Global);
 
           // Show configuration menu (allows configuring both CLI and API)
           let configuring = true;
@@ -370,8 +397,8 @@ export class CommandManager {
           }
 
         } else if (newProvider === 'cursor') {
-          // Set provider to Cursor
-          await config.update('provider', 'cursor', vscode.ConfigurationTarget.Workspace);
+          // Set provider to Cursor (global, but workspace can override)
+          await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
 
           // Show configuration menu (allows configuring both clipboard and CLI methods)
           let configuring = true;
@@ -489,14 +516,14 @@ export class CommandManager {
           }
 
           await config.update('endpoint', endpoint, vscode.ConfigurationTarget.Global);
-          await config.update('provider', 'custom', vscode.ConfigurationTarget.Workspace);
+          await config.update('provider', 'custom', vscode.ConfigurationTarget.Global);
 
           vscode.window.showInformationMessage(
             '✓ Custom endpoint configured!'
           );
         } else if (newProvider === 'vscode') {
-          // VS Code Chat requires no additional config
-          await config.update('provider', 'vscode', vscode.ConfigurationTarget.Workspace);
+          // VS Code Chat requires no additional config (global, but workspace can override)
+          await config.update('provider', 'vscode', vscode.ConfigurationTarget.Global);
 
           vscode.window.showInformationMessage(
             '✓ VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
@@ -721,10 +748,14 @@ export class CommandManager {
         });
 
         if (selected) {
-          // Update configuration
-          await config.update('name', selected.value, vscode.ConfigurationTarget.Workspace);
+          // Update configuration (use Global to avoid workspace settings file save requirement)
+          await config.update('name', selected.value, vscode.ConfigurationTarget.Global);
 
-          // Refresh all webviews to apply new theme (regenerates HTML with new CSS)
+          // Wait for config to propagate
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          // Explicitly refresh webviews to ensure theme change is applied
+          // (Config listener should also trigger refresh, but this ensures immediate update)
           await this.webviewProvider.refreshAllWebviews();
 
           vscode.window.showInformationMessage(`Theme switched to: ${selected.label.replace(' $(check)', '')}`);

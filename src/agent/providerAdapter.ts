@@ -23,11 +23,13 @@ import { OpenAIProvider } from './providers/openai';
 export class ProviderAdapter {
   private providers: Map<string, ProviderStrategy>;
   private terminals: Map<string, vscode.Terminal>;
+  private terminalCounter: number;
 
   constructor(private context: vscode.ExtensionContext) {
     this.providers = new Map();
     this.terminals = new Map();
-    
+    this.terminalCounter = 0;
+
     // Register all providers
     this.providers.set('claude', new ClaudeProvider());
     this.providers.set('cursor', new CursorProvider());
@@ -50,7 +52,7 @@ export class ProviderAdapter {
       claudeCliPath: config.get<string>('claudeCliPath', 'claude'),
 
       // Cursor
-      cursorCliPath: config.get<string>('cursorCliPath', 'cursor-agent'),
+      cursorCliPath: config.get<string>('cursorCliPath'), // No default - must be explicitly configured
       cursorInteractive: config.get<boolean>('cursorInteractive', true),
 
       // OpenAI
@@ -243,15 +245,24 @@ export class ProviderAdapter {
 
       if (response) {
         // Show response in output channel
-        const outputChannel = vscode.window.createOutputChannel(`Commentary - ${providerName}`);
+        const outputChannel = vscode.window.createOutputChannel(`Commentary → ${providerName} Response (Preview)`);
         outputChannel.clear();
-        outputChannel.appendLine(`=== ${providerName} Response ===\n`);
+        outputChannel.appendLine(`=== ${providerName} AI Response (Manual Application Required) ===\n`);
+        outputChannel.appendLine(`📝 Review the response below and manually apply changes to your document.\n`);
+        outputChannel.appendLine(`⚠️  Unlike CLI tools (Claude Code, Cursor Agent), API responses do not auto-edit files.\n`);
+        outputChannel.appendLine(`---\n`);
         outputChannel.appendLine(response);
         outputChannel.show(true);
       }
 
       const message = provider.getSuccessMessage(request, 'api');
-      vscode.window.showInformationMessage(message);
+      vscode.window.showInformationMessage(message, 'View Response').then((action) => {
+        if (action === 'View Response' && response) {
+          // Re-show output channel if user clicks button
+          const outputChannel = vscode.window.createOutputChannel(`Commentary → ${providerName} Response (Preview)`);
+          outputChannel.show(true);
+        }
+      });
 
       return {
         success: true,
@@ -266,43 +277,21 @@ export class ProviderAdapter {
   }
 
   /**
-   * Get or create terminal for provider
-   * Attempts to reuse existing terminal with robust cleanup
+   * Create a new terminal for each command
+   * Multiple commands can run in parallel without interfering
    */
   private async getOrCreateTerminal(providerId: string, providerName: string): Promise<vscode.Terminal> {
-    // Check if existing terminal is still alive
-    const existingTerminal = this.terminals.get(providerId);
-    if (existingTerminal) {
-      const allTerminals = vscode.window.terminals;
-      if (allTerminals.includes(existingTerminal)) {
-        // Terminal exists - aggressively clean it up for reuse
-        // Send multiple Ctrl+C to break out of any nested interactive sessions
-        existingTerminal.sendText('\x03'); // First Ctrl+C
-        await new Promise(resolve => setTimeout(resolve, 100));
-        existingTerminal.sendText('\x03'); // Second Ctrl+C (for nested sessions)
-        await new Promise(resolve => setTimeout(resolve, 100));
-        existingTerminal.sendText('\x03'); // Third Ctrl+C (to be sure)
-        await new Promise(resolve => setTimeout(resolve, 200));
+    // Increment counter for unique terminal ID
+    this.terminalCounter++;
+    const terminalId = `${providerId}-${this.terminalCounter}`;
 
-        // Try to explicitly exit any interactive shell/tool
-        existingTerminal.sendText('exit');
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // Clear screen for clean slate
-        existingTerminal.sendText('clear');
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        return existingTerminal;
-      }
-    }
-
-    // Create new terminal if none exists or previous was closed
+    // Create a new terminal (don't dispose existing ones - they may still be running)
     const terminal = vscode.window.createTerminal({
-      name: `Commentary → ${providerName}`,
+      name: `Commentary → ${providerName} #${this.terminalCounter}`,
       hideFromUser: false
     });
 
-    this.terminals.set(providerId, terminal);
+    this.terminals.set(terminalId, terminal);
     return terminal;
   }
 

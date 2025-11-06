@@ -25,53 +25,58 @@ export class AgentClient {
 
   /**
    * Send a single comment to the agent
+   * @returns The method used (cli, api, clipboard, chat) or undefined if failed
    */
-  async sendSingleComment(note: Note): Promise<void> {
+  async sendSingleComment(note: Note): Promise<'cli' | 'api' | 'clipboard' | 'chat' | undefined> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     const enabled = config.get<boolean>('enabled', true);
 
     if (!enabled) {
       vscode.window.showWarningMessage('AI agent integration is disabled in settings');
-      return;
+      return undefined;
     }
 
     try {
       const request = await PayloadBuilder.buildSingleRequest(note);
-      await this.sendRequest(request);
+      return await this.sendRequest(request);
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to send comment to agent: ${error}`);
+      return undefined;
     }
   }
 
   /**
    * Send multiple comments to the agent
+   * Returns the method used for conditional deletion
    */
-  async sendMultipleComments(notes: Note[]): Promise<void> {
+  async sendMultipleComments(notes: Note[]): Promise<'cli' | 'api' | 'clipboard' | 'chat' | undefined> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     const enabled = config.get<boolean>('enabled', true);
 
     if (!enabled) {
       vscode.window.showWarningMessage('AI agent integration is disabled in settings');
-      return;
+      return undefined;
     }
 
     if (notes.length === 0) {
       vscode.window.showInformationMessage('No comments to send');
-      return;
+      return undefined;
     }
 
     try {
       const request = await PayloadBuilder.buildMultipleRequest(notes);
-      await this.sendRequest(request);
+      return await this.sendRequest(request);
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to send comments to agent: ${error}`);
+      return undefined;
     }
   }
 
   /**
    * Send request to agent using new provider adapter
+   * @returns The method used (cli, api, clipboard, chat) or undefined if failed
    */
-  private async sendRequest(request: AgentRequest): Promise<AgentResponse | void> {
+  private async sendRequest(request: AgentRequest): Promise<'cli' | 'api' | 'clipboard' | 'chat' | undefined> {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     const provider = config.get<string>('provider', 'cursor');
 
@@ -88,16 +93,16 @@ export class AgentClient {
       if (provider === 'claude' && this.apiIntegration.isAvailable()) {
         const success = await this.apiIntegration.sendAndApply(request, prompt);
         if (success) {
-          return this.mockAgentResponse(request);
+          return 'api'; // API method was used
         }
         // If API fails, fall through to adapter
       }
 
       // Use the new provider adapter for all provider methods
       const result = await this.adapter.send(prompt, request);
-      
+
       if (result.success) {
-        return this.mockAgentResponse(request);
+        return result.method; // Return the method that was used
       } else {
         throw new Error(result.message);
       }

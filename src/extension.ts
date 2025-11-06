@@ -57,6 +57,12 @@ function activateInternal(context: vscode.ExtensionContext) {
     const provider = agentConfig.get<string>('provider', 'cursor');
     vscode.commands.executeCommand('setContext', 'commentary.agentProvider', provider);
     console.log('[Extension] Set commentary.agentProvider context to:', provider);
+
+    // Set Cursor CLI availability context (no default value = must be explicitly configured)
+    const cursorCliPath = agentConfig.get<string>('cursorCliPath');
+    const hasCursorCli = !!(cursorCliPath && cursorCliPath.trim().length > 0);
+    vscode.commands.executeCommand('setContext', 'commentary.hasCursorCli', hasCursorCli);
+    console.log('[Extension] Set commentary.hasCursorCli context to:', hasCursorCli);
   };
 
   // Smart provider detection (async, non-blocking)
@@ -68,8 +74,8 @@ function activateInternal(context: vscode.ExtensionContext) {
 
     // Only auto-configure if user hasn't explicitly set a provider
     if (!currentProvider?.workspaceValue && !currentProvider?.globalValue) {
-      // Set the detected provider as workspace setting (doesn't persist globally)
-      await agentConfig.update('provider', detection.provider, vscode.ConfigurationTarget.Workspace);
+      // Set the detected provider as global setting (can be overridden per-workspace)
+      await agentConfig.update('provider', detection.provider, vscode.ConfigurationTarget.Global);
       console.log('[Commentary] Auto-configured provider:', detection.provider, '-', detection.reason);
 
       // Show notification about detection (dismissible, non-intrusive)
@@ -101,7 +107,8 @@ function activateInternal(context: vscode.ExtensionContext) {
   // Listen for provider configuration changes and update context
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('commentary.agent.provider')) {
+      if (e.affectsConfiguration('commentary.agent.provider') ||
+          e.affectsConfiguration('commentary.agent.cursorCliPath')) {
         updateProviderContext();
       }
     })

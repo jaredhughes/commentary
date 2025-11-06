@@ -74,6 +74,12 @@
         "icon": "$(send)"
       },
       {
+        "command": "commentary.sendToAgentCursorCli",
+        "title": "Send to Cursor Agent",
+        "category": "Commentary",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "commentary.sendToAgentCursor",
         "title": "Copy for Cursor",
         "category": "Commentary",
@@ -102,6 +108,12 @@
         "title": "Send All to Claude",
         "category": "Commentary",
         "icon": "$(send)"
+      },
+      {
+        "command": "commentary.sendAllToAgentCursorCli",
+        "title": "Send All to Cursor Agent",
+        "category": "Commentary",
+        "icon": "$(terminal)"
       },
       {
         "command": "commentary.sendAllToAgentCursor",
@@ -219,6 +231,10 @@
           "when": "false"
         },
         {
+          "command": "commentary.sendAllToAgentCursorCli",
+          "when": "false"
+        },
+        {
           "command": "commentary.sendAllToAgentCursor",
           "when": "false"
         },
@@ -248,6 +264,10 @@
         },
         {
           "command": "commentary.editComment",
+          "when": "false"
+        },
+        {
+          "command": "commentary.sendToAgentCursorCli",
           "when": "false"
         },
         {
@@ -284,8 +304,13 @@
           "group": "navigation@1"
         },
         {
+          "command": "commentary.sendAllToAgentCursorCli",
+          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == cursor && commentary.hasCursorCli",
+          "group": "navigation@1"
+        },
+        {
           "command": "commentary.sendAllToAgentCursor",
-          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == cursor",
+          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == cursor && !commentary.hasCursorCli",
           "group": "navigation@1"
         },
         {
@@ -311,8 +336,13 @@
           "group": "inline@1"
         },
         {
+          "command": "commentary.sendToAgentCursorCli",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == cursor && commentary.hasCursorCli",
+          "group": "inline@1"
+        },
+        {
           "command": "commentary.sendToAgentCursor",
-          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == cursor",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == cursor && !commentary.hasCursorCli",
           "group": "inline@1"
         },
         {
