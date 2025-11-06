@@ -267,11 +267,36 @@ export class ProviderAdapter {
 
   /**
    * Get or create terminal for provider
-   * Always creates a new terminal to avoid conflicts with active sessions
+   * Attempts to reuse existing terminal with robust cleanup
    */
   private async getOrCreateTerminal(providerId: string, providerName: string): Promise<vscode.Terminal> {
-    // Always create a new terminal to avoid conflicts with running interactive sessions
-    // (e.g., cursor-agent may still be active and Ctrl+C doesn't reliably exit it)
+    // Check if existing terminal is still alive
+    const existingTerminal = this.terminals.get(providerId);
+    if (existingTerminal) {
+      const allTerminals = vscode.window.terminals;
+      if (allTerminals.includes(existingTerminal)) {
+        // Terminal exists - aggressively clean it up for reuse
+        // Send multiple Ctrl+C to break out of any nested interactive sessions
+        existingTerminal.sendText('\x03'); // First Ctrl+C
+        await new Promise(resolve => setTimeout(resolve, 100));
+        existingTerminal.sendText('\x03'); // Second Ctrl+C (for nested sessions)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        existingTerminal.sendText('\x03'); // Third Ctrl+C (to be sure)
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Try to explicitly exit any interactive shell/tool
+        existingTerminal.sendText('exit');
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Clear screen for clean slate
+        existingTerminal.sendText('clear');
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        return existingTerminal;
+      }
+    }
+
+    // Create new terminal if none exists or previous was closed
     const terminal = vscode.window.createTerminal({
       name: `Commentary → ${providerName}`,
       hideFromUser: false
