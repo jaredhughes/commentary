@@ -143,7 +143,7 @@ suite('Cursor Provider', () => {
 
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
-      assert.ok(text.includes('file:///test/file.md'));
+      assert.ok(text.includes('file.md')); // Just filename, not full URI
     });
 
     test('should pluralize comments correctly', () => {
@@ -159,18 +159,21 @@ suite('Cursor Provider', () => {
   suite('getSuccessMessage', () => {
     test('should return CLI message for cli method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'cli');
+      assert.ok(msg.includes('🚀'));
       assert.ok(msg.includes('Opening Cursor editor'));
       assert.ok(msg.includes('1 comment'));
     });
     
     test('should return clipboard message for clipboard method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'clipboard');
+      assert.ok(msg.includes('📋'));
       assert.ok(msg.includes('Copied'));
       assert.ok(msg.includes('clipboard'));
     });
     
     test('should return chat message for chat method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'chat');
+      assert.ok(msg.includes('💬'));
       assert.ok(msg.includes('Opening Cursor chat'));
     });
   });
@@ -196,7 +199,7 @@ suite('Cursor Provider', () => {
       const { content, fileName } = buildCursorTempFileContent('test prompt', mockRequest);
       
       assert.ok(content.includes('test prompt'));
-      assert.ok(content.includes('/test/file.md'));
+      assert.ok(content.includes('file.md')); // Just filename, not full path
       assert.ok(content.includes('1'));
       assert.ok(fileName.includes('commentary-cursor'));
       assert.ok(fileName.endsWith('.md'));

@@ -119,8 +119,8 @@ suite('OpenAI Provider', () => {
       assert.ok(text.includes('OpenAI Review Request'));
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
-      assert.ok(text.includes('file:///test/file.md'));
-      assert.ok(text.includes('Copied to clipboard'));
+      assert.ok(text.includes('file.md')); // Just filename, not full URI
+      assert.ok(text.includes('Ready to paste into ChatGPT'));
       assert.ok(text.includes('ChatGPT'));
     });
 
@@ -142,9 +142,9 @@ suite('OpenAI Provider', () => {
   suite('getSuccessMessage', () => {
     test('should return API message for api method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'api');
-      assert.ok(msg.includes('Sent'));
-      assert.ok(msg.includes('1 comment'));
-      assert.ok(msg.includes('OpenAI API'));
+      assert.ok(msg.includes('OpenAI response ready'));
+      assert.ok(msg.includes('manual edits required'));
+      assert.ok(msg.includes('Output panel'));
     });
 
     test('should return clipboard message for clipboard method', () => {
@@ -167,7 +167,9 @@ suite('OpenAI Provider', () => {
       };
 
       const msg = provider.getSuccessMessage(multiRequest, 'api');
-      assert.ok(msg.includes('2 comments'));
+      // New message is the same regardless of count for API method
+      assert.ok(msg.includes('OpenAI response ready'));
+      assert.ok(msg.includes('manual edits required'));
     });
   });
 
