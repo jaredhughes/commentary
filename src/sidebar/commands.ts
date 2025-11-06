@@ -296,7 +296,7 @@ export class CommandManager {
             if (!claudeOption || claudeOption.value === 'done') {
               configuring = false;
               const status = hasApiKey ? 'API key configured (primary)' : `CLI configured: "${currentCommand}"`;
-              vscode.window.showInformationMessage(`? Claude configured! ${status}`);
+              vscode.window.showInformationMessage(`✓ Claude configured! ${status}`);
               break;
             }
 
@@ -318,7 +318,7 @@ export class CommandManager {
               if (command) {
                 await config.update('claudeCommand', command, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  `? Claude CLI command updated: "${command}"`
+                  `✓ Claude CLI command updated: "${command}"`
                 );
               }
 
@@ -363,7 +363,7 @@ export class CommandManager {
               if (apiKey) {
                 await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  '? Claude API key configured! This will be the primary method (CLI as fallback).'
+                  '✓ Claude API key configured! This will be the primary method (CLI as fallback).'
                 );
               }
             }
@@ -409,7 +409,7 @@ export class CommandManager {
               const status = hasCliPath
                 ? `Cursor Agent CLI configured: "${currentCliPath}" (clipboard as fallback)`
                 : 'Clipboard method (manual paste)';
-              vscode.window.showInformationMessage(`? Cursor configured! ${status}`);
+              vscode.window.showInformationMessage(`✓ Cursor configured! ${status}`);
               break;
             }
 
@@ -451,7 +451,7 @@ export class CommandManager {
                 if (interactive !== undefined) {
                   await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
                   vscode.window.showInformationMessage(
-                    `? Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
+                    `✓ Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
                   );
                 }
               }
@@ -460,7 +460,7 @@ export class CommandManager {
               // Clear CLI path to force clipboard method
               await config.update('cursorCliPath', '', vscode.ConfigurationTarget.Global);
               vscode.window.showInformationMessage(
-                '? Clipboard method selected. Comments will be copied for manual paste into Cursor chat.'
+                '✓ Clipboard method selected. Comments will be copied for manual paste into Cursor chat.'
               );
             }
           }
@@ -492,14 +492,14 @@ export class CommandManager {
           await config.update('provider', 'custom', vscode.ConfigurationTarget.Workspace);
 
           vscode.window.showInformationMessage(
-            '? Custom endpoint configured!'
+            '✓ Custom endpoint configured!'
           );
         } else if (newProvider === 'vscode') {
           // VS Code Chat requires no additional config
           await config.update('provider', 'vscode', vscode.ConfigurationTarget.Workspace);
 
           vscode.window.showInformationMessage(
-            '? VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
+            '✓ VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
           );
         }
       })
@@ -635,14 +635,14 @@ export class CommandManager {
 
         if (relevantCommands.length > 0) {
           relevantCommands.forEach(cmd => {
-            outputChannel.appendLine(`? ${cmd}`);
+            outputChannel.appendLine(`✓ ${cmd}`);
           });
         } else {
           outputChannel.appendLine('No chat/AI commands found');
           outputChannel.appendLine('');
           outputChannel.appendLine('All available commands:');
           allCommands.slice(0, 50).forEach(cmd => {
-            outputChannel.appendLine(`? ${cmd}`);
+            outputChannel.appendLine(`✓ ${cmd}`);
           });
           outputChannel.appendLine(`... and ${allCommands.length - 50} more`);
         }
