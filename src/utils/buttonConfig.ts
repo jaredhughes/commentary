@@ -79,7 +79,7 @@ export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: bool
  * @returns Button configuration with icon HTML and platform-specific tooltip
  */
 export function getSaveButtonConfig(isMac: boolean): ButtonConfig {
-  const shortcut = isMac ? '?+Enter' : 'Ctrl+Enter';
+  const shortcut = isMac ? '⌘+Enter' : 'Ctrl+Enter';
   return {
     icon: '<i class="codicon codicon-save"></i>',
     text: 'Save',

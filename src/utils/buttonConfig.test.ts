@@ -84,20 +84,20 @@ suite('Button Configuration Utils', () => {
     
     test('returns save icon with macOS shortcut', () => {
       const config = getSaveButtonConfig(true);
-      
+
       assert.ok(config.icon.includes('codicon-save'));
       assert.strictEqual(config.text, 'Save');
-      assert.ok(config.tooltip.includes('?+Enter'));
+      assert.ok(config.tooltip.includes('⌘+Enter'));
       assert.ok(!config.tooltip.includes('Ctrl+Enter'));
     });
-    
+
     test('returns save icon with Windows/Linux shortcut', () => {
       const config = getSaveButtonConfig(false);
-      
+
       assert.ok(config.icon.includes('codicon-save'));
       assert.strictEqual(config.text, 'Save');
       assert.ok(config.tooltip.includes('Ctrl+Enter'));
-      assert.ok(!config.tooltip.includes('?+Enter'));
+      assert.ok(!config.tooltip.includes('⌘+Enter'));
     });
     
     test('always includes valid codicon class', () => {
