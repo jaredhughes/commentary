@@ -176,3 +176,108 @@ export function validateConfig(config: ProviderConfig): { valid: boolean; errors
     errors
   };
 }
+
+/**
+ * Pure function to extract clean filename from file URI
+ * Converts "file:///Users/jared/project/src/file.md" → "file.md"
+ */
+export function extractFileName(fileUri: string): string {
+  // Handle 'Unknown file' case
+  if (!fileUri || fileUri === 'Unknown file') {
+    return fileUri;
+  }
+
+  // Extract filename from path (handles both file:// URIs and plain paths)
+  const fileName = fileUri.includes('/')
+    ? fileUri.split('/').pop() || fileUri
+    : fileUri;
+
+  return fileName;
+}
+
+/**
+ * Shared prompt formatting options
+ */
+export interface PromptFormatOptions {
+  providerName: string;
+  fileName: string;
+  commentCount: number;
+  prompt: string;
+  includeFooter?: boolean;
+  footerText?: string;
+  emoji?: string;
+}
+
+/**
+ * Build clipboard prompt text with consistent formatting
+ */
+export function buildClipboardPrompt(options: PromptFormatOptions): string {
+  const { providerName, fileName, commentCount, prompt, emoji, footerText } = options;
+
+  const header = emoji
+    ? `# ${emoji} ${providerName} Review Request`
+    : `# ${providerName} Review Request (${commentCount} comment${commentCount === 1 ? '' : 's'})`;
+
+  const commentInfo = emoji
+    ? `**Comments:** ${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`
+    : `Comments: ${commentCount}`;
+
+  const fileInfo = emoji
+    ? `**File:** \`${fileName}\``
+    : `File: ${fileName}`;
+
+  const parts = [header, ''];
+
+  if (emoji) {
+    parts.push(commentInfo, fileInfo);
+  } else {
+    parts.push(fileInfo);
+  }
+
+  parts.push('', '---', '', prompt);
+
+  if (footerText) {
+    parts.push('', '---', '', footerText);
+  }
+
+  return parts.join('\n');
+}
+
+/**
+ * Build CLI prompt text with consistent formatting
+ */
+export function buildCliPrompt(options: PromptFormatOptions): string {
+  const { fileName, commentCount, prompt, footerText } = options;
+
+  const parts = [
+    '# Commentary Review Request',
+    '',
+    `File: ${fileName}`,
+    `Comments: ${commentCount}`,
+    '',
+    prompt
+  ];
+
+  if (footerText) {
+    parts.push('', '---', footerText);
+  }
+
+  return parts.join('\n');
+}
+
+/**
+ * Build simple CLI prompt (for Claude's conversational style)
+ */
+export function buildSimpleCliPrompt(fileName: string, prompt: string, footerText?: string): string {
+  const parts = [
+    `I have comments on the file: ${fileName}`,
+    '',
+    prompt
+  ];
+
+  if (footerText) {
+    parts.push('', footerText);
+  }
+
+  return parts.join('\n');
+}

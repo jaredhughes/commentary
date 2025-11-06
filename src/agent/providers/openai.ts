@@ -4,7 +4,13 @@
  */
 
 import { AgentRequest } from '../../types';
-import { ProviderStrategy, ProviderConfig, TerminalCommand } from './types';
+import {
+  ProviderStrategy,
+  ProviderConfig,
+  TerminalCommand,
+  extractFileName,
+  buildClipboardPrompt
+} from './types';
 
 export class OpenAIProvider implements ProviderStrategy {
   canUse(config: ProviderConfig): boolean {
@@ -71,18 +77,17 @@ export class OpenAIProvider implements ProviderStrategy {
     request: AgentRequest,
     _config: ProviderConfig
   ): string {
-    const commentCount = request.contexts.length;
-    const fileInfo = request.contexts[0]?.note?.file || 'Unknown file';
+    const fileUri = request.contexts[0]?.note?.file || 'Unknown file';
+    const fileName = extractFileName(fileUri);
 
-    return `# OpenAI Review Request (${commentCount} comment${commentCount === 1 ? '' : 's'})
-
-File: ${fileInfo}
-
-${prompt}
-
----
-[Copied to clipboard - paste into ChatGPT]
-`;
+    return buildClipboardPrompt({
+      providerName: 'OpenAI',
+      fileName,
+      commentCount: request.contexts.length,
+      prompt,
+      emoji: '📝',
+      footerText: '*✨ Ready to paste into ChatGPT*'
+    });
   }
 
   getSuccessMessage(
@@ -94,7 +99,7 @@ ${prompt}
 
     switch (method) {
       case 'api':
-        return `✨ Sent ${commentText} to OpenAI API`;
+        return `💡 OpenAI response ready - check Output panel (manual edits required)`;
       case 'clipboard':
         return `📋 Copied ${commentText} to clipboard for ChatGPT`;
       default:
