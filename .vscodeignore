@@ -25,7 +25,6 @@ cli-config.json
 vsc-extension-quickstart.md
 docs/**
 UX_IMPROVEMENTS.md
-images/ICON_REQUIREMENTS.md
 PUBLISHING.md
 
 # Build scripts (not needed at runtime)
