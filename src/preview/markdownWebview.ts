@@ -228,18 +228,28 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
    */
   async refreshAllWebviews(): Promise<void> {
     console.log('[MarkdownWebviewProvider] Refreshing all webviews. Panel count:', this.panels.size);
+
+    // Get the new theme name
+    const newTheme = this.getThemeName();
+    console.log('[MarkdownWebviewProvider] New theme:', newTheme);
+
     for (const [uriString, panel] of this.panels.entries()) {
       try {
         console.log('[MarkdownWebviewProvider] Refreshing webview:', uriString);
-        const uri = vscode.Uri.parse(uriString);
-        const document = await vscode.workspace.openTextDocument(uri);
-        this.updateContent(panel, document);
-        console.log('[MarkdownWebviewProvider] Webview refreshed successfully:', uriString);
+
+        // Send message to webview to update theme dynamically
+        // This is more reliable than regenerating entire HTML
+        panel.webview.postMessage({
+          type: 'updateTheme',
+          themeName: newTheme,
+        });
+
+        console.log('[MarkdownWebviewProvider] Theme update message sent to webview:', uriString);
       } catch (error) {
         console.error(`Failed to refresh webview for ${uriString}:`, error);
       }
     }
-    console.log('[MarkdownWebviewProvider] All webviews refreshed');
+    console.log('[MarkdownWebviewProvider] All webviews notified of theme change');
   }
 
   /**
