@@ -24,6 +24,58 @@ console.log('[OVERLAY.JS] Script is loading...');
   let editingNoteId = null; // Track which note is being edited (null for new comments)
 
   /**
+   * Update the theme stylesheet dynamically
+   * @param {string} themeName - The name of the theme to load
+   */
+  function updateThemeStylesheet(themeName) {
+    console.log('[OVERLAY] updateThemeStylesheet called with:', themeName);
+
+    // Find the existing theme link element
+    const themeLink = document.querySelector('link[data-theme-name]');
+    if (!themeLink) {
+      console.error('[OVERLAY] Could not find theme link element');
+      return;
+    }
+
+    console.log('[OVERLAY] Current theme link:', themeLink.getAttribute('data-theme-name'));
+
+    // Extract the base URL (without the theme filename and cache buster)
+    const currentHref = themeLink.href;
+    const urlParts = currentHref.split('/');
+    // Remove the filename (last part) and reconstruct base URL
+    urlParts.pop();
+    const baseUrl = urlParts.join('/');
+
+    // Generate new cache-busting parameter
+    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const newHref = `${baseUrl}/${themeName}.css?v=${cacheBuster}`;
+
+    console.log('[OVERLAY] New theme href:', newHref);
+
+    // Update the link element
+    themeLink.href = newHref;
+    themeLink.setAttribute('data-theme-name', themeName);
+
+    // Also update syntax highlighting theme based on whether theme is dark
+    const isDarkTheme = themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple';
+    const highlightTheme = isDarkTheme ? 'highlight-dark.css' : 'highlight-light.css';
+
+    const highlightLink = document.querySelector('link[data-highlight-theme]');
+    if (highlightLink) {
+      const highlightUrlParts = highlightLink.href.split('/');
+      highlightUrlParts.pop();
+      const highlightBaseUrl = highlightUrlParts.join('/');
+      const newHighlightHref = `${highlightBaseUrl}/${highlightTheme}?v=${cacheBuster}`;
+
+      console.log('[OVERLAY] Updating syntax highlighting to:', highlightTheme);
+      highlightLink.href = newHighlightHref;
+      highlightLink.setAttribute('data-highlight-theme', highlightTheme);
+    }
+
+    console.log('[OVERLAY] Theme stylesheet updated successfully');
+  }
+
+  /**
    * Get agent button text and icon based on provider
    */
   function getAgentButtonConfig() {
@@ -1087,6 +1139,12 @@ console.log('[OVERLAY.JS] Script is loading...');
           }
         };
         showBubbleForDocument();
+        break;
+
+      case 'updateTheme':
+        // Update theme dynamically by replacing the theme stylesheet
+        console.log('[OVERLAY] Theme update requested:', message.themeName);
+        updateThemeStylesheet(message.themeName);
         break;
 
       case 'updateProvider':
