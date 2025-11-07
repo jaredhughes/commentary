@@ -5,7 +5,7 @@
 
 **Inline comments for rendered Markdown in VS Code.** Select text, add comments, and send feedback to your AI agent—without touching the source file.
 
-📹 **[Watch Demo Video](media/demo/demo.mp4)** (downloads when clicked)
+📹 **[Watch Demo Video](https://raw.githubusercontent.com/jaredhughes/commentary/main/media/demo/demo.mp4)** (downloads when clicked)
 
 ---
 
