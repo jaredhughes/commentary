@@ -58,11 +58,12 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         if (e.affectsConfiguration('commentary.agent.provider')) {
           this.broadcastProviderUpdate();
         }
-        // Refresh webviews when theme changes
-        if (e.affectsConfiguration('commentary.theme')) {
+        // Refresh webviews when theme.name specifically changes
+        // CRITICAL: Check specific property, not entire namespace
+        if (e.affectsConfiguration('commentary.theme.name')) {
           const config = vscode.workspace.getConfiguration('commentary');
           const newTheme = config.get<string>('theme.name', 'simple');
-          console.log('[MarkdownWebview] Theme config changed, refreshing all webviews. New theme:', newTheme);
+          console.log('[MarkdownWebview] Theme changed, refreshing all webviews. New theme:', newTheme);
           this.refreshAllWebviews();
         }
       })
@@ -227,18 +228,28 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
    */
   async refreshAllWebviews(): Promise<void> {
     console.log('[MarkdownWebviewProvider] Refreshing all webviews. Panel count:', this.panels.size);
+
+    // Get the new theme name
+    const newTheme = this.getThemeName();
+    console.log('[MarkdownWebviewProvider] New theme:', newTheme);
+
     for (const [uriString, panel] of this.panels.entries()) {
       try {
         console.log('[MarkdownWebviewProvider] Refreshing webview:', uriString);
-        const uri = vscode.Uri.parse(uriString);
-        const document = await vscode.workspace.openTextDocument(uri);
-        this.updateContent(panel, document);
-        console.log('[MarkdownWebviewProvider] Webview refreshed successfully:', uriString);
+
+        // Send message to webview to update theme dynamically
+        // This is more reliable than regenerating entire HTML
+        panel.webview.postMessage({
+          type: 'updateTheme',
+          themeName: newTheme,
+        });
+
+        console.log('[MarkdownWebviewProvider] Theme update message sent to webview:', uriString);
       } catch (error) {
         console.error(`Failed to refresh webview for ${uriString}:`, error);
       }
     }
-    console.log('[MarkdownWebviewProvider] All webviews refreshed');
+    console.log('[MarkdownWebviewProvider] All webviews notified of theme change');
   }
 
   /**
@@ -262,8 +273,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
    * Get the theme name to use, with fallback to system color scheme
    */
   private getThemeName(): string {
-    const config = vscode.workspace.getConfiguration('commentary.theme');
-    const currentTheme = config.inspect<string>('name');
+    // CRITICAL: Must use 'commentary' config namespace, not 'commentary.theme'
+    // Package.json defines 'commentary.theme.name', so we access via commentary config
+    const config = vscode.workspace.getConfiguration('commentary');
+    const currentTheme = config.inspect<string>('theme.name');
 
     // If user has explicitly set a theme (workspace or global), use it
     if (currentTheme?.workspaceValue !== undefined) {

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2025-11-06
+
+### Fixed
+- Theme selection command now properly updates webview visual appearance
+- Workspace configuration now correctly takes precedence over global configuration
+- Dynamic stylesheet reloading via postMessage instead of full HTML regeneration
+
+### Changed
+- Theme updates now preserve scroll position and webview state
+- Extension icon updated to higher quality version (128x128px)
+
+### Documentation
+- Clarified AI agent integration in README - emphasizes terminal integration over copy-paste
+- Updated Quick Start instructions to match actual user experience
+
 ## [0.9.7] - 2025-11-03
 
 ### Added
