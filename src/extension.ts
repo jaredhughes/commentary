@@ -4,6 +4,8 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { StorageManager } from './storage';
 import { OverlayHost } from './preview/overlayHost';
 import { CommentsViewProvider } from './sidebar/commentsView';
@@ -20,6 +22,60 @@ let commentsTreeView: vscode.TreeView<vscode.TreeItem> | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
 let isActivating = false;
+
+/**
+ * Validate that theme files exist in the extension
+ * Provides helpful error messages if themes are missing
+ */
+async function validateThemeFiles(context: vscode.ExtensionContext): Promise<void> {
+  const themesDir = vscode.Uri.joinPath(context.extensionUri, 'media', 'themes');
+  const config = vscode.workspace.getConfiguration('commentary');
+  const currentTheme = config.get<string>('theme.name', 'simple');
+
+  try {
+    // Check if themes directory exists
+    const themesDirPath = themesDir.fsPath;
+    if (!fs.existsSync(themesDirPath)) {
+      console.error('[Commentary] Themes directory not found:', themesDirPath);
+      vscode.window.showWarningMessage(
+        'Commentary: Theme files not found. Please rebuild the extension with "npm run compile".',
+        'Open Terminal'
+      ).then((action) => {
+        if (action === 'Open Terminal') {
+          const terminal = vscode.window.createTerminal('Commentary Build');
+          terminal.sendText('npm run compile');
+          terminal.show();
+        }
+      });
+      return;
+    }
+
+    // Check if current theme file exists
+    const currentThemeFile = path.join(themesDirPath, `${currentTheme}.css`);
+    if (!fs.existsSync(currentThemeFile)) {
+      console.warn('[Commentary] Current theme file not found:', currentThemeFile);
+      // List available themes
+      const availableThemes = fs.readdirSync(themesDirPath)
+        .filter(f => f.endsWith('.css'))
+        .map(f => f.replace('.css', ''));
+
+      if (availableThemes.length === 0) {
+        vscode.window.showWarningMessage(
+          `Commentary: No theme files found. Please rebuild with "npm run compile".`
+        );
+      } else {
+        console.log('[Commentary] Available themes:', availableThemes);
+        vscode.window.showWarningMessage(
+          `Commentary: Theme "${currentTheme}" not found. Available themes: ${availableThemes.join(', ')}`
+        );
+      }
+    } else {
+      console.log(`[Commentary] Theme validated: ${currentTheme}`);
+    }
+  } catch (error) {
+    console.error('[Commentary] Theme validation error:', error);
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   // Prevent concurrent activation
@@ -113,6 +169,11 @@ function activateInternal(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  // Validate theme files exist (non-blocking)
+  validateThemeFiles(context).catch((error) => {
+    console.error('[Commentary] Theme validation failed:', error);
+  });
 
   // Initialize overlay host
   overlayHost = new OverlayHost(context, storageManager);
