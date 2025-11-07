@@ -31,13 +31,18 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 - **Visual highlights** — See exactly what's commented
 
 ### AI Agent Integration
-Send comments directly to your agent with full context:
-- **Claude Code** — CLI integration with auto-editing
-- **Cursor Agent** — Terminal or clipboard workflow
-- **OpenAI API** — Direct API calls with preview
-- **VS Code Chat** — Built-in chat integration
 
-**Auto-deletion:** Comments sent via CLI/API are removed automatically. Clipboard/chat methods keep comments so you can track what to apply manually.
+**🚀 Terminal Integration (Recommended)**
+- **Claude Code CLI** — Opens terminal with `claude` command, applies edits automatically
+- **Cursor Agent CLI** — Opens terminal with `cursor-agent` command, applies edits automatically
+
+**📋 Copy-Paste Workflow**
+- **Claude (IDE)** — Copies to clipboard, paste into Claude chat in VS Code/Cursor
+- **Cursor (IDE)** — Copies to clipboard, paste into Composer/Chat
+- **VS Code Chat** — Copies to clipboard, paste into built-in chat
+- **OpenAI API** — Direct API calls (requires API key)
+
+💡 **Why terminal?** CLI integrations automatically apply edits to your files. Copy-paste workflows require manual application, but work without additional setup.
 
 ### Beautiful Themes
 Choose from **20 professional themes**:
@@ -79,11 +84,17 @@ Comments survive document edits with 3-layer fallback:
 
 `⌘⇧P` → `Commentary: Configure AI Agent`
 
-Select your preferred agent:
-- **Claude** — API key or CLI path (`claude`)
-- **Cursor** — CLI path (`cursor-agent`) or clipboard fallback
-- **OpenAI** — API key for ChatGPT
-- **VS Code Chat** — No setup required
+**Recommended: Terminal Integration**
+- **Claude Code CLI** — Enter command: `claude` (installs automatically, applies edits)
+- **Cursor Agent CLI** — Enter path: `cursor-agent` (requires [installation](https://github.com/Cursor-AI/cursor-agent))
+
+**Alternative: Copy-Paste**
+- **Claude (IDE)** — Choose "Claude" provider, uses clipboard
+- **Cursor (IDE)** — Choose "Cursor" provider, uses clipboard
+- **VS Code Chat** — Built-in chat, uses clipboard
+
+**API Options**
+- **OpenAI** — Direct API calls (requires API key)
 - **Custom** — Your own endpoint
 
 ---
