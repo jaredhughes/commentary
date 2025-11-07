@@ -749,8 +749,18 @@ export class CommandManager {
         });
 
         if (selected) {
-          // Update configuration (use Global to avoid workspace settings file save requirement)
-          await config.update('name', selected.value, vscode.ConfigurationTarget.Global);
+          // Check if there's a workspace setting that would override global
+          const inspectConfig = vscode.workspace.getConfiguration('commentary');
+          const themeInspect = inspectConfig.inspect<string>('theme.name');
+
+          // If workspace value exists, update workspace (to avoid override confusion)
+          // Otherwise update global
+          const target = themeInspect?.workspaceValue !== undefined
+            ? vscode.ConfigurationTarget.Workspace
+            : vscode.ConfigurationTarget.Global;
+
+          // Update configuration
+          await config.update('name', selected.value, target);
 
           // Wait for config to propagate
           await new Promise(resolve => setTimeout(resolve, 50));
