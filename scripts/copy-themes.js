@@ -2,13 +2,43 @@
 /**
  * Copy theme CSS files from node_modules to media/themes/
  * Runs during build to bundle themes with the extension
+ *
+ * Handles git worktrees by finding the actual node_modules directory
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-// Ensure themes directory exists
-const themesDir = path.join(__dirname, '..', 'media', 'themes');
+/**
+ * Find the git repository root (handles worktrees correctly)
+ * Falls back to current directory if not in a git repo
+ */
+function findRepoRoot() {
+  try {
+    // git rev-parse --show-toplevel gives worktree root
+    // We need the actual repository root with node_modules
+    const gitDir = execSync('git rev-parse --git-common-dir', { encoding: 'utf8' }).trim();
+
+    // If .git is a directory, we're in the base repo
+    // If .git is a file (worktree), gitDir points to .git/worktrees/xxx
+    // In both cases, going up to the directory containing .git gives us the repo root
+    const repoRoot = path.dirname(path.resolve(gitDir));
+
+    console.log(`📍 Resolved repository root: ${repoRoot}`);
+    return repoRoot;
+  } catch (error) {
+    // Not in a git repo, use current directory
+    console.log('📍 Not in git repo, using current directory');
+    return path.join(__dirname, '..');
+  }
+}
+
+const repoRoot = findRepoRoot();
+const workingDir = path.join(__dirname, '..');
+
+// Ensure themes directory exists in working directory
+const themesDir = path.join(workingDir, 'media', 'themes');
 if (!fs.existsSync(themesDir)) {
   fs.mkdirSync(themesDir, { recursive: true });
 }
@@ -128,12 +158,15 @@ let failed = 0;
 console.log('📦 Copying theme CSS files...\n');
 
 for (const { src, dest } of themes) {
-  const fullSrc = path.join(__dirname, '..', src);
-  const fullDest = path.join(__dirname, '..', dest);
+  // Source files are always in repo root's node_modules
+  const fullSrc = path.join(repoRoot, src);
+  // Destination is in the working directory (could be worktree or base repo)
+  const fullDest = path.join(workingDir, dest);
 
   try {
     if (!fs.existsSync(fullSrc)) {
       console.error(`❌ Source not found: ${src}`);
+      console.error(`   Looked in: ${fullSrc}`);
       failed++;
       continue;
     }
@@ -152,29 +185,36 @@ console.log(`\n📊 Summary: ${copied} copied, ${failed} failed`);
 
 // Also copy codicons for webview access
 console.log('\n📦 Copying codicons...');
-const codiconsSource = path.join(__dirname, '../node_modules/@vscode/codicons/dist');
-const codiconsTarget = path.join(__dirname, '../media/codicons');
+// Source is always in repo root's node_modules
+const codiconsSource = path.join(repoRoot, 'node_modules/@vscode/codicons/dist');
+// Target is in working directory
+const codiconsTarget = path.join(workingDir, 'media/codicons');
 
 try {
-  // Create codicons directory
-  if (!fs.existsSync(codiconsTarget)) {
-    fs.mkdirSync(codiconsTarget, { recursive: true });
-  }
-  
-  // Copy codicon files (css, ttf)
-  const codiconFiles = fs.readdirSync(codiconsSource).filter(f => 
-    f.startsWith('codicon.') && (f.endsWith('.css') || f.endsWith('.ttf'))
-  );
-  
-  for (const file of codiconFiles) {
-    fs.copyFileSync(
-      path.join(codiconsSource, file),
-      path.join(codiconsTarget, file)
+  if (!fs.existsSync(codiconsSource)) {
+    console.error(`❌ Codicons source not found: ${codiconsSource}`);
+    failed++;
+  } else {
+    // Create codicons directory
+    if (!fs.existsSync(codiconsTarget)) {
+      fs.mkdirSync(codiconsTarget, { recursive: true });
+    }
+
+    // Copy codicon files (css, ttf)
+    const codiconFiles = fs.readdirSync(codiconsSource).filter(f =>
+      f.startsWith('codicon.') && (f.endsWith('.css') || f.endsWith('.ttf'))
     );
-    console.log('✓', file);
+
+    for (const file of codiconFiles) {
+      fs.copyFileSync(
+        path.join(codiconsSource, file),
+        path.join(codiconsTarget, file)
+      );
+      console.log('✓', file);
+    }
+
+    console.log('\n✅ Codicons copied successfully');
   }
-  
-  console.log('\n✅ Codicons copied successfully');
 } catch (error) {
   console.error('❌ Failed to copy codicons:', error.message);
   failed++;
