@@ -10,3 +10,5 @@ worktrees/
 
 # Generated theme files (rebuilt from node_modules during compile)
 media/themes/*.css
+media/demo/*.mov
+media/demo/*.webm
