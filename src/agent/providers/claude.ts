@@ -54,11 +54,12 @@ export class ClaudeProvider implements ProviderStrategy {
     const fileUri = firstNote.file.replace('file://', '');
     const fileName = extractFileName(firstNote.file);
 
-    // Build prompt with file context
+    // Build prompt with explicit file path for Claude to edit
+    // Include absolute path so Claude's Edit tool can find the file
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      'Review the comments, consider the full document context, and make the necessary edits. Save your changes.'
+      `Review the comments, consider the full document context, and make the necessary edits directly to the file: ${fileUri}. Use the Edit tool to apply changes and save them.`
     );
 
     // Create temp file path
@@ -67,11 +68,19 @@ export class ClaudeProvider implements ProviderStrategy {
     const tempFileName = `commentary-claude-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Claude Code CLI command
+    // Claude Code CLI command with --print flag and flags to auto-apply edits
+    // --permission-mode acceptEdits: allows Claude to apply edits automatically
+    // --tools Edit Read: ensures Edit and Read tools are available (required for file modifications)
+    // --add-dir: explicitly allow access to the file's directory
     // The actual writing of the temp file happens in the adapter layer
     return {
       command: config.claudeCliPath,
-      args: [tempFilePath],
+      args: [
+        '--print',
+        '--permission-mode', 'acceptEdits',
+        '--tools', 'Edit,Read',
+        '--add-dir', path.dirname(fileUri)
+      ],
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,

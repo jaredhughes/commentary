@@ -136,16 +136,13 @@ export class ProviderAdapter {
     // Get or create terminal
     const terminal = await this.getOrCreateTerminal(config.provider, providerName);
     
-    // Execute command
+    // Execute command (this will show the terminal after sending the command)
     await this.executeTerminalCommand(terminal, command);
 
     // Show success message (don't await - let progress dismiss immediately)
     const message = provider.getSuccessMessage(request, 'cli');
-    vscode.window.showInformationMessage(message, 'View Terminal').then((action) => {
-      if (action === 'View Terminal') {
-        terminal.show();
-      }
-    });
+    // Terminal is already shown by executeTerminalCommand, so just show the message
+    vscode.window.showInformationMessage(message);
 
     // Schedule cleanup of temp file
     if (command.env?.commentaryTempFile) {
@@ -284,14 +281,25 @@ export class ProviderAdapter {
     // Increment counter for unique terminal ID
     this.terminalCounter++;
     const terminalId = `${providerId}-${this.terminalCounter}`;
+    const terminalName = `Commentary → ${providerName} #${this.terminalCounter}`;
 
-    // Create a new terminal (don't dispose existing ones - they may still be running)
+    // Create a new terminal with explicit name
+    // Use shellPath to ensure proper terminal initialization
     const terminal = vscode.window.createTerminal({
-      name: `Commentary → ${providerName} #${this.terminalCounter}`,
-      hideFromUser: false
+      name: terminalName,
+      hideFromUser: false,
+      // Explicitly set shell path to ensure terminal is properly initialized
+      shellPath: process.env.SHELL || '/bin/zsh'
     });
 
     this.terminals.set(terminalId, terminal);
+    
+    // Ensure terminal name is set (sometimes needs to be set after creation)
+    if (terminal.name !== terminalName) {
+      // Terminal name should be set via createTerminal options, but log if it's not
+      console.log(`[ProviderAdapter] Terminal created but name mismatch. Expected: ${terminalName}, Got: ${terminal.name || 'undefined'}`);
+    }
+    
     return terminal;
   }
 
@@ -299,19 +307,36 @@ export class ProviderAdapter {
    * Execute command in terminal
    */
   private async executeTerminalCommand(terminal: vscode.Terminal, command: TerminalCommand): Promise<void> {
+    // Show terminal first to ensure name is visible
     terminal.show();
-
+    
+    // Small delay to let terminal initialize and display name
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Change working directory if specified
     if (command.workingDirectory) {
       terminal.sendText(`cd "${command.workingDirectory}"`);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     // Build command string
-    const args = command.args.map(arg => `"${arg}"`).join(' ');
-    const fullCommand = `${command.command} ${args}`;
-
-    terminal.sendText(fullCommand);
+    // Claude CLI: --print with pipe from cat (avoids command length limits)
+    // Cursor-agent: --print --approve-mcps with file path as argument
+    const isClaude = command.command.includes('claude') && command.args.includes('--print');
+    const hasTempFile = isClaude && command.env?.commentaryTempFile;
+    
+    if (hasTempFile && command.env) {
+      // Use pipe from cat to avoid command length limits and shell escaping issues
+      // This is more reliable than stdin redirection or command substitution
+      const tempFilePath = command.env.commentaryTempFile;
+      const fullCommand = `cat "${tempFilePath}" | ${command.command} ${command.args.join(' ')}`;
+      terminal.sendText(fullCommand);
+    } else {
+      // Build command string normally for cursor-agent
+      const args = command.args.map(arg => `"${arg.replace(/"/g, '\\"')}"`).join(' ');
+      const fullCommand = `${command.command} ${args}`;
+      terminal.sendText(fullCommand);
+    }
   }
 
   /**

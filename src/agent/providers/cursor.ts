@@ -64,9 +64,11 @@ export class CursorProvider implements ProviderStrategy {
       footerText: 'Review the comments above, consider the full document context, and make the necessary edits. Save your changes.'
     });
 
+    // Use --print flag for non-interactive mode (auto-applies edits)
+    // Use --approve-mcps to automatically approve MCP servers (only works with --print)
     return {
       command: config.cursorCliPath,
-      args: [tempFilePath],
+      args: ['--print', '--approve-mcps', tempFilePath],
       workingDirectory: path.dirname(fileUri),
       env: {
         // Pass temp file path and prompt as env vars for cleanup

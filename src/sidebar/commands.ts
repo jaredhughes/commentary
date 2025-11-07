@@ -10,6 +10,7 @@ import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { Note } from '../types';
 import { DocumentNavigationService } from './documentNavigation';
+import { CommentaryFileDecorationProvider } from '../decorations/fileDecorationProvider';
 
 export class CommandManager {
   private navigationService: DocumentNavigationService;
@@ -20,7 +21,8 @@ export class CommandManager {
     private overlayHost: OverlayHost,
     private commentsView: CommentsViewProvider,
     private agentClient: AgentClient,
-    private webviewProvider: MarkdownWebviewProvider
+    private webviewProvider: MarkdownWebviewProvider,
+    private fileDecorationProvider?: CommentaryFileDecorationProvider
   ) {
     // Initialize navigation service with default timing
     this.navigationService = new DocumentNavigationService(webviewProvider, overlayHost);
@@ -64,6 +66,9 @@ export class CommandManager {
           await this.storage.deleteNote(item.note.id, item.note.file);
           await this.overlayHost.refreshPreview();
           this.commentsView.refresh();
+          // Refresh file decoration to update comment count badge
+          const fileUri = vscode.Uri.parse(item.note.file);
+          await this.fileDecorationProvider?.refresh(fileUri);
         }
       })
     );
@@ -129,6 +134,11 @@ export class CommandManager {
           await this.storage.deleteNote(note.id, note.file);
           await this.overlayHost.refreshPreview();
           this.commentsView.refresh();
+          // Refresh file decoration to update comment count badge
+          const fileUri = vscode.Uri.parse(note.file);
+          await this.fileDecorationProvider?.refresh(fileUri);
+          // Note: Webview will refresh automatically when cursor-agent saves changes
+          // via onDidChangeTextDocument handler in extension.ts
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -197,11 +207,19 @@ export class CommandManager {
         // Keep comments for manual methods (clipboard, chat) so user can track what to apply
         if (method === 'cli' || method === 'api') {
           // Delete all comments that were sent
+          const fileUris = new Set<string>();
           for (const note of notes) {
             await this.storage.deleteNote(note.id, note.file);
+            fileUris.add(note.file);
           }
           await this.overlayHost.refreshPreview();
           this.commentsView.refresh();
+          // Refresh file decorations for all affected files
+          for (const fileUri of fileUris) {
+            await this.fileDecorationProvider?.refresh(vscode.Uri.parse(fileUri));
+          }
+          // Note: Webview will refresh automatically when cursor-agent saves changes
+          // via onDidChangeTextDocument handler in extension.ts
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
