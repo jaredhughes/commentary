@@ -108,7 +108,10 @@ suite('Cursor Provider', () => {
 
       assert.ok(command);
       assert.strictEqual(command!.command, '/usr/local/bin/cursor');
-      assert.ok(command!.args[0].includes('commentary-cursor'));
+      // args are: ['--print', '--approve-mcps', tempFilePath]
+      assert.strictEqual(command!.args[0], '--print');
+      assert.strictEqual(command!.args[1], '--approve-mcps');
+      assert.ok(command!.args[2].includes('commentary-cursor'));
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
       assert.ok(command!.env.commentaryPrompt);
