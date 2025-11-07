@@ -22,6 +22,7 @@ let commentsTreeView: vscode.TreeView<vscode.TreeItem> | undefined;
 let markdownWebviewProvider: MarkdownWebviewProvider | undefined;
 let fileDecorationProvider: CommentaryFileDecorationProvider | undefined;
 let isActivating = false;
+let documentChangeTimer: NodeJS.Timeout | undefined;
 
 /**
  * Validate that theme files exist in the extension
@@ -339,7 +340,6 @@ function activateInternal(context: vscode.ExtensionContext) {
   );
 
   // Watch for document changes to refresh preview
-  let documentChangeTimer: NodeJS.Timeout | undefined;
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument(async (event) => {
       try {
@@ -419,6 +419,12 @@ export function deactivate() {
       console.warn('[Commentary] Error disposing file decoration provider:', e);
     }
     fileDecorationProvider = undefined;
+  }
+  
+  // Clear document change timer
+  if (documentChangeTimer) {
+    clearTimeout(documentChangeTimer);
+    documentChangeTimer = undefined;
   }
   
   storageManager = undefined;

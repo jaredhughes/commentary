@@ -41,6 +41,14 @@
       },
       {
         "selector": "objectLiteralProperty",
+        "format": null,
+        "filter": {
+          "regex": "^(Authorization|Content-Type)$",
+          "match": true
+        }
+      },
+      {
+        "selector": "objectLiteralProperty",
         "format": ["camelCase", "snake_case"],
         "leadingUnderscore": "allow"
       }
