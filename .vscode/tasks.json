@@ -15,13 +15,20 @@
       }
     },
     {
-      "type": "npm",
-      "script": "compile",
+      "label": "compile",
+      "type": "shell",
+      "command": "source ~/.asdf/asdf.sh && npm run compile",
       "problemMatcher": "$tsc",
       "presentation": {
         "reveal": "never"
       },
-      "group": "build"
+      "group": "build",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": ["-c"]
+        }
+      }
     }
   ]
 }
