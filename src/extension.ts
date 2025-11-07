@@ -319,7 +319,8 @@ function activateInternal(context: vscode.ExtensionContext) {
     overlayHost,
     commentsViewProvider,
     agentClient,
-    markdownWebviewProvider
+    markdownWebviewProvider,
+    fileDecorationProvider
   );
   commandManager.registerCommands();
 
@@ -342,9 +343,11 @@ function activateInternal(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeTextDocument(async (event) => {
       try {
         if (event.document.languageId === 'markdown') {
-          // Debounce: only refresh after 500ms of inactivity
-          // (In a real implementation, use a proper debounce)
+          // Refresh highlights
           await overlayHost?.refreshPreview();
+          // Refresh webview content to show external changes (e.g., from cursor-agent)
+          // Use existing webview's own change handler which already debounces
+          // The webview panel already listens to onDidChangeTextDocument internally
         }
       } catch (error) {
         console.error('[Commentary] Error in onDidChangeTextDocument:', error);

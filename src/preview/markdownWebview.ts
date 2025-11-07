@@ -253,6 +253,20 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * Refresh webview for a specific document (e.g., after external file changes)
+   */
+  async refreshWebviewForDocument(document: vscode.TextDocument): Promise<void> {
+    const uri = document.uri.toString();
+    const panel = this.panels.get(uri);
+    if (panel) {
+      console.log('[MarkdownWebviewProvider] Refreshing webview content for document:', uri);
+      // Reload document from disk to ensure we have latest content
+      const freshDocument = await vscode.workspace.openTextDocument(document.uri);
+      this.updateContent(panel, freshDocument);
+    }
+  }
+
+  /**
    * Get the URI of the currently active Commentary document
    */
   getActiveDocumentUri(): string | undefined {
