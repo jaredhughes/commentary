@@ -1,14 +1,49 @@
+# VS Code directories
 .vscode/**
 .vscode-test/**
+
+# Source files (only compiled output in out/ is needed)
 src/**
+**/*.ts
+**/*.map
+
+# Configuration files (development only)
 .gitignore
 .yarnrc
-vsc-extension-quickstart.md
+.cursorrules
+.eslintrc.json
 **/tsconfig.json
-**/.eslintrc.json
-**/*.map
-**/*.ts
+cli-config.json
+
+# Git files
+.git
+.github/**
+.husky/**
+.ux-polish
+
+# Documentation (development only)
+vsc-extension-quickstart.md
+docs/**
+UX_IMPROVEMENTS.md
+images/ICON_REQUIREMENTS.md
+
+# Build scripts (not needed at runtime)
+scripts/**
+
+# Test files
+**/*.test.ts
+**/*.test.js
+out/test/**
+
+# Node modules cleanup
 node_modules/**/test/**
 node_modules/**/tests/**
 node_modules/**/*.md
 node_modules/**/*.ts
+
+# System files
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

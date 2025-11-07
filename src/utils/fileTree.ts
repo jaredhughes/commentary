@@ -28,9 +28,8 @@ export interface FolderNode {
 export function getWorkspaceRelativePath(fileUri: string): string | null {
   try {
     const uri = vscode.Uri.parse(fileUri);
-    const fullPath = uri.fsPath;
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       return null;
     }

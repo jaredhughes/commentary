@@ -29,7 +29,7 @@ export class CommentaryFileDecorationProvider implements vscode.FileDecorationPr
    */
   async provideFileDecoration(
     uri: vscode.Uri,
-    token: vscode.CancellationToken
+    _token: vscode.CancellationToken
   ): Promise<vscode.FileDecoration | undefined> {
     // Only decorate markdown files
     if (!uri.fsPath.endsWith('.md')) {
@@ -49,5 +49,9 @@ export class CommentaryFileDecorationProvider implements vscode.FileDecorationPr
       tooltip: `${notes.length} comment${notes.length === 1 ? '' : 's'}`,
       color: new vscode.ThemeColor('charts.yellow'),
     };
+  }
+
+  dispose(): void {
+    this._onDidChangeFileDecorations.dispose();
   }
 }

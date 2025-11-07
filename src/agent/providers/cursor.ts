@@ -5,8 +5,16 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import { randomUUID } from 'crypto';
 import { AgentRequest } from '../../types';
-import { ProviderStrategy, ProviderConfig, TerminalCommand } from './types';
+import {
+  ProviderStrategy,
+  ProviderConfig,
+  TerminalCommand,
+  extractFileName,
+  buildClipboardPrompt,
+  buildCliPrompt
+} from './types';
 
 export class CursorProvider implements ProviderStrategy {
   canUse(config: ProviderConfig): boolean {
@@ -40,28 +48,25 @@ export class CursorProvider implements ProviderStrategy {
 
     // Create a temp file with the prompt (similar to Claude approach)
     const tempDir = os.tmpdir();
-    const tempFileName = `commentary-cursor-${Date.now()}.md`;
+    const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename
+    const tempFileName = `commentary-cursor-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
     // Build prompt with file context
     const fileUri = firstNote.file.replace('file://', '');
-    const promptWithContext = `# Commentary Review Request
+    const fileName = extractFileName(firstNote.file);
 
-File: ${fileUri}
-Comments: ${request.contexts.length}
-
-${prompt}
-
----
-Please review the above comments and provide suggestions for improving the documentation.
-`;
+    const promptWithContext = buildCliPrompt({
+      providerName: 'Commentary',
+      fileName,
+      commentCount: request.contexts.length,
+      prompt,
+      footerText: 'Review the comments above, consider the full document context, and make the necessary edits. Save your changes.'
+    });
 
     return {
       command: config.cursorCliPath,
-      args: [
-        '--wait',  // Wait for editor to close
-        tempFilePath
-      ],
+      args: [tempFilePath],
       workingDirectory: path.dirname(fileUri),
       env: {
         // Pass temp file path and prompt as env vars for cleanup
@@ -75,19 +80,16 @@ Please review the above comments and provide suggestions for improving the docum
     prompt: string,
     request: AgentRequest
   ): string {
-    // For clipboard method, include clear instructions
-    const commentCount = request.contexts.length;
-    const fileInfo = request.contexts[0]?.note?.file || 'Unknown file';
-    
-    return `# Commentary Review Request (${commentCount} comment${commentCount === 1 ? '' : 's'})
+    const fileUri = request.contexts[0]?.note?.file || 'Unknown file';
+    const fileName = extractFileName(fileUri);
 
-File: ${fileInfo}
-
-${prompt}
-
----
-[Copied to clipboard - paste into Cursor chat]
-`;
+    return buildClipboardPrompt({
+      providerName: 'Commentary',
+      fileName,
+      commentCount: request.contexts.length,
+      prompt,
+      footerText: '[Copied to clipboard - paste into Cursor chat]'
+    });
   }
 
   getSuccessMessage(
@@ -99,13 +101,13 @@ ${prompt}
 
     switch (method) {
       case 'cli':
-        return `?? Opening Cursor editor with ${commentText}`;
+        return `🚀 Opening Cursor editor with ${commentText}`;
       case 'clipboard':
-        return `?? Copied ${commentText} to clipboard - open Cursor chat to paste`;
+        return `📋 Copied ${commentText} to clipboard - open Cursor chat to paste`;
       case 'chat':
-        return `?? Opening Cursor chat with ${commentText}`;
+        return `💬 Opening Cursor chat with ${commentText}`;
       default:
-        return `? Sent ${commentText} to Cursor`;
+        return `✅ Sent ${commentText} to Cursor`;
     }
   }
 
@@ -136,20 +138,18 @@ export function buildCursorTempFileContent(
   request: AgentRequest
 ): { content: string; fileName: string } {
   const firstNote = request.contexts[0]?.note;
-  const fileUri = firstNote?.file?.replace('file://', '') || 'Unknown file';
-  
-  const content = `# Commentary Review Request
+  const cleanFileName = extractFileName(firstNote?.file || 'Unknown file');
 
-File: ${fileUri}
-Comments: ${request.contexts.length}
+  const content = buildCliPrompt({
+    providerName: 'Commentary',
+    fileName: cleanFileName,
+    commentCount: request.contexts.length,
+    prompt,
+    footerText: 'Review the comments above and make the necessary edits. Save your changes.'
+  });
 
-${prompt}
-
----
-Please review the above comments and provide suggestions for improving the documentation.
-`;
-
-  const fileName = `commentary-cursor-${Date.now()}.md`;
+  const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename
+  const fileName = `commentary-cursor-${uuid}.md`;
 
   return { content, fileName };
 }

@@ -60,6 +60,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         }
         // Refresh webviews when theme changes
         if (e.affectsConfiguration('commentary.theme')) {
+          const config = vscode.workspace.getConfiguration('commentary');
+          const newTheme = config.get<string>('theme.name', 'simple');
+          console.log('[MarkdownWebview] Theme config changed, refreshing all webviews. New theme:', newTheme);
           this.refreshAllWebviews();
         }
       })
@@ -223,16 +226,19 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
    * Refresh all open webviews (e.g., when theme changes)
    */
   async refreshAllWebviews(): Promise<void> {
-    console.log('[MarkdownWebviewProvider] Refreshing all webviews');
+    console.log('[MarkdownWebviewProvider] Refreshing all webviews. Panel count:', this.panels.size);
     for (const [uriString, panel] of this.panels.entries()) {
       try {
+        console.log('[MarkdownWebviewProvider] Refreshing webview:', uriString);
         const uri = vscode.Uri.parse(uriString);
         const document = await vscode.workspace.openTextDocument(uri);
         this.updateContent(panel, document);
+        console.log('[MarkdownWebviewProvider] Webview refreshed successfully:', uriString);
       } catch (error) {
         console.error(`Failed to refresh webview for ${uriString}:`, error);
       }
     }
+    console.log('[MarkdownWebviewProvider] All webviews refreshed');
   }
 
   /**
@@ -253,6 +259,35 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   }
 
   /**
+   * Get the theme name to use, with fallback to system color scheme
+   */
+  private getThemeName(): string {
+    const config = vscode.workspace.getConfiguration('commentary.theme');
+    const currentTheme = config.inspect<string>('name');
+
+    // If user has explicitly set a theme (workspace or global), use it
+    if (currentTheme?.workspaceValue !== undefined) {
+      return currentTheme.workspaceValue;
+    }
+    if (currentTheme?.globalValue !== undefined) {
+      return currentTheme.globalValue;
+    }
+
+    // Check if there's a configured default from package.json
+    if (currentTheme?.defaultValue !== undefined) {
+      return currentTheme.defaultValue;
+    }
+
+    // Fall back to system color scheme
+    const colorTheme = vscode.window.activeColorTheme;
+    const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
+      ? 'water-dark'
+      : 'water-light';
+
+    return defaultTheme;
+  }
+
+  /**
    * Generate HTML for webview
    */
   private getHtmlForWebview(
@@ -267,15 +302,24 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const overlayStyleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'overlay.css')
     );
-    
+
     // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
-    const themeName = config.get<string>('theme.name', 'simple');
+    const themeName = this.getThemeName();
     
     // Get button configurations from our pure utility
-    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
-    const agentBtnConfig = getAgentButtonConfig(provider);
+
+    // Check if Cursor CLI is explicitly configured (not just default)
+    // Only show "Send to agent" if user has explicitly set a CLI path
+    const cursorCliConfig = config.inspect<string>('agent.cursorCliPath');
+    const cursorInteractive = config.get<boolean>('agent.cursorInteractive', true);
+    const hasExplicitCursorCli = provider === 'cursor' &&
+                                  cursorInteractive &&
+                                  !!(cursorCliConfig?.workspaceValue || cursorCliConfig?.globalValue);
+
+    const agentBtnConfig = getAgentButtonConfig(provider, hasExplicitCursorCli);
     const saveBtnConfig = getSaveButtonConfig(isMac);
     const deleteBtnConfig = getDeleteButtonConfig();
     
@@ -284,12 +328,16 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       configuredTheme: config.get<string>('theme.name'),
       extensionUri: this.context.extensionUri.toString(),
     });
-    
+
+    // Add cache-busting query parameter to force fresh CSS load on theme change
+    // Use both timestamp and random component to ensure uniqueness
+    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const themeUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'themes', `${themeName}.css`)
     );
-    
-    console.log('[MarkdownWebview] Theme URI:', themeUri.toString());
+    const themeUriWithCache = `${themeUri.toString()}?v=${cacheBuster}`;
+
+    console.log('[MarkdownWebview] Theme URI:', themeUriWithCache);
 
     // Determine if theme is dark for syntax highlighting
     // Simple theme looks better with dark syntax highlighting
@@ -298,11 +346,12 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const highlightUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', highlightTheme)
     );
-    
+    const highlightUriWithCache = `${highlightUri.toString()}?v=${cacheBuster}`;
+
     console.log('[MarkdownWebview] Syntax highlighting:', {
       isDarkTheme,
       highlightTheme,
-      highlightUri: highlightUri.toString(),
+      highlightUri: highlightUriWithCache,
     });
 
     // Generate nonce for security
@@ -314,6 +363,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} data:;">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Commentary</title>
 
   <!-- Codicons for VS Code icons -->
@@ -349,10 +401,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->
-  <link rel="stylesheet" href="${themeUri}" data-theme-name="${themeName}">
+  <link rel="stylesheet" href="${themeUriWithCache}" data-theme-name="${themeName}">
 
   <!-- Syntax Highlighting CSS -->
-  <link rel="stylesheet" href="${highlightUri}" data-highlight-theme="${highlightTheme}">
+  <link rel="stylesheet" href="${highlightUriWithCache}" data-highlight-theme="${highlightTheme}">
 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
@@ -361,9 +413,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     // Debug theme loading
     console.log('[Commentary Webview] Theme loading:', {
       theme: '${themeName}',
-      themeUri: '${themeUri}',
+      themeUri: '${themeUriWithCache}',
       highlightTheme: '${highlightTheme}',
-      highlightUri: '${highlightUri}',
+      highlightUri: '${highlightUriWithCache}',
       isDarkTheme: ${isDarkTheme},
     });
     

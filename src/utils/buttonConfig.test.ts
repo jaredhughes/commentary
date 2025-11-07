@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from '../../utils/buttonConfig';
+import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from './buttonConfig';
 
 suite('Button Configuration Utils', () => {
   
@@ -13,33 +13,43 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('Claude'));
     });
     
-    test('returns copy icon for Cursor provider', () => {
-      const config = getAgentButtonConfig('cursor');
-      
+    test('returns copy icon for Cursor provider without CLI', () => {
+      const config = getAgentButtonConfig('cursor', false);
+
       assert.ok(config.icon.includes('codicon-copy'));
       assert.strictEqual(config.text, 'Copy for agent');
       assert.ok(config.tooltip.includes('Cursor'));
+      assert.ok(config.tooltip.includes('clipboard'));
+    });
+
+    test('returns terminal icon for Cursor provider with CLI', () => {
+      const config = getAgentButtonConfig('cursor', true);
+
+      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('Cursor Agent'));
+      assert.ok(config.tooltip.includes('terminal'));
     });
     
-    test('returns copy icon for OpenAI provider', () => {
+    test('returns rocket icon for OpenAI provider', () => {
       const config = getAgentButtonConfig('openai');
-      
-      assert.ok(config.icon.includes('codicon-copy'));
-      assert.strictEqual(config.text, 'Copy for agent');
-      assert.ok(config.tooltip.includes('OpenAI'));
+
+      assert.ok(config.icon.includes('codicon-rocket'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('OpenAI API'));
     });
-    
+
     test('returns chat icon for VS Code provider', () => {
       const config = getAgentButtonConfig('vscode');
-      
+
       assert.ok(config.icon.includes('codicon-comment-discussion'));
       assert.strictEqual(config.text, 'Send to chat');
       assert.ok(config.tooltip.includes('VS Code Chat'));
     });
-    
+
     test('returns send icon for custom provider', () => {
       const config = getAgentButtonConfig('custom');
-      
+
       assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('custom'));
@@ -57,14 +67,14 @@ suite('Button Configuration Utils', () => {
     
     test('all configs include valid codicon class', () => {
       const providers = ['claude', 'cursor', 'openai', 'vscode', 'custom'] as const;
-      
+
       for (const provider of providers) {
         const config = getAgentButtonConfig(provider);
-        assert.ok(config.icon.includes('class="codicon'), 
+        assert.ok(config.icon.includes('class="codicon'),
           `${provider} should have codicon class`);
-        assert.ok(config.icon.startsWith('<i '), 
+        assert.ok(config.icon.startsWith('<i '),
           `${provider} icon should be an <i> tag`);
-        assert.ok(config.icon.endsWith('</i>'), 
+        assert.ok(config.icon.endsWith('</i>'),
           `${provider} icon should close with </i>`);
       }
     });
@@ -74,20 +84,20 @@ suite('Button Configuration Utils', () => {
     
     test('returns save icon with macOS shortcut', () => {
       const config = getSaveButtonConfig(true);
-      
+
       assert.ok(config.icon.includes('codicon-save'));
       assert.strictEqual(config.text, 'Save');
-      assert.ok(config.tooltip.includes('?+Enter'));
+      assert.ok(config.tooltip.includes('⌘+Enter'));
       assert.ok(!config.tooltip.includes('Ctrl+Enter'));
     });
-    
+
     test('returns save icon with Windows/Linux shortcut', () => {
       const config = getSaveButtonConfig(false);
-      
+
       assert.ok(config.icon.includes('codicon-save'));
       assert.strictEqual(config.text, 'Save');
       assert.ok(config.tooltip.includes('Ctrl+Enter'));
-      assert.ok(!config.tooltip.includes('?+Enter'));
+      assert.ok(!config.tooltip.includes('⌘+Enter'));
     });
     
     test('always includes valid codicon class', () => {

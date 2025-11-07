@@ -9,7 +9,7 @@ import {
   formatPathForDisplay,
   isPathInWorkspace,
   getWorkspaceRelativePath,
-} from '../../utils/filePath';
+} from './filePath';
 
 suite('File Path Utilities Test Suite', () => {
   suite('sanitizeFileUriForFilename', () => {

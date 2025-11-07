@@ -8,7 +8,7 @@ import {
   findQuotePosition,
   extractContextLines,
   extractContextByPosition,
-} from '../../utils/textPosition';
+} from './textPosition';
 
 suite('Text Position Utilities Test Suite', () => {
   suite('calculateLineNumbers', () => {

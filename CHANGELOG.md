@@ -5,6 +5,62 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.9.7] - 2025-11-03
+
+### Added
+- Extension icon for VS Code marketplace (160x160px PNG)
+- Empty state messaging in sidebar when no comments exist
+- Loading indicators for all agent operations (send single/all comments)
+- Pre-push git hook for automated linting and type checking
+- Explicit TypeScript type checking in CI pipeline
+- Comprehensive error handling with user-friendly error messages
+- Progress notifications for long-running agent operations
+
+### Changed
+- **BREAKING**: All enum members changed from PascalCase to camelCase (e.g., `MessageType.SaveComment` → `MessageType.saveComment`)
+- Standardized command naming for clarity:
+  - Claude: "Send to Claude" / "Send All to Claude"
+  - Cursor: "Copy for Cursor" / "Copy All for Cursor"
+  - VS Code: "Send to VS Code Chat" / "Send All to VS Code Chat"
+- Document button now uses VS Code theme colors instead of hardcoded blue
+- Test files reorganized as siblings to source files (`*.test.ts` pattern)
+- ESLint configuration enhanced with comprehensive naming conventions
+- README restructured for marketplace appeal with "Why Commentary?" section
+- README now includes CI badge, early preview warning, and Quick Start guide
+
+### Fixed
+- 44 ESLint warnings resolved (naming conventions, unused variables)
+- TypeScript compilation warnings eliminated
+- External API compatibility (Anthropic SDK snake_case properties)
+- Theme color integration with VS Code color variables
+
+### Development
+- Added `npm run validate` script (linting + type checking)
+- Test discovery updated to search from `src/` root
+- Pre-push hooks prevent broken code from being pushed
+- CI workflow enhanced with explicit type checking step
+- All tests moved to sibling pattern for better organization
+
+### Upgrade Notes
+
+**Breaking Change - Enum Members**: If you are using the Commentary API or have custom integrations:
+
+```typescript
+// Before (0.9.0):
+MessageType.SaveComment
+MessageType.DeleteComment
+HostMessageType.PaintHighlights
+
+// After (0.9.7):
+MessageType.saveComment
+MessageType.deleteComment
+HostMessageType.paintHighlights
+```
+
+This change affects TypeScript consumers of the extension's types. If you are only using the extension through VS Code UI, no action is required.
+
 ## [0.9.0] - 2025-10-22
 
 ### Added

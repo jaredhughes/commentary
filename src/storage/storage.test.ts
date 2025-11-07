@@ -5,9 +5,10 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { WorkspaceStorage } from '../../storage/workspaceStorage';
-import { SidecarStorage } from '../../storage/sidecarStorage';
-import { Note } from '../../types';
+import * as os from 'os';
+import { WorkspaceStorage } from './workspaceStorage';
+import { SidecarStorage } from './sidecarStorage';
+import { Note } from '../types';
 
 // Mock workspace state for testing
 class MockMemento implements vscode.Memento {
@@ -224,18 +225,20 @@ suite('Storage Tests', () => {
     });
 
     test('Should import notes from JSON', async () => {
-      const data = JSON.stringify({
-        'file:///imported.md': [
+      const testFileUri = 'file:///imported.md';
+      const importData: Record<string, Note[]> = {
+        [testFileUri]: [
           {
             id: 'import-1',
-            file: 'file:///imported.md',
+            file: testFileUri,
             quote: { exact: 'test', prefix: '', suffix: '' },
             position: { start: 0, end: 4 },
             text: 'Imported comment',
             createdAt: '2024-01-01T00:00:00.000Z',
           },
         ],
-      });
+      };
+      const data = JSON.stringify(importData);
 
       await storage.importNotes(data);
       const notes = await storage.getNotes('file:///imported.md');
@@ -284,7 +287,6 @@ suite('Storage Tests', () => {
       const folders = vscode.workspace.workspaceFolders;
       if (!folders || folders.length === 0) {
         // Create a temporary workspace URI for testing - use platform-specific temp dir
-        const os = require('os');
         const tempDir = os.tmpdir();
         workspaceUri = vscode.Uri.file(`${tempDir}/commentary-test`);
       } else {
