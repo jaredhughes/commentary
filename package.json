@@ -23,6 +23,7 @@
     "vscode": "^1.85.0"
   },
   "categories": [
+    "Notebooks",
     "Other"
   ],
   "keywords": [
@@ -30,7 +31,12 @@
     "comments",
     "annotations",
     "review",
-    "ai"
+    "ai",
+    "claude",
+    "cursor",
+    "documentation",
+    "preview",
+    "collaboration"
   ],
   "activationEvents": [
     "onStartupFinished"
