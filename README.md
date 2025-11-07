@@ -67,13 +67,13 @@ Comments survive document edits with 3-layer fallback:
 ## 🚀 Quick Start
 
 1. **Install** from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jaredhughes.commentary)
-2. **Open** any Markdown file
-3. **Right-click** in the file explorer → "Open with Commentary"
-4. **Select text** in the rendered preview
-5. **Type comment** in the floating bubble
-6. **Save** — `⌘Enter` / `Ctrl+Enter`
+2. **Open** any Markdown (`.md`) file
+3. **Right-click** the file in Explorer → **"Open with Commentary"**
+4. **Select text** in the rendered preview → floating comment bubble appears
+5. **Type comment** → Press `⌘Enter` (Mac) / `Ctrl+Enter` (Windows/Linux) to save
+6. **View all comments** in the Commentary sidebar → `⌘⇧C` / `Ctrl+Shift+C`
 
-View all comments in the **Commentary sidebar** (`⌘⇧C` / `Ctrl+Shift+C`).
+**Pro tip:** After adding comments, send them to your AI agent with the "Send to Agent" button!
 
 ### Configure AI Agent
 
