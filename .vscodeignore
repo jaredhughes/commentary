@@ -48,5 +48,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Demo videos (too large for package)
+media/demo/**
+
 # Worktrees (development only)
 worktrees/**
