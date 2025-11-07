@@ -339,15 +339,21 @@ function activateInternal(context: vscode.ExtensionContext) {
   );
 
   // Watch for document changes to refresh preview
+  let documentChangeTimer: NodeJS.Timeout | undefined;
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument(async (event) => {
       try {
         if (event.document.languageId === 'markdown') {
-          // Refresh highlights
-          await overlayHost?.refreshPreview();
-          // Refresh webview content to show external changes (e.g., from cursor-agent)
-          // Use existing webview's own change handler which already debounces
-          // The webview panel already listens to onDidChangeTextDocument internally
+          // Clear previous timer
+          if (documentChangeTimer) {
+            clearTimeout(documentChangeTimer);
+          }
+          // Debounce: refresh after 300ms of inactivity
+          documentChangeTimer = setTimeout(async () => {
+            await overlayHost?.refreshPreview();
+            // Also refresh webview content to show external changes (e.g., from cursor-agent)
+            await markdownWebviewProvider?.refreshWebviewForDocument(event.document);
+          }, 300);
         }
       } catch (error) {
         console.error('[Commentary] Error in onDidChangeTextDocument:', error);

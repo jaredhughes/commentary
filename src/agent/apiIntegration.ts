@@ -134,7 +134,7 @@ ${originalContent}`;
    */
   isAvailable(): boolean {
     const config = vscode.workspace.getConfiguration('commentary.agent');
-    const apiKey = config.get<string>('apiKey') || process.env.ANTHROPIC_API_KEY;
+    const apiKey = config.get<string>('claudeApiKey') || process.env.ANTHROPIC_API_KEY;
     return !!apiKey;
   }
 }
