@@ -4,9 +4,9 @@
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { DocumentNavigationService, DEFAULT_TIMING_CONFIG } from '../../sidebar/documentNavigation';
-import { MarkdownWebviewProvider } from '../../preview/markdownWebview';
-import { OverlayHost } from '../../preview/overlayHost';
+import { DocumentNavigationService, DEFAULT_TIMING_CONFIG } from './documentNavigation';
+import { MarkdownWebviewProvider } from '../preview/markdownWebview';
+import { OverlayHost } from '../preview/overlayHost';
 
 /**
  * Mock webview provider for testing

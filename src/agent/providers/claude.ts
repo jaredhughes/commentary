@@ -5,8 +5,16 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import { randomUUID } from 'crypto';
 import { AgentRequest } from '../../types';
-import { ProviderStrategy, ProviderConfig, TerminalCommand } from './types';
+import {
+  ProviderStrategy,
+  ProviderConfig,
+  TerminalCommand,
+  extractFileName,
+  buildClipboardPrompt,
+  buildSimpleCliPrompt
+} from './types';
 
 export class ClaudeProvider implements ProviderStrategy {
   canUse(config: ProviderConfig): boolean {
@@ -44,17 +52,19 @@ export class ClaudeProvider implements ProviderStrategy {
     }
 
     const fileUri = firstNote.file.replace('file://', '');
-    
+    const fileName = extractFileName(firstNote.file);
+
     // Build prompt with file context
-    const promptWithFile = `I have comments on the file: ${fileUri}
-
-${prompt}
-
-Please review the comments and suggest edits.`;
+    const promptWithFile = buildSimpleCliPrompt(
+      fileName,
+      prompt,
+      'Review the comments, consider the full document context, and make the necessary edits. Save your changes.'
+    );
 
     // Create temp file path
     const tempDir = os.tmpdir();
-    const tempFileName = `commentary-claude-${Date.now()}.md`;
+    const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename
+    const tempFileName = `commentary-claude-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
     // Claude Code CLI command
@@ -75,18 +85,16 @@ Please review the comments and suggest edits.`;
     request: AgentRequest,
     _config: ProviderConfig
   ): string {
-    const commentCount = request.contexts.length;
-    const fileInfo = request.contexts[0]?.note?.file || 'Unknown file';
-    
-    return `# Claude Review Request (${commentCount} comment${commentCount === 1 ? '' : 's'})
+    const fileUri = request.contexts[0]?.note?.file || 'Unknown file';
+    const fileName = extractFileName(fileUri);
 
-File: ${fileInfo}
-
-${prompt}
-
----
-[Copied to clipboard - paste into Claude]
-`;
+    return buildClipboardPrompt({
+      providerName: 'Claude',
+      fileName,
+      commentCount: request.contexts.length,
+      prompt,
+      footerText: '[Copied to clipboard - paste into Claude]'
+    });
   }
 
   getSuccessMessage(
@@ -98,13 +106,13 @@ ${prompt}
 
     switch (method) {
       case 'api':
-        return `?? Sending ${commentText} to Claude API`;
+        return `✨ Sending ${commentText} to Claude API`;
       case 'cli':
-        return `?? Opening Claude Code with ${commentText}`;
+        return `🚀 Opening Claude Code with ${commentText}`;
       case 'clipboard':
-        return `?? Copied ${commentText} to clipboard for Claude`;
+        return `📋 Copied ${commentText} to clipboard for Claude`;
       default:
-        return `? Sent ${commentText} to Claude`;
+        return `✅ Sent ${commentText} to Claude`;
     }
   }
 
@@ -122,15 +130,16 @@ export function buildClaudeTempFileContent(
   request: AgentRequest
 ): { content: string; fileName: string } {
   const firstNote = request.contexts[0]?.note;
-  const fileUri = firstNote?.file?.replace('file://', '') || 'Unknown file';
-  
-  const content = `I have comments on the file: ${fileUri}
+  const cleanFileName = extractFileName(firstNote?.file || 'Unknown file');
 
-${prompt}
+  const content = buildSimpleCliPrompt(
+    cleanFileName,
+    prompt,
+    'Review the comments and make the necessary edits. Save your changes.'
+  );
 
-Please review the comments and suggest edits.`;
-
-  const fileName = `commentary-claude-${Date.now()}.md`;
+  const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename
+  const fileName = `commentary-claude-${uuid}.md`;
 
   return { content, fileName };
 }

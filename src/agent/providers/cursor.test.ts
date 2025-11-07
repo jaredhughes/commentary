@@ -3,9 +3,9 @@
  */
 
 import * as assert from 'assert';
-import { CursorProvider, getCursorChatCommands, buildCursorTempFileContent } from '../../../agent/providers/cursor';
-import { ProviderConfig } from '../../../agent/providers/types';
-import { AgentRequest, Note } from '../../../types';
+import { CursorProvider, getCursorChatCommands, buildCursorTempFileContent } from './cursor';
+import { ProviderConfig } from './types';
+import { AgentRequest, Note } from '../../types';
 
 suite('Cursor Provider', () => {
   let provider: CursorProvider;
@@ -105,11 +105,10 @@ suite('Cursor Provider', () => {
       };
       
       const command = provider.buildTerminalCommand('test prompt', mockRequest, config);
-      
+
       assert.ok(command);
       assert.strictEqual(command!.command, '/usr/local/bin/cursor');
-      assert.ok(command!.args.includes('--wait'));
-      assert.ok(command!.args[1].includes('commentary-cursor'));
+      assert.ok(command!.args[0].includes('commentary-cursor'));
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
       assert.ok(command!.env.commentaryPrompt);
@@ -140,28 +139,18 @@ suite('Cursor Provider', () => {
   
   suite('getClipboardText', () => {
     test('should format clipboard text with comment count', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const text = provider.getClipboardText('test prompt', mockRequest);
-      
+
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
-      assert.ok(text.includes('file:///test/file.md'));
+      assert.ok(text.includes('file.md')); // Just filename, not full URI
     });
-    
+
     test('should pluralize comments correctly', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const multiRequest: AgentRequest = {
         contexts: [mockRequest.contexts[0], mockRequest.contexts[0]]
       };
-      
+
       const text = provider.getClipboardText('test prompt', multiRequest);
       assert.ok(text.includes('2 comments'));
     });
@@ -170,29 +159,27 @@ suite('Cursor Provider', () => {
   suite('getSuccessMessage', () => {
     test('should return CLI message for cli method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'cli');
+      assert.ok(msg.includes('🚀'));
       assert.ok(msg.includes('Opening Cursor editor'));
       assert.ok(msg.includes('1 comment'));
     });
     
     test('should return clipboard message for clipboard method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'clipboard');
+      assert.ok(msg.includes('📋'));
       assert.ok(msg.includes('Copied'));
       assert.ok(msg.includes('clipboard'));
     });
     
     test('should return chat message for chat method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'chat');
+      assert.ok(msg.includes('💬'));
       assert.ok(msg.includes('Opening Cursor chat'));
     });
   });
   
   suite('getChatCommand', () => {
     test('should return Cursor chat command', () => {
-      const config: ProviderConfig = {
-        provider: 'cursor',
-        enabled: true
-      };
-      
       const command = provider.getChatCommand();
       assert.strictEqual(command, 'aichat.newchataction');
     });
@@ -212,7 +199,7 @@ suite('Cursor Provider', () => {
       const { content, fileName } = buildCursorTempFileContent('test prompt', mockRequest);
       
       assert.ok(content.includes('test prompt'));
-      assert.ok(content.includes('/test/file.md'));
+      assert.ok(content.includes('file.md')); // Just filename, not full path
       assert.ok(content.includes('1'));
       assert.ok(fileName.includes('commentary-cursor'));
       assert.ok(fileName.endsWith('.md'));

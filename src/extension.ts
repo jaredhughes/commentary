@@ -11,6 +11,7 @@ import { CommandManager } from './sidebar/commands';
 import { AgentClient } from './agent/client';
 import { MarkdownWebviewProvider } from './preview/markdownWebview';
 import { CommentaryFileDecorationProvider } from './decorations/fileDecorationProvider';
+import { detectOptimalProvider, getProviderSetupMessage } from './agent/providerDetection';
 
 let overlayHost: OverlayHost | undefined;
 let storageManager: StorageManager | undefined;
@@ -46,22 +47,6 @@ export function activate(context: vscode.ExtensionContext) {
 function activateInternal(context: vscode.ExtensionContext) {
   console.log('[Commentary] Extension is now active');
 
-  // Set default theme based on system color scheme (only if not already configured)
-  const config = vscode.workspace.getConfiguration('commentary.theme');
-  const currentTheme = config.inspect<string>('name');
-
-  // Only set default if user hasn't explicitly configured a theme
-  if (!currentTheme?.workspaceValue && !currentTheme?.globalValue) {
-    const colorTheme = vscode.window.activeColorTheme;
-    const defaultTheme = colorTheme.kind === vscode.ColorThemeKind.Dark
-      ? 'water-dark'
-      : 'water-light';
-
-    console.log(`Setting default theme based on color scheme: ${defaultTheme}`);
-    // Set as workspace value so it's not persisted globally
-    config.update('name', defaultTheme, vscode.ConfigurationTarget.Workspace);
-  }
-
   // Initialize storage
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
   storageManager = new StorageManager(context, workspaceRoot);
@@ -72,13 +57,58 @@ function activateInternal(context: vscode.ExtensionContext) {
     const provider = agentConfig.get<string>('provider', 'cursor');
     vscode.commands.executeCommand('setContext', 'commentary.agentProvider', provider);
     console.log('[Extension] Set commentary.agentProvider context to:', provider);
+
+    // Set Cursor CLI availability context (no default value = must be explicitly configured)
+    const cursorCliPath = agentConfig.get<string>('cursorCliPath');
+    const hasCursorCli = !!(cursorCliPath && cursorCliPath.trim().length > 0);
+    vscode.commands.executeCommand('setContext', 'commentary.hasCursorCli', hasCursorCli);
+    console.log('[Extension] Set commentary.hasCursorCli context to:', hasCursorCli);
   };
-  updateProviderContext();
+
+  // Smart provider detection (async, non-blocking)
+  detectOptimalProvider().then(async (detection) => {
+    console.log('[Commentary] Provider detection result:', detection);
+
+    const agentConfig = vscode.workspace.getConfiguration('commentary.agent');
+    const currentProvider = agentConfig.inspect<string>('provider');
+
+    // Only auto-configure if user hasn't explicitly set a provider
+    if (!currentProvider?.workspaceValue && !currentProvider?.globalValue) {
+      // Set the detected provider as global setting (can be overridden per-workspace)
+      await agentConfig.update('provider', detection.provider, vscode.ConfigurationTarget.Global);
+      console.log('[Commentary] Auto-configured provider:', detection.provider, '-', detection.reason);
+
+      // Show notification about detection (dismissible, non-intrusive)
+      const message = getProviderSetupMessage(detection);
+      if (detection.capabilities.requiresClipboard) {
+        // Show more prominent message if falling back to clipboard
+        const action = await vscode.window.showInformationMessage(
+          message,
+          'Configure Agent',
+          'Dismiss'
+        );
+        if (action === 'Configure Agent') {
+          await vscode.commands.executeCommand('commentary.configureAgent');
+        }
+      } else {
+        // Just log success for CLI/API methods
+        console.log('[Commentary]', message);
+      }
+    }
+
+    // Update context key
+    updateProviderContext();
+  }).catch((error) => {
+    console.error('[Commentary] Provider detection failed:', error);
+    // Fallback to manual context update
+    updateProviderContext();
+  });
 
   // Listen for provider configuration changes and update context
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('commentary.agent.provider')) {
+      if (e.affectsConfiguration('commentary.agent.provider') ||
+          e.affectsConfiguration('commentary.agent.cursorCliPath')) {
         updateProviderContext();
       }
     })
@@ -235,9 +265,13 @@ function activateInternal(context: vscode.ExtensionContext) {
   // Watch for active editor changes to refresh preview
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (editor && editor.document.languageId === 'markdown') {
-        await overlayHost?.refreshPreview();
-        commentsViewProvider?.refresh();
+      try {
+        if (editor && editor.document.languageId === 'markdown') {
+          await overlayHost?.refreshPreview();
+          commentsViewProvider?.refresh();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidChangeActiveTextEditor:', error);
       }
     })
   );
@@ -245,10 +279,14 @@ function activateInternal(context: vscode.ExtensionContext) {
   // Watch for document changes to refresh preview
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument(async (event) => {
-      if (event.document.languageId === 'markdown') {
-        // Debounce: only refresh after 500ms of inactivity
-        // (In a real implementation, use a proper debounce)
-        await overlayHost?.refreshPreview();
+      try {
+        if (event.document.languageId === 'markdown') {
+          // Debounce: only refresh after 500ms of inactivity
+          // (In a real implementation, use a proper debounce)
+          await overlayHost?.refreshPreview();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidChangeTextDocument:', error);
       }
     })
   );
@@ -282,9 +320,14 @@ export function deactivate() {
   }
   
   if (commentsViewProvider) {
+    try {
+      commentsViewProvider.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing comments view provider:', e);
+    }
     commentsViewProvider = undefined;
   }
-  
+
   if (overlayHost) {
     try {
       overlayHost.dispose();
@@ -293,14 +336,18 @@ export function deactivate() {
     }
     overlayHost = undefined;
   }
-  
+
   if (markdownWebviewProvider) {
     // MarkdownWebviewProvider doesn't have dispose, but panels are managed by it
     markdownWebviewProvider = undefined;
   }
-  
-  // FileDecorationProvider doesn't need explicit disposal
+
   if (fileDecorationProvider) {
+    try {
+      fileDecorationProvider.dispose();
+    } catch (e) {
+      console.warn('[Commentary] Error disposing file decoration provider:', e);
+    }
     fileDecorationProvider = undefined;
   }
   

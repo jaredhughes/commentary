@@ -4,7 +4,6 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { Note } from '../types';
 
 /**
@@ -111,12 +110,12 @@ export class CommentTreeItem extends vscode.TreeItem {
 
   private buildDescription(): string {
     if (this.note.isDocumentLevel) {
-      return '?? Entire document';
+      return '📄 Entire document';
     }
     if (this.note.lines) {
-      return `L${this.note.lines.start}?${this.note.lines.end}`;
+      return `L${this.note.lines.start}-${this.note.lines.end}`;
     }
-    return `Pos ${this.note.position.start}?${this.note.position.end}`;
+    return `Pos ${this.note.position.start}-${this.note.position.end}`;
   }
 
   private buildTooltip(): string {
@@ -134,7 +133,7 @@ export class CommentTreeItem extends vscode.TreeItem {
     const lines = [`Comment: ${this.note.text}`, '', `Selected: "${this.note.quote.exact}"`];
 
     if (this.note.lines) {
-      lines.push(`Lines: ${this.note.lines.start}?${this.note.lines.end}`);
+      lines.push(`Lines: ${this.note.lines.start}-${this.note.lines.end}`);
     }
 
     lines.push(`Created: ${new Date(this.note.createdAt).toLocaleString()}`);

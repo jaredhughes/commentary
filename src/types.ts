@@ -39,29 +39,29 @@ export interface SerializedSelection {
  * Messages sent from preview overlay to extension host
  */
 export enum MessageType {
-  SaveComment = 'saveComment',
-  SaveAndSubmitToAgent = 'saveAndSubmitToAgent',
-  UpdateComment = 'updateComment',
-  DeleteComment = 'deleteComment',
-  EditHighlightComment = 'editHighlightComment',
-  RevealComment = 'revealComment',
-  SendToAgent = 'sendToAgent',
-  Ready = 'ready',
-  SelectionMade = 'selectionMade',
-  AddDocumentComment = 'addDocumentComment',
-  UpdateDocumentText = 'updateDocumentText'
+  saveComment = 'saveComment',
+  saveAndSubmitToAgent = 'saveAndSubmitToAgent',
+  updateComment = 'updateComment',
+  deleteComment = 'deleteComment',
+  editHighlightComment = 'editHighlightComment',
+  revealComment = 'revealComment',
+  sendToAgent = 'sendToAgent',
+  ready = 'ready',
+  selectionMade = 'selectionMade',
+  addDocumentComment = 'addDocumentComment',
+  updateDocumentText = 'updateDocumentText'
 }
 
 /**
  * Messages sent from extension host to preview overlay
  */
 export enum HostMessageType {
-  PaintHighlights = 'paintHighlights',
-  RemoveHighlight = 'removeHighlight',
-  ScrollToHighlight = 'scrollToHighlight',
-  ClearAllHighlights = 'clearAllHighlights',
-  ShowEditBubble = 'showEditBubble',
-  UpdateProvider = 'updateProvider'
+  paintHighlights = 'paintHighlights',
+  removeHighlight = 'removeHighlight',
+  scrollToHighlight = 'scrollToHighlight',
+  clearAllHighlights = 'clearAllHighlights',
+  showEditBubble = 'showEditBubble',
+  updateProvider = 'updateProvider'
 }
 
 export interface BaseMessage {
@@ -69,7 +69,7 @@ export interface BaseMessage {
 }
 
 export interface SaveCommentMessage extends BaseMessage {
-  type: MessageType.SaveComment;
+  type: MessageType.saveComment;
   selection: SerializedSelection;
   commentText: string;
   documentUri?: string;
@@ -77,7 +77,7 @@ export interface SaveCommentMessage extends BaseMessage {
 }
 
 export interface SaveAndSubmitToAgentMessage extends BaseMessage {
-  type: MessageType.SaveAndSubmitToAgent;
+  type: MessageType.saveAndSubmitToAgent;
   selection: SerializedSelection;
   commentText: string;
   documentUri?: string;
@@ -86,49 +86,49 @@ export interface SaveAndSubmitToAgentMessage extends BaseMessage {
 }
 
 export interface UpdateCommentMessage extends BaseMessage {
-  type: MessageType.UpdateComment;
+  type: MessageType.updateComment;
   noteId: string;
   commentText: string;
   documentUri?: string;
 }
 
 export interface DeleteCommentMessage extends BaseMessage {
-  type: MessageType.DeleteComment;
+  type: MessageType.deleteComment;
   noteId: string;
 }
 
 export interface EditHighlightCommentMessage extends BaseMessage {
-  type: MessageType.EditHighlightComment;
+  type: MessageType.editHighlightComment;
   noteId: string;
   documentUri?: string;
 }
 
 export interface RevealCommentMessage extends BaseMessage {
-  type: MessageType.RevealComment;
+  type: MessageType.revealComment;
   noteId: string;
 }
 
 export interface SendToAgentMessage extends BaseMessage {
-  type: MessageType.SendToAgent;
+  type: MessageType.sendToAgent;
   noteId: string;
   documentUri?: string;
 }
 
 export interface ReadyMessage extends BaseMessage {
-  type: MessageType.Ready;
+  type: MessageType.ready;
 }
 
 export interface SelectionMadeMessage extends BaseMessage {
-  type: MessageType.SelectionMade;
+  type: MessageType.selectionMade;
   selection: SerializedSelection;
 }
 
 export interface AddDocumentCommentMessage extends BaseMessage {
-  type: MessageType.AddDocumentComment;
+  type: MessageType.addDocumentComment;
 }
 
 export interface UpdateDocumentTextMessage extends BaseMessage {
-  type: MessageType.UpdateDocumentText;
+  type: MessageType.updateDocumentText;
   oldText: string;
   newText: string;
 }
@@ -151,31 +151,31 @@ export interface BaseHostMessage {
 }
 
 export interface PaintHighlightsMessage extends BaseHostMessage {
-  type: HostMessageType.PaintHighlights;
+  type: HostMessageType.paintHighlights;
   notes: Note[];
 }
 
 export interface RemoveHighlightMessage extends BaseHostMessage {
-  type: HostMessageType.RemoveHighlight;
+  type: HostMessageType.removeHighlight;
   noteId: string;
 }
 
 export interface ScrollToHighlightMessage extends BaseHostMessage {
-  type: HostMessageType.ScrollToHighlight;
+  type: HostMessageType.scrollToHighlight;
   noteId: string;
 }
 
 export interface ClearAllHighlightsMessage extends BaseHostMessage {
-  type: HostMessageType.ClearAllHighlights;
+  type: HostMessageType.clearAllHighlights;
 }
 
 export interface ShowEditBubbleMessage extends BaseHostMessage {
-  type: HostMessageType.ShowEditBubble;
+  type: HostMessageType.showEditBubble;
   note: Note;
 }
 
 export interface UpdateProviderMessage extends BaseHostMessage {
-  type: HostMessageType.UpdateProvider;
+  type: HostMessageType.updateProvider;
   provider: string;
 }
 

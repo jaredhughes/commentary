@@ -163,7 +163,6 @@ export class PayloadBuilder {
     const lines = [request.instruction || 'Please review the following comments:', ''];
 
     for (const ctx of request.contexts) {
-      const filename = this.getFilename(ctx.note.file);
       const filepath = this.getRelativePath(ctx.note.file);
       const absolutePath = this.getAbsolutePath(ctx.note.file);
 

@@ -108,11 +108,32 @@ export class CommandManager {
         return;
       }
 
-      await this.agentClient.sendSingleComment(note);
+      try {
+        let method: 'cli' | 'api' | 'clipboard' | 'chat' | undefined;
 
-      // Delete the comment after sending
-      await this.storage.deleteNote(note.id, note.file);
-      this.commentsView.refresh();
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Commentary',
+            cancellable: false
+          },
+          async (progress) => {
+            progress.report({ message: 'Sending comment to agent...' });
+            method = await this.agentClient.sendSingleComment(note);
+          }
+        );
+
+        // Only auto-delete if method applies changes automatically (CLI or API)
+        // Keep comment for manual methods (clipboard, chat) so user can track what to apply
+        if (method === 'cli' || method === 'api') {
+          await this.storage.deleteNote(note.id, note.file);
+          await this.overlayHost.refreshPreview();
+          this.commentsView.refresh();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to send comment: ${message}`);
+      }
     };
 
     // Send comment to agent (generic)
@@ -125,9 +146,14 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendToAgentClaude', sendToAgentHandler)
     );
 
-    // Send comment to agent (Cursor-specific)
+    // Send comment to agent (Cursor-specific - clipboard fallback)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendToAgentCursor', sendToAgentHandler)
+    );
+
+    // Send comment to agent (Cursor CLI-specific - terminal)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentCursorCli', sendToAgentHandler)
     );
 
     // Send comment to agent (VS Code-specific)
@@ -141,7 +167,7 @@ export class CommandManager {
       const allNotes = await this.storage.getAllNotes();
       const notes: Note[] = [];
 
-      for (const [fileUri, fileNotes] of allNotes.entries()) {
+      for (const fileNotes of allNotes.values()) {
         notes.push(...fileNotes);
       }
 
@@ -150,7 +176,37 @@ export class CommandManager {
         return;
       }
 
-      await this.agentClient.sendMultipleComments(notes);
+      try {
+        let method: 'cli' | 'api' | 'clipboard' | 'chat' | undefined;
+
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Commentary',
+            cancellable: false
+          },
+          async (progress) => {
+            progress.report({
+              message: `Sending ${notes.length} comment${notes.length === 1 ? '' : 's'} to agent...`
+            });
+            method = await this.agentClient.sendMultipleComments(notes);
+          }
+        );
+
+        // Only auto-delete if method applies changes automatically (CLI or API)
+        // Keep comments for manual methods (clipboard, chat) so user can track what to apply
+        if (method === 'cli' || method === 'api') {
+          // Delete all comments that were sent
+          for (const note of notes) {
+            await this.storage.deleteNote(note.id, note.file);
+          }
+          await this.overlayHost.refreshPreview();
+          this.commentsView.refresh();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to send comments: ${message}`);
+      }
     };
 
     // Generic command (for command palette)
@@ -163,9 +219,14 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendAllToAgentClaude', sendAllToAgentHandler)
     );
 
-    // Send all comments to agent (Cursor-specific)
+    // Send all comments to agent (Cursor-specific - clipboard fallback)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendAllToAgentCursor', sendAllToAgentHandler)
+    );
+
+    // Send all comments to agent (Cursor CLI-specific - terminal)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentCursorCli', sendAllToAgentHandler)
     );
 
     // Send all comments to agent (VS Code-specific)
@@ -189,24 +250,19 @@ export class CommandManager {
 
         const providers: ProviderOption[] = [
           {
-            label: '$(sparkle) Claude API',
+            label: '$(sparkle) Claude',
             value: 'claude',
-            description: 'Automatic document editing via Anthropic API',
+            description: '✨ API (auto-edit) → CLI (terminal) → clipboard (fallback)',
           },
           {
             label: '$(comment-discussion) Cursor',
             value: 'cursor',
-            description: 'Manual chat workflow (no additional config needed)',
+            description: '🔧 CLI (cursor-agent, auto-edit) → clipboard (fallback)',
           },
           {
             label: '$(code) VS Code Chat',
             value: 'vscode',
-            description: 'VS Code built-in Chat/Agent (requires manual paste)',
-          },
-          {
-            label: '$(globe) OpenAI',
-            value: 'openai',
-            description: 'OpenAI API integration',
+            description: '📋 Clipboard only (requires manual paste)',
           },
           {
             label: '$(tools) Custom',
@@ -233,8 +289,8 @@ export class CommandManager {
 
         // Step 2: Provider-specific configuration
         if (newProvider === 'claude') {
-          // Set provider to Claude
-          await config.update('provider', 'claude', vscode.ConfigurationTarget.Workspace);
+          // Set provider to Claude (global, but workspace can override)
+          await config.update('provider', 'claude', vscode.ConfigurationTarget.Global);
 
           // Show configuration menu (allows configuring both CLI and API)
           let configuring = true;
@@ -269,7 +325,7 @@ export class CommandManager {
             if (!claudeOption || claudeOption.value === 'done') {
               configuring = false;
               const status = hasApiKey ? 'API key configured (primary)' : `CLI configured: "${currentCommand}"`;
-              vscode.window.showInformationMessage(`? Claude configured! ${status}`);
+              vscode.window.showInformationMessage(`✓ Claude configured! ${status}`);
               break;
             }
 
@@ -291,7 +347,7 @@ export class CommandManager {
               if (command) {
                 await config.update('claudeCommand', command, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  `? Claude CLI command updated: "${command}"`
+                  `✓ Claude CLI command updated: "${command}"`
                 );
               }
 
@@ -336,45 +392,106 @@ export class CommandManager {
               if (apiKey) {
                 await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(
-                  '? Claude API key configured! This will be the primary method (CLI as fallback).'
+                  '✓ Claude API key configured! This will be the primary method (CLI as fallback).'
                 );
               }
             }
           }
 
         } else if (newProvider === 'cursor') {
-          // Cursor requires no additional config
-          await config.update('provider', 'cursor', vscode.ConfigurationTarget.Workspace);
+          // Set provider to Cursor (global, but workspace can override)
+          await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
 
-          vscode.window.showInformationMessage(
-            '? Cursor configured! Comments will open in Cursor chat (requires manual paste).'
-          );
+          // Show configuration menu (allows configuring both clipboard and CLI methods)
+          let configuring = true;
+          while (configuring) {
+            const currentCliPath = config.get<string>('cursorCliPath', '');
+            const hasCliPath = !!currentCliPath;
+            const isInteractive = config.get<boolean>('cursorInteractive', true);
 
-        } else if (newProvider === 'openai') {
-          // Prompt for OpenAI API key
-          const apiKey = await vscode.window.showInputBox({
-            prompt: 'Enter your OpenAI API key',
-            placeHolder: 'sk-...',
-            password: true,
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-              if (!value || value.trim().length === 0) {
-                return 'API key cannot be empty';
+            const cursorOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Configure Cursor Agent CLI',
+                value: 'cli',
+                description: hasCliPath ? 'Currently configured' : 'Optional - for direct terminal integration',
+                detail: hasCliPath ? `Current: "${currentCliPath}" (interactive: ${isInteractive})` : 'Requires cursor-agent to be installed'
+              },
+              {
+                label: '$(copy) Use Clipboard Method',
+                value: 'clipboard',
+                description: hasCliPath ? 'Fallback method' : 'Default method (no setup required)',
+                detail: 'Copy comments to clipboard, paste into Cursor chat manually'
+              },
+              {
+                label: '$(check) Done',
+                value: 'done',
+                description: 'Finish configuration',
+                detail: ''
               }
-              return null;
+            ], {
+              placeHolder: 'Configure Cursor integration method',
+              title: 'Commentary: Configure Cursor',
+            });
+
+            if (!cursorOption || cursorOption.value === 'done') {
+              configuring = false;
+              const status = hasCliPath
+                ? `Cursor Agent CLI configured: "${currentCliPath}" (clipboard as fallback)`
+                : 'Clipboard method (manual paste)';
+              vscode.window.showInformationMessage(`✓ Cursor configured! ${status}`);
+              break;
             }
-          });
 
-          if (!apiKey) {
-            return;
+            if (cursorOption.value === 'cli') {
+              // Configure Cursor Agent CLI path
+              const cliPath = await vscode.window.showInputBox({
+                prompt: 'Enter the path to cursor-agent command',
+                placeHolder: 'cursor-agent (or full path like /usr/local/bin/cursor-agent)',
+                value: currentCliPath || 'cursor-agent',
+                ignoreFocusOut: true,
+                validateInput: (value) => {
+                  if (!value || value.trim().length === 0) {
+                    return 'Path cannot be empty';
+                  }
+                  return null;
+                }
+              });
+
+              if (cliPath) {
+                // Ask about interactive mode
+                const interactive = await vscode.window.showQuickPick([
+                  {
+                    label: 'Interactive Mode (Recommended)',
+                    value: true,
+                    description: 'Opens Cursor agent in terminal for conversational sessions'
+                  },
+                  {
+                    label: 'Non-Interactive Mode',
+                    value: false,
+                    description: 'Single-shot execution, returns response immediately'
+                  }
+                ], {
+                  placeHolder: 'Select cursor-agent mode',
+                  title: 'Cursor Agent Interaction Mode'
+                });
+
+                if (interactive !== undefined) {
+                  await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
+                  await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
+                  vscode.window.showInformationMessage(
+                    `✓ Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
+                  );
+                }
+              }
+
+            } else if (cursorOption.value === 'clipboard') {
+              // Clear CLI path to force clipboard method
+              await config.update('cursorCliPath', '', vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage(
+                '✓ Clipboard method selected. Comments will be copied for manual paste into Cursor chat.'
+              );
+            }
           }
-
-          await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-          await config.update('provider', 'openai', vscode.ConfigurationTarget.Workspace);
-
-          vscode.window.showInformationMessage(
-            '? OpenAI configured! (Note: Full OpenAI integration coming soon)'
-          );
 
         } else if (newProvider === 'custom') {
           // Prompt for custom endpoint
@@ -400,17 +517,17 @@ export class CommandManager {
           }
 
           await config.update('endpoint', endpoint, vscode.ConfigurationTarget.Global);
-          await config.update('provider', 'custom', vscode.ConfigurationTarget.Workspace);
+          await config.update('provider', 'custom', vscode.ConfigurationTarget.Global);
 
           vscode.window.showInformationMessage(
-            '? Custom endpoint configured!'
+            '✓ Custom endpoint configured!'
           );
         } else if (newProvider === 'vscode') {
-          // VS Code Chat requires no additional config
-          await config.update('provider', 'vscode', vscode.ConfigurationTarget.Workspace);
+          // VS Code Chat requires no additional config (global, but workspace can override)
+          await config.update('provider', 'vscode', vscode.ConfigurationTarget.Global);
 
           vscode.window.showInformationMessage(
-            '? VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
+            '✓ VS Code Chat configured! Comments will open in VS Code\'s built-in chat (requires manual paste).'
           );
         }
       })
@@ -525,13 +642,6 @@ export class CommandManager {
       })
     );
 
-    // Toggle expand/collapse all
-    this.context.subscriptions.push(
-      vscode.commands.registerCommand('commentary.toggleExpandCollapse', async () => {
-        await this.commentsView.toggleExpandCollapseAll();
-      })
-    );
-
     // Debug: List available commands (helps find Cursor chat command)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.listAvailableCommands', async () => {
@@ -553,14 +663,14 @@ export class CommandManager {
 
         if (relevantCommands.length > 0) {
           relevantCommands.forEach(cmd => {
-            outputChannel.appendLine(`? ${cmd}`);
+            outputChannel.appendLine(`✓ ${cmd}`);
           });
         } else {
           outputChannel.appendLine('No chat/AI commands found');
           outputChannel.appendLine('');
           outputChannel.appendLine('All available commands:');
           allCommands.slice(0, 50).forEach(cmd => {
-            outputChannel.appendLine(`? ${cmd}`);
+            outputChannel.appendLine(`✓ ${cmd}`);
           });
           outputChannel.appendLine(`... and ${allCommands.length - 50} more`);
         }
@@ -639,10 +749,14 @@ export class CommandManager {
         });
 
         if (selected) {
-          // Update configuration
-          await config.update('name', selected.value, vscode.ConfigurationTarget.Workspace);
+          // Update configuration (use Global to avoid workspace settings file save requirement)
+          await config.update('name', selected.value, vscode.ConfigurationTarget.Global);
 
-          // Refresh all webviews to apply new theme (regenerates HTML with new CSS)
+          // Wait for config to propagate
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          // Explicitly refresh webviews to ensure theme change is applied
+          // (Config listener should also trigger refresh, but this ensures immediate update)
           await this.webviewProvider.refreshAllWebviews();
 
           vscode.window.showInformationMessage(`Theme switched to: ${selected.label.replace(' $(check)', '')}`);

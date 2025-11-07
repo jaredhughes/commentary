@@ -14,7 +14,6 @@ import {
   DeleteCommentMessage,
   EditHighlightCommentMessage,
   SendToAgentMessage,
-  UpdateDocumentTextMessage,
   Note,
   PreviewMessage
 } from '../types';
@@ -67,7 +66,7 @@ export class OverlayHost {
 
   private setupMessageHandlers(): void {
     // Handle save comment
-    this.messageHandler.on(MessageType.SaveComment, async (msg: SaveCommentMessage) => {
+    this.messageHandler.on(MessageType.saveComment, async (msg: SaveCommentMessage) => {
       console.log('SaveComment handler called with:', msg);
 
       // Get document URI from the message or fall back to active editor
@@ -131,7 +130,7 @@ export class OverlayHost {
     });
 
     // Handle save and submit to agent (atomic operation)
-    this.messageHandler.on(MessageType.SaveAndSubmitToAgent, async (msg: SaveAndSubmitToAgentMessage) => {
+    this.messageHandler.on(MessageType.saveAndSubmitToAgent, async (msg: SaveAndSubmitToAgentMessage) => {
       console.log('SaveAndSubmitToAgent handler called with:', msg);
 
       // Get document URI from the message or fall back to active editor
@@ -231,7 +230,7 @@ export class OverlayHost {
     });
 
     // Handle delete comment
-    this.messageHandler.on(MessageType.DeleteComment, async (msg: DeleteCommentMessage & { documentUri?: string }) => {
+    this.messageHandler.on(MessageType.deleteComment, async (msg: DeleteCommentMessage & { documentUri?: string }) => {
       // Get document URI from the message or fall back to active editor
       let documentUri: string | undefined;
       if (msg.documentUri) {
@@ -263,12 +262,12 @@ export class OverlayHost {
     });
 
     // Handle ready message (preview loaded)
-    this.messageHandler.on(MessageType.Ready, async () => {
+    this.messageHandler.on(MessageType.ready, async () => {
       console.log('Preview ready message received');
     });
 
     // Handle add document comment (from floating button)
-    this.messageHandler.on(MessageType.AddDocumentComment, async (msg: PreviewMessage & { documentUri?: string }) => {
+    this.messageHandler.on(MessageType.addDocumentComment, async (msg: PreviewMessage & { documentUri?: string }) => {
       console.log('AddDocumentComment handler called');
 
       // Get document URI
@@ -312,7 +311,7 @@ export class OverlayHost {
     });
 
     // Handle edit highlight comment request
-    this.messageHandler.on(MessageType.EditHighlightComment, async (msg: EditHighlightCommentMessage) => {
+    this.messageHandler.on(MessageType.editHighlightComment, async (msg: EditHighlightCommentMessage) => {
       console.log('EditHighlightComment handler called for note:', msg.noteId);
 
       // Get document URI from message or fall back to active editor
@@ -348,7 +347,7 @@ export class OverlayHost {
     });
 
     // Handle update comment
-    this.messageHandler.on(MessageType.UpdateComment, async (msg: UpdateCommentMessage) => {
+    this.messageHandler.on(MessageType.updateComment, async (msg: UpdateCommentMessage) => {
       console.log('UpdateComment handler called:', msg);
 
       const documentUri = msg.documentUri;
@@ -371,7 +370,7 @@ export class OverlayHost {
     });
 
     // Handle send to agent (from webview "Submit to agent" button)
-    this.messageHandler.on(MessageType.SendToAgent, async (msg: SendToAgentMessage) => {
+    this.messageHandler.on(MessageType.sendToAgent, async (msg: SendToAgentMessage) => {
       console.log('SendToAgent handler called:', msg);
 
       // Get document URI
@@ -461,5 +460,6 @@ export class OverlayHost {
 
   dispose(): void {
     this.messageHandler.clear();
+    this.onNotesChangedEmitter.dispose();
   }
 }

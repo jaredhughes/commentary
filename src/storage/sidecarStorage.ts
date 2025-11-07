@@ -4,12 +4,14 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ICommentStorage, Note } from '../types';
+import { AsyncMutexMap } from '../utils/asyncMutex';
 
 const COMMENTS_DIR = '.comments';
 
 export class SidecarStorage implements ICommentStorage {
+  private mutexMap = new AsyncMutexMap();
+
   constructor(private workspaceRoot: vscode.Uri) {}
 
   private getCommentsDir(): vscode.Uri {
@@ -48,48 +50,54 @@ export class SidecarStorage implements ICommentStorage {
   }
 
   async saveNote(note: Note): Promise<void> {
-    await this.ensureCommentsDirExists();
+    return this.mutexMap.runExclusive(note.file, async () => {
+      await this.ensureCommentsDirExists();
 
-    const notes = await this.getNotes(note.file);
-    const index = notes.findIndex((n) => n.id === note.id);
+      const notes = await this.getNotes(note.file);
+      const index = notes.findIndex((n) => n.id === note.id);
 
-    if (index >= 0) {
-      notes[index] = note;
-    } else {
-      notes.push(note);
-    }
+      if (index >= 0) {
+        notes[index] = note;
+      } else {
+        notes.push(note);
+      }
 
-    const filePath = this.getCommentFilePath(note.file);
-    const content = Buffer.from(JSON.stringify(notes, null, 2), 'utf8');
-    await vscode.workspace.fs.writeFile(filePath, content);
+      const filePath = this.getCommentFilePath(note.file);
+      const content = Buffer.from(JSON.stringify(notes, null, 2), 'utf8');
+      await vscode.workspace.fs.writeFile(filePath, content);
+    });
   }
 
   async deleteNote(noteId: string, fileUri: string): Promise<void> {
-    const notes = await this.getNotes(fileUri);
-    const filtered = notes.filter((n) => n.id !== noteId);
+    return this.mutexMap.runExclusive(fileUri, async () => {
+      const notes = await this.getNotes(fileUri);
+      const filtered = notes.filter((n) => n.id !== noteId);
 
-    if (filtered.length === 0) {
-      // Delete the file if no notes remain
+      if (filtered.length === 0) {
+        // Delete the file if no notes remain
+        const filePath = this.getCommentFilePath(fileUri);
+        try {
+          await vscode.workspace.fs.delete(filePath);
+        } catch {
+          // File might not exist, ignore
+        }
+      } else {
+        const filePath = this.getCommentFilePath(fileUri);
+        const content = Buffer.from(JSON.stringify(filtered, null, 2), 'utf8');
+        await vscode.workspace.fs.writeFile(filePath, content);
+      }
+    });
+  }
+
+  async deleteAllNotes(fileUri: string): Promise<void> {
+    return this.mutexMap.runExclusive(fileUri, async () => {
       const filePath = this.getCommentFilePath(fileUri);
       try {
         await vscode.workspace.fs.delete(filePath);
       } catch {
         // File might not exist, ignore
       }
-    } else {
-      const filePath = this.getCommentFilePath(fileUri);
-      const content = Buffer.from(JSON.stringify(filtered, null, 2), 'utf8');
-      await vscode.workspace.fs.writeFile(filePath, content);
-    }
-  }
-
-  async deleteAllNotes(fileUri: string): Promise<void> {
-    const filePath = this.getCommentFilePath(fileUri);
-    try {
-      await vscode.workspace.fs.delete(filePath);
-    } catch {
-      // File might not exist, ignore
-    }
+    });
   }
 
   async getAllNotes(): Promise<Map<string, Note[]>> {
@@ -130,7 +138,7 @@ export class SidecarStorage implements ICommentStorage {
     try {
       const parsed = JSON.parse(data) as Record<string, Note[]>;
 
-      for (const [fileUri, notes] of Object.entries(parsed)) {
+      for (const [, notes] of Object.entries(parsed)) {
         for (const note of notes) {
           await this.saveNote(note);
         }
