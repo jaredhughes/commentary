@@ -32,17 +32,18 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 
 ### AI Agent Integration
 
-**🚀 Terminal Integration (Recommended)**
-- **Claude Code CLI** — Opens terminal with `claude` command, applies edits automatically
-- **Cursor Agent CLI** — Opens terminal with `cursor-agent` command, applies edits automatically
+**Automatic (Send) — Recommended**
+- **Claude CLI** — Terminal integration, automatically applies edits
+- **Cursor CLI** — Terminal integration, automatically applies edits
+- **OpenAI API** — Direct API calls, automatically applies edits
+- **Claude API** — Direct API calls (when configured), automatically applies edits
 
-**📋 Copy-Paste Workflow**
-- **Claude (IDE)** — Copies to clipboard, paste into Claude chat in VS Code/Cursor
-- **Cursor (IDE)** — Copies to clipboard, paste into Composer/Chat
-- **VS Code Chat** — Copies to clipboard, paste into built-in chat
-- **OpenAI API** — Direct API calls (requires API key)
+**Manual (Copy)**
+- **Claude IDE** — Clipboard copy, paste into Claude chat
+- **Cursor IDE** — Clipboard copy, paste into Cursor chat
+- **VS Code Chat** — Clipboard copy, paste into built-in chat
 
-💡 **Why terminal?** CLI integrations automatically apply edits to your files. Copy-paste workflows require manual application, but work without additional setup.
+💡 **Automatic methods** send comments directly and apply edits automatically. **Manual methods** copy to clipboard for you to paste—useful when CLI/API isn't available.
 
 ### Beautiful Themes
 Choose from **20 professional themes**:
@@ -78,24 +79,24 @@ Comments survive document edits with 3-layer fallback:
 5. **Type comment** → Press `⌘Enter` (Mac) / `Ctrl+Enter` (Windows/Linux) to save
 6. **View all comments** in the Commentary sidebar → `⌘⇧C` / `Ctrl+Shift+C`
 
-**Pro tip:** After adding comments, send them to your AI agent with the "Send to Agent" button!
+**Pro tip:** After adding comments, send them to your AI agent! Automatic methods apply edits directly; manual methods copy to clipboard.
 
 ### Configure AI Agent
 
 `⌘⇧P` → `Commentary: Configure AI Agent`
 
-**Recommended: Terminal Integration**
-- **Claude Code CLI** — Enter command: `claude` (installs automatically, applies edits)
-- **Cursor Agent CLI** — Enter path: `cursor-agent` (requires [installation](https://github.com/Cursor-AI/cursor-agent))
+**For Automatic Editing (Recommended):**
+- **Claude CLI** — Enter command: `claude` (installs automatically)
+- **Cursor CLI** — Enter path: `cursor-agent` (requires [installation](https://github.com/Cursor-AI/cursor-agent))
+- **OpenAI API** — Enter your API key for direct GPT-4/GPT-3.5 access
 
-**Alternative: Copy-Paste**
-- **Claude (IDE)** — Choose "Claude" provider, uses clipboard
-- **Cursor (IDE)** — Choose "Cursor" provider, uses clipboard
-- **VS Code Chat** — Built-in chat, uses clipboard
+**For Manual Copy-Paste:**
+- **Claude IDE** — Choose "Claude" provider (uses clipboard)
+- **Cursor IDE** — Choose "Cursor" provider (uses clipboard)
+- **VS Code Chat** — Built-in chat (uses clipboard)
 
-**API Options**
-- **OpenAI** — Direct API calls (requires API key)
-- **Custom** — Your own endpoint
+**Advanced:**
+- **Custom** — Your own API endpoint
 
 ---
 
@@ -127,35 +128,87 @@ Press `F5` in VS Code to launch Extension Development Host.
 
 ---
 
-## 🎮 Usage
+## Usage
 
 ### Creating Comments
 
-**Text Selection:**
-- Select text in the rendered preview
-- Type in the floating bubble
-- Save with `⌘Enter` / `Ctrl+Enter`
+**Text Selection Comments:**
+1. Select any text in the rendered Markdown preview
+2. A floating comment bubble appears
+3. Type your comment
+4. Press `⌘Enter` (Mac) or `Ctrl+Enter` (Windows/Linux) to save
+5. Press `Esc` to cancel
 
-**Document-Level:**
-- Click 📄 button (top-left corner), OR
-- Sidebar toolbar → 📝 icon, OR
-- Command Palette → `Add Document-Level Comment`
+**Document-Level Comments:**
+You can comment on an entire document without selecting text:
+- **In the preview:** Click the note icon button in the top-left corner of the preview
+- **In the sidebar:** Click the note icon in the Commentary sidebar toolbar
+- **Command Palette:** Press `⌘⇧P` (Mac) or `Ctrl+Shift+P` (Windows/Linux), then type "Add Document-Level Comment"
 
 ### Managing Comments
 
-**Edit:** Click ✏️ pencil icon in sidebar
-**Delete:** Click 🗑️ trash icon (single or all)
-**Navigate:** Click comment to scroll to location
-**Export/Import:** Backup or share as JSON
+**View All Comments:**
+- Open the Commentary sidebar: `⌘⇧C` / `Ctrl+Shift+C`
+- Comments are organized by file
+- Click a comment to navigate to its location in the document
 
-### Send to AI Agent
+**Edit a Comment:**
+- In the sidebar, click the edit icon next to the comment
+- Or click the comment text to navigate and edit in the preview
 
-**Single comment:** Click 📤 send icon
-**All comments:** Sidebar toolbar → send icon
+**Delete Comments:**
+- **Single comment:** Click the trash icon next to the comment in the sidebar
+- **All comments:** Click the trash icon in the sidebar toolbar (with confirmation)
+
+**Export/Import:**
+- Use the export/import commands to backup or share comments as JSON
+
+### Sending Comments to AI Agent
+
+Commentary supports two types of agent integration: **automatic** (Send) and **manual** (Copy).
+
+#### Automatic Methods (Send) — Recommended
+
+These methods send comments directly to your agent and **automatically apply edits** to your files:
+
+- **Claude CLI** — Opens terminal with `claude` command, agent applies edits automatically
+- **Cursor CLI** — Opens terminal with `cursor-agent` command, agent applies edits automatically  
+- **OpenAI API** — Direct API calls to GPT-4/GPT-3.5, applies edits automatically
+- **Claude API** — Direct API calls (when API key configured), applies edits automatically
 
 **Behavior:**
-- **CLI/API methods** — Comments deleted automatically after sending
-- **Clipboard/Chat methods** — Comments kept for manual tracking
+- Comments are sent immediately
+- Agent responses are applied to your files automatically
+- Comments are **deleted from the sidebar** after successful delivery (they've been processed)
+
+#### Manual Methods (Copy)
+
+These methods copy comments to your clipboard for you to paste manually:
+
+- **Claude IDE** — Copies to clipboard, paste into Claude chat in VS Code/Cursor
+- **Cursor IDE** — Copies to clipboard, paste into Cursor Composer/Chat
+- **VS Code Chat** — Copies to clipboard, paste into built-in VS Code Chat
+- **OpenAI (fallback)** — Copies to clipboard when API key not configured
+
+**Behavior:**
+- Comments are formatted and copied to clipboard
+- You paste them into your agent's chat interface
+- Comments **remain in the sidebar** for tracking (you manually apply edits)
+
+#### How to Use
+
+**Send a Single Comment:**
+- In the sidebar, click the send/copy icon next to any comment
+- Icon varies by method: sparkle (Claude), terminal (Cursor CLI), rocket (OpenAI), etc.
+
+**Send All Comments:**
+- Click the send/copy icon in the sidebar toolbar
+- All comments are sent together with full document context
+
+**Which Method is Used?**
+- Commentary automatically chooses the best available method based on your configuration
+- CLI/API methods are preferred (automatic editing)
+- Clipboard methods are used as fallback (manual paste required)
 
 ---
 
