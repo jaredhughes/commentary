@@ -285,11 +285,23 @@ export class ProviderAdapter {
 
     // Create a new terminal with explicit name
     // Use shellPath to ensure proper terminal initialization
+    // Determine shell path based on platform
+    const getShellPath = (): string | undefined => {
+      if (process.env.SHELL) {
+        return process.env.SHELL;
+      }
+      // Let VS Code use its default shell on Windows
+      if (process.platform === 'win32') {
+        return undefined; // VS Code will use default
+      }
+      // Unix-like systems: prefer zsh, fall back to bash
+      return '/bin/zsh';
+    };
+
     const terminal = vscode.window.createTerminal({
       name: terminalName,
       hideFromUser: false,
-      // Explicitly set shell path to ensure terminal is properly initialized
-      shellPath: process.env.SHELL || '/bin/zsh'
+      shellPath: getShellPath()
     });
 
     this.terminals.set(terminalId, terminal);
