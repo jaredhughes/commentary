@@ -1,7 +1,7 @@
 # 📝 Commentary
 
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jaredhughes/commentary?utm_source=oss&utm_medium=github&utm_campaign=jaredhughes%2Fcommentary&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 [![CI](https://github.com/jaredhughes/commentary/workflows/CI/badge.svg)](https://github.com/jaredhughes/commentary/actions)
+[![VS Code Marketplace](https://img.shields.io/vscode-marketplace/v/jaredhughes.commentary.svg?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=jaredhughes.commentary)
 
 **Inline comments for rendered Markdown in VS Code.** Select text, add comments, and send feedback to your AI agent—without touching the source file.
 
@@ -102,9 +102,18 @@ Comments survive document edits with 3-layer fallback:
 ## 📦 Installation
 
 ### From Marketplace
-*(Publishing soon)*
 
-Search for "Commentary" in Extensions view (`⌘⇧X` / `Ctrl+Shift+X`)
+Install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=jaredhughes.commentary):
+
+1. Open VS Code
+2. Go to Extensions view (`⌘⇧X` / `Ctrl+Shift+X`)
+3. Search for "Commentary"
+4. Click **Install**
+
+Or install via command line:
+```bash
+code --install-extension jaredhughes.commentary
+```
 
 ### From Source
 ```bash
