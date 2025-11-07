@@ -375,8 +375,6 @@
           "type": "string",
           "default": "simple",
           "enum": [
-            "github-dark",
-            "github-light",
             "water-light",
             "water-dark",
             "sakura-light",
