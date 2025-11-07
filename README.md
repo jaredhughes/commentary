@@ -5,10 +5,12 @@
 
 **Inline comments for rendered Markdown in VS Code.** Select text, add comments, and send feedback to your AI agent—without touching the source file.
 
-<video width="1280" height="980" controls>
-  <source src="media/demo/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+📹 **[Watch Demo Video](media/demo/demo.mp4)** (downloads when clicked)
+
+> 💡 **Note:** GitHub doesn't support inline video playback in README files. For inline display:
+> - **Convert to GIF** (recommended): `ffmpeg -i media/demo/demo.mp4 -vf "fps=10,scale=1280:-1:flags=lanczos" media/demo/demo.gif` then use `![Demo](media/demo/demo.gif)`
+> - **GitHub Assets**: Upload video to a GitHub issue/PR and use the asset URL
+> - **External hosting**: Upload to YouTube/Vimeo and embed the link
 
 ---
 

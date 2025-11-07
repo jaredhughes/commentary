@@ -19,12 +19,6 @@
  * ```
  */
 
-interface QueuedOperation<T> {
-  operation: () => Promise<T>;
-  resolve: (value: T) => void;
-  reject: (error: unknown) => void;
-}
-
 export class AsyncMutex {
   private locked = false;
   private queue: Array<{
