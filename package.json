@@ -2,7 +2,7 @@
   "name": "commentary",
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "publisher": "jaredhughes",
   "license": "MIT",
   "icon": "images/icon.png",
