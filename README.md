@@ -5,7 +5,10 @@
 
 **Inline comments for rendered Markdown in VS Code.** Select text, add comments, and send feedback to your AI agent—without touching the source file.
 
-https://github.com/user-attachments/assets/demo.mp4
+<video width="1280" height="980" controls>
+  <source src="media/demo/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ---
 
