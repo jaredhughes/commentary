@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-11-09
+
+### Fixed
+- Sidebar file tree now deduplicates markdown files reported by VS Code multi-root workspaces
+- Worktree and multi-root folder names are preserved when displaying files in the sidebar
+
+### Changed
+- Bumped extension version to `1.1.0`
+
 ## [0.9.8] - 2025-11-06
 
 ### Fixed

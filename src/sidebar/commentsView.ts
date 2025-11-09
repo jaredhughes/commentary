@@ -67,7 +67,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
     console.log('[CommentsView] getChildren called, element:', element);
-    
+
     if (!element) {
       // Root level: build and show folder hierarchy
       return this.getRootItems();
@@ -88,7 +88,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   private async getRootItems(): Promise<vscode.TreeItem[]> {
     console.log('[CommentsView] getRootItems called');
-    
+
     // Build the folder tree if not cached
     if (!this.folderTree) {
       this.folderTree = await this.buildFolderTree();
@@ -138,7 +138,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   private async getFolderChildren(folderItem: FolderTreeItem): Promise<vscode.TreeItem[]> {
     console.log('[CommentsView] getFolderChildren called for:', folderItem.folderPath);
-    
+
     if (!this.folderTree) {
       this.folderTree = await this.buildFolderTree();
     }
@@ -206,10 +206,18 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   private async buildFolderTree(): Promise<FolderNode> {
     console.log('[CommentsView] buildFolderTree called');
-    
+
     // Find all markdown files in workspace
     const workspaceFiles = await vscode.workspace.findFiles('**/*.md', '**/node_modules/**');
     console.log('[CommentsView] Found', workspaceFiles.length, 'markdown files in workspace');
+
+    const uniqueWorkspaceFiles = new Map<string, vscode.Uri>();
+    for (const fileUri of workspaceFiles) {
+      uniqueWorkspaceFiles.set(fileUri.toString(), fileUri);
+    }
+    if (uniqueWorkspaceFiles.size !== workspaceFiles.length) {
+      console.log('[CommentsView] Deduplicated markdown files from', workspaceFiles.length, 'to', uniqueWorkspaceFiles.size);
+    }
 
     // Get all notes to check which files have comments
     const allNotes = await this.storage.getAllNotes();
@@ -219,7 +227,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const fileNodes: FileNode[] = [];
     const filesOutsideWorkspace: FileNode[] = [];
 
-    for (const fileUri of workspaceFiles) {
+    for (const fileUri of uniqueWorkspaceFiles.values()) {
       const uriString = fileUri.toString();
       const notes = allNotes.get(uriString) || [];
       const relativePath = getWorkspaceRelativePath(uriString);

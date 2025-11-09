@@ -34,15 +34,17 @@ export function getWorkspaceRelativePath(fileUri: string): string | null {
       return null;
     }
 
+    const includeFolder = workspaceFolders.length > 1;
+
     // Try VS Code's built-in method first
-    const workspaceRelative = vscode.workspace.asRelativePath(uri, false);
+    const workspaceRelative = vscode.workspace.asRelativePath(uri, includeFolder);
     const fullFsPath = uri.fsPath;
-    
+
     // Check if it's actually relative
-    const isInWorkspace = workspaceRelative !== fullFsPath && 
+    const isInWorkspace = workspaceRelative !== fullFsPath &&
                           !path.isAbsolute(workspaceRelative) &&
                           workspaceRelative.length < fullFsPath.length;
-    
+
     if (isInWorkspace) {
       return workspaceRelative;
     }
@@ -52,6 +54,9 @@ export function getWorkspaceRelativePath(fileUri: string): string | null {
       if (fullFsPath.startsWith(folder.uri.fsPath)) {
         const relativePath = path.relative(folder.uri.fsPath, fullFsPath);
         if (!relativePath.startsWith('..')) {
+          if (includeFolder) {
+            return relativePath ? path.join(folder.name, relativePath) : folder.name;
+          }
           return relativePath;
         }
       }
@@ -70,7 +75,7 @@ export function getDisplayPath(fileUri: string): string {
   try {
     const uri = vscode.Uri.parse(fileUri);
     const fullPath = uri.fsPath;
-    
+
     // Try workspace-relative first
     const workspaceRel = getWorkspaceRelativePath(fileUri);
     if (workspaceRel) {
@@ -115,7 +120,7 @@ export function buildFolderTree(files: FileNode[]): FolderNode {
 
     for (const folderName of folderParts) {
       currentPath = currentPath ? path.join(currentPath, folderName) : folderName;
-      
+
       if (!currentFolder.subfolders.has(folderName)) {
         currentFolder.subfolders.set(folderName, {
           path: currentPath,
@@ -125,7 +130,7 @@ export function buildFolderTree(files: FileNode[]): FolderNode {
           commentCount: 0
         });
       }
-      
+
       currentFolder = currentFolder.subfolders.get(folderName)!;
     }
 
@@ -139,12 +144,12 @@ export function buildFolderTree(files: FileNode[]): FolderNode {
     let folder: FolderNode | undefined = currentFolder;
     while (folder) {
       folder.commentCount += file.commentCount;
-      
+
       // Navigate up to parent (find parent by path)
       if (folder === root) {
         break;
       }
-      
+
       // Find parent folder
       const parentPath = path.dirname(folder.path);
       if (parentPath === '.' || parentPath === '') {
