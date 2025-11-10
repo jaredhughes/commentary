@@ -32,7 +32,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   }
 
   refresh(event?: NotesChangedEvent): void {
-    console.log('[CommentsView] refresh() called');
+    console.log('[CommentsView] refresh() called with event:', event);
     this.folderTree = null; // Invalidate cache
     this.fileItemsByUri.clear();
     this.commentItemsById.clear();
@@ -41,11 +41,14 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       this.pendingRevealAttempts = 0;
       if (event.type === 'added' || event.type === 'updated') {
         this.pendingReveal = { fileUri: event.note.file, noteId: event.note.id };
+        console.log('[CommentsView] Set pending reveal for:', event.note.id, 'in file:', event.note.file);
       } else if (event.type === 'deleted') {
         this.pendingReveal = { fileUri: event.documentUri };
+        console.log('[CommentsView] Set pending reveal for deleted note in file:', event.documentUri);
       }
     } else {
       this.pendingReveal = null;
+      console.log('[CommentsView] No event, clearing pending reveal');
     }
 
     this._onDidChangeTreeData.fire();
@@ -58,6 +61,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.updateEmptyMessage();
 
     if (this.pendingReveal) {
+      console.log('[CommentsView] Scheduling reveal in 50ms');
       setTimeout(() => {
         void this.revealPending();
       }, 50);
