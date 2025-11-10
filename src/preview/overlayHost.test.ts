@@ -19,21 +19,21 @@ type MockPanel = {
 // Mock Memento for testing
 class MockMemento implements vscode.Memento {
   private storage = new Map<string, unknown>();
-  
+
   keys(): readonly string[] {
     return Array.from(this.storage.keys());
   }
-  
+
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;
   get<T>(key: string, defaultValue?: T): T | undefined {
     return (this.storage.get(key) as T) ?? defaultValue;
   }
-  
+
   async update(key: string, value: unknown): Promise<void> {
     this.storage.set(key, value);
   }
-  
+
   setKeysForSync(_keys: string[]): void {
     // Mock implementation
   }
@@ -83,15 +83,27 @@ suite('OverlayHost Tests', () => {
     showWarningMessageOriginal = vscode.window.showWarningMessage;
   });
 
-  setup(() => {
+  setup(async () => {
+    // Clear workspace state before each test
+    await context.workspaceState.update('commentary.notes', undefined);
+
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     storage = new StorageManager(context, workspaceRoot);
     overlayHost = new OverlayHost(context, storage);
- 
+
     (vscode.window.showWarningMessage as unknown as typeof vscode.window.showWarningMessage) = async () => 'Delete';
   });
 
   teardown(async () => {
+    // Clean up all notes
+    const allNotes = await storage.getAllNotes();
+    for (const [fileUri] of allNotes) {
+      await storage.deleteAllNotes(fileUri);
+    }
+
+    // Clear workspace state
+    await context.workspaceState.update('commentary.notes', undefined);
+
     if (overlayHost) {
       overlayHost.dispose();
     }
