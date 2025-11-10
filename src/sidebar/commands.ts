@@ -8,7 +8,7 @@ import { OverlayHost } from '../preview/overlayHost';
 import { AgentClient } from '../agent/client';
 import { CommentsViewProvider, CommentTreeItem } from './commentsView';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
-import { Note } from '../types';
+import { Note, NotesChangedEvent } from '../types';
 import { DocumentNavigationService } from './documentNavigation';
 import { CommentaryFileDecorationProvider } from '../decorations/fileDecorationProvider';
 
@@ -65,7 +65,12 @@ export class CommandManager {
         if (confirm === 'Delete') {
           await this.storage.deleteNote(item.note.id, item.note.file);
           await this.overlayHost.refreshPreview();
-          this.commentsView.refresh();
+          const event: NotesChangedEvent = {
+            type: 'deleted',
+            noteId: item.note.id,
+            documentUri: item.note.file
+          };
+          this.commentsView.refresh(event);
           // Refresh file decoration to update comment count badge
           const fileUri = vscode.Uri.parse(item.note.file);
           await this.fileDecorationProvider?.refresh(fileUri);
@@ -133,7 +138,12 @@ export class CommandManager {
         if (method === 'cli' || method === 'api') {
           await this.storage.deleteNote(note.id, note.file);
           await this.overlayHost.refreshPreview();
-          this.commentsView.refresh();
+          const event: NotesChangedEvent = {
+            type: 'deleted',
+            noteId: note.id,
+            documentUri: note.file
+          };
+          this.commentsView.refresh(event);
           // Refresh file decoration to update comment count badge
           const fileUri = vscode.Uri.parse(note.file);
           await this.fileDecorationProvider?.refresh(fileUri);
@@ -580,7 +590,8 @@ export class CommandManager {
           };
 
           await this.storage.saveNote(updatedNote);
-          this.commentsView.refresh();
+          const event: NotesChangedEvent = { type: 'updated', note: updatedNote };
+          this.commentsView.refresh(event);
           vscode.window.showInformationMessage('Comment updated');
         }
       })
@@ -655,7 +666,8 @@ export class CommandManager {
         };
 
         await this.storage.saveNote(note);
-        this.commentsView.refresh();
+        const event: NotesChangedEvent = { type: 'added', note };
+        this.commentsView.refresh(event);
         vscode.window.showInformationMessage('Document comment added');
       })
     );

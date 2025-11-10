@@ -29,6 +29,11 @@ export interface Note {
   isDocumentLevel?: boolean; // True if comment applies to entire document
 }
 
+export type NotesChangedEvent =
+  | { type: 'added'; note: Note }
+  | { type: 'updated'; note: Note }
+  | { type: 'deleted'; noteId: string; documentUri: string };
+
 export interface SerializedSelection {
   quote: TextQuoteSelector;
   position: TextPositionSelector;
@@ -49,7 +54,8 @@ export enum MessageType {
   ready = 'ready',
   selectionMade = 'selectionMade',
   addDocumentComment = 'addDocumentComment',
-  updateDocumentText = 'updateDocumentText'
+  updateDocumentText = 'updateDocumentText',
+  openMarkdownLink = 'openMarkdownLink'
 }
 
 /**
@@ -133,6 +139,12 @@ export interface UpdateDocumentTextMessage extends BaseMessage {
   newText: string;
 }
 
+export interface OpenMarkdownLinkMessage extends BaseMessage {
+  type: MessageType.openMarkdownLink;
+  href: string;
+  documentUri: string;
+}
+
 export type PreviewMessage =
   | SaveCommentMessage
   | SaveAndSubmitToAgentMessage
@@ -144,7 +156,8 @@ export type PreviewMessage =
   | ReadyMessage
   | SelectionMadeMessage
   | AddDocumentCommentMessage
-  | UpdateDocumentTextMessage;
+  | UpdateDocumentTextMessage
+  | OpenMarkdownLinkMessage;
 
 export interface BaseHostMessage {
   type: HostMessageType;

@@ -7,14 +7,24 @@ import { StorageManager } from '../storage';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { FolderTreeItem, FileTreeItem, CommentTreeItem } from './treeItems';
 import { buildFolderTree, getWorkspaceRelativePath, getDisplayPath, FileNode, FolderNode, isFileInWorkspace } from '../utils/fileTree';
+import { NotesChangedEvent } from '../types';
 
 export { CommentTreeItem, FileTreeItem, FolderTreeItem };
 
 export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+  private static readonly INITIAL_REVEAL_DELAY_MS = 50;
+  private static readonly REVEAL_RETRY_DELAY_MS = 100;
+  private static readonly MAX_REVEAL_ATTEMPTS = 6;
+
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
   private folderTree: FolderNode | null = null; // Cache the folder tree
+  private fileItemsByUri = new Map<string, FileTreeItem>();
+  private commentItemsById = new Map<string, CommentTreeItem>();
+  private commentIdsByFileUri = new Map<string, Set<string>>();
+  private pendingReveal: { fileUri: string; noteId?: string } | null = null;
+  private pendingRevealAttempts = 0;
 
   constructor(
     private storage: StorageManager,
@@ -26,9 +36,35 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.updateEmptyMessage(); // Set initial message
   }
 
-  refresh(): void {
-    console.log('[CommentsView] refresh() called');
-    this.folderTree = null; // Invalidate cache
+  refresh(event?: NotesChangedEvent): void {
+    console.log('[CommentsView] refresh() called with event:', event);
+
+    if (event) {
+      // Selective cache invalidation: only clear cache for the affected file
+      this.clearCommentCacheForFile(event.type === 'deleted' ? event.documentUri! : event.note.file);
+      this.folderTree = null; // Still invalidate folder tree since it includes comment counts
+    } else {
+      // Full refresh: clear all caches
+      this.folderTree = null;
+      this.fileItemsByUri.clear();
+      this.commentItemsById.clear();
+      this.commentIdsByFileUri.clear();
+    }
+
+    if (event) {
+      this.pendingRevealAttempts = 0;
+      if (event.type === 'added' || event.type === 'updated') {
+        this.pendingReveal = { fileUri: event.note.file, noteId: event.note.id };
+        console.log('[CommentsView] Set pending reveal for:', event.note.id, 'in file:', event.note.file);
+      } else if (event.type === 'deleted') {
+        this.pendingReveal = { fileUri: event.documentUri };
+        console.log('[CommentsView] Set pending reveal for deleted note in file:', event.documentUri);
+      }
+    } else {
+      this.pendingReveal = null;
+      console.log('[CommentsView] No event, clearing pending reveal');
+    }
+
     this._onDidChangeTreeData.fire();
     console.log('[CommentsView] _onDidChangeTreeData fired');
 
@@ -37,6 +73,13 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Update empty state message
     this.updateEmptyMessage();
+
+    if (this.pendingReveal) {
+      console.log('[CommentsView] Scheduling reveal in', CommentsViewProvider.INITIAL_REVEAL_DELAY_MS, 'ms');
+      setTimeout(() => {
+        void this.revealPending();
+      }, CommentsViewProvider.INITIAL_REVEAL_DELAY_MS);
+    }
   }
 
   private async updateContext(): Promise<void> {
@@ -63,6 +106,31 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     console.log('[CommentsView] getTreeItem called');
     return element;
+  }
+
+  getParent(element: vscode.TreeItem): vscode.TreeItem | undefined {
+    if (element instanceof CommentTreeItem) {
+      // Return parent FileTreeItem
+      return this.fileItemsByUri.get(element.note.file);
+    }
+
+    if (element instanceof FileTreeItem) {
+      // Return parent FolderTreeItem if file is nested
+      if (!this.folderTree) {
+        return undefined;
+      }
+      return this.findParentFolderForFile(this.folderTree, element.fileUri);
+    }
+
+    if (element instanceof FolderTreeItem) {
+      // Return parent folder or undefined if at root
+      if (!this.folderTree) {
+        return undefined;
+      }
+      return this.findParentFolderForFolder(this.folderTree, element.folderPath);
+    }
+
+    return undefined;
   }
 
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
@@ -113,12 +181,14 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
-      items.push(new FileTreeItem(
+      const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
         collapsibleState
-      ));
+      );
+      this.fileItemsByUri.set(file.uri, fileItem);
+      items.push(fileItem);
     }
 
     // Sort: folders first, then files
@@ -168,12 +238,14 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
-      items.push(new FileTreeItem(
+      const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
         collapsibleState
-      ));
+      );
+      this.fileItemsByUri.set(file.uri, fileItem);
+      items.push(fileItem);
     }
 
     // Sort: folders first, then files
@@ -196,9 +268,17 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const notes = await this.storage.getNotes(fileUri);
     console.log('[CommentsView] Got', notes.length, 'notes');
 
-    const items = notes.map(
-      (note) => new CommentTreeItem(note, vscode.TreeItemCollapsibleState.None)
-    );
+    // Only populate cache if not already populated (avoid race with reveal)
+    const noteIds = new Set<string>();
+
+    const items = notes.map((note) => {
+      const item = new CommentTreeItem(note, vscode.TreeItemCollapsibleState.None);
+      this.commentItemsById.set(note.id, item);
+      noteIds.add(note.id);
+      return item;
+    });
+
+    this.commentIdsByFileUri.set(fileUri, noteIds);
 
     console.log('[CommentsView] Returning comment items for file:', items.length);
     return items;
@@ -287,6 +367,130 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       count += subfolder.files.length + this.countSubfolderFiles(subfolder);
     }
     return count;
+  }
+
+  private findParentFolderForFile(root: FolderNode, fileUri: string): FolderTreeItem | undefined {
+    // Check if file is at this level
+    for (const file of root.files) {
+      if (file.uri === fileUri) {
+        // File found at this level - return this folder if not root
+        if (root.path) {
+          return new FolderTreeItem(
+            root.path,
+            root.path.split('/').pop() || root.path,
+            root.files.length + this.countSubfolderFiles(root),
+            root.commentCount
+          );
+        }
+        return undefined; // File is at root level
+      }
+    }
+
+    // Recursively search subfolders
+    for (const folder of root.subfolders.values()) {
+      const found = this.findParentFolderForFile(folder, fileUri);
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  private findParentFolderForFolder(root: FolderNode, folderPath: string): FolderTreeItem | undefined {
+    // Check if this folder is a direct child
+    for (const [, folder] of root.subfolders) {
+      if (folder.path === folderPath) {
+        // Found folder at this level - return parent
+        if (root.path) {
+          return new FolderTreeItem(
+            root.path,
+            root.path.split('/').pop() || root.path,
+            root.files.length + this.countSubfolderFiles(root),
+            root.commentCount
+          );
+        }
+        return undefined; // Folder is at root level
+      }
+    }
+
+    // Recursively search subfolders
+    for (const folder of root.subfolders.values()) {
+      const found = this.findParentFolderForFolder(folder, folderPath);
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  private clearCommentCacheForFile(fileUri: string): void {
+    const ids = this.commentIdsByFileUri.get(fileUri);
+    if (ids) {
+      for (const id of ids) {
+        this.commentItemsById.delete(id);
+      }
+      this.commentIdsByFileUri.delete(fileUri);
+    }
+  }
+
+  private async revealPending(): Promise<void> {
+    if (!this.pendingReveal || !this.treeView) {
+      return;
+    }
+
+    const { fileUri, noteId } = this.pendingReveal;
+    const fileItem = this.fileItemsByUri.get(fileUri);
+
+    if (!fileItem) {
+      this.scheduleRevealRetry();
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(fileItem, { expand: true, focus: false, select: !noteId });
+    } catch (error) {
+      console.error('[CommentsView] Failed to reveal file item', error);
+    }
+
+    if (!noteId) {
+      this.pendingReveal = null;
+      this.pendingRevealAttempts = 0;
+      return;
+    }
+
+    const commentItem = this.commentItemsById.get(noteId);
+    if (!commentItem) {
+      this.scheduleRevealRetry();
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(commentItem, { select: true, focus: true, expand: true });
+    } catch (error) {
+      console.error('[CommentsView] Failed to reveal comment item', error);
+    }
+
+    this.pendingReveal = null;
+    this.pendingRevealAttempts = 0;
+  }
+
+  private scheduleRevealRetry(): void {
+    if (!this.pendingReveal) {
+      return;
+    }
+
+    this.pendingRevealAttempts += 1;
+    if (this.pendingRevealAttempts > CommentsViewProvider.MAX_REVEAL_ATTEMPTS) {
+      console.warn('[CommentsView] Unable to reveal pending comment after', CommentsViewProvider.MAX_REVEAL_ATTEMPTS, 'attempts');
+      this.pendingReveal = null;
+      return;
+    }
+
+    setTimeout(() => {
+      void this.revealPending();
+    }, CommentsViewProvider.REVEAL_RETRY_DELAY_MS);
   }
 
   dispose(): void {

@@ -306,9 +306,9 @@ function activateInternal(context: vscode.ExtensionContext) {
   );
 
   // Refresh view and decorations when notes change
-  overlayHost.onNotesChanged(() => {
+  overlayHost.onNotesChanged((event) => {
     console.log('[Extension] onNotesChanged fired - refreshing sidebar and decorations');
-    commentsViewProvider?.refresh();
+    commentsViewProvider?.refresh(event);
     fileDecorationProvider?.refresh();
     console.log('[Extension] Sidebar and decorations refresh called');
   });

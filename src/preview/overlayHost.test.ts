@@ -19,21 +19,21 @@ type MockPanel = {
 // Mock Memento for testing
 class MockMemento implements vscode.Memento {
   private storage = new Map<string, unknown>();
-  
+
   keys(): readonly string[] {
     return Array.from(this.storage.keys());
   }
-  
+
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;
   get<T>(key: string, defaultValue?: T): T | undefined {
     return (this.storage.get(key) as T) ?? defaultValue;
   }
-  
+
   async update(key: string, value: unknown): Promise<void> {
     this.storage.set(key, value);
   }
-  
+
   setKeysForSync(_keys: string[]): void {
     // Mock implementation
   }
@@ -43,13 +43,17 @@ suite('OverlayHost Tests', () => {
   let context: vscode.ExtensionContext;
   let storage: StorageManager;
   let overlayHost: OverlayHost;
+  let showWarningMessageOriginal: typeof vscode.window.showWarningMessage;
 
   // Helper to create a mock panel
-  function createMockPanel(): MockPanel {
+  function createMockPanel(onMessage?: (data: unknown) => void): MockPanel {
     return {
       onDidDispose: () => ({ dispose: () => {} }),
       webview: {
-        postMessage: async () => true,
+        postMessage: async (data: unknown) => {
+          onMessage?.(data);
+          return true;
+        },
       },
     };
   }
@@ -75,22 +79,35 @@ suite('OverlayHost Tests', () => {
       globalStoragePath: '/test/globalStorage',
       logPath: '/test/log',
     } as unknown as vscode.ExtensionContext;
+
+    showWarningMessageOriginal = vscode.window.showWarningMessage;
   });
 
-  setup(() => {
+  setup(async () => {
+    // Clear workspace state before each test
+    await context.workspaceState.update('commentary.notes', undefined);
+
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     storage = new StorageManager(context, workspaceRoot);
     overlayHost = new OverlayHost(context, storage);
+
+    (vscode.window.showWarningMessage as unknown as typeof vscode.window.showWarningMessage) = async () => 'Delete';
   });
 
   teardown(async () => {
-    // Clean up test data
-    if (context && context.workspaceState) {
-      await context.workspaceState.update('commentary.notes', undefined);
+    // Clean up all notes
+    const allNotes = await storage.getAllNotes();
+    for (const [fileUri] of allNotes) {
+      await storage.deleteAllNotes(fileUri);
     }
+
+    // Clear workspace state
+    await context.workspaceState.update('commentary.notes', undefined);
+
     if (overlayHost) {
       overlayHost.dispose();
     }
+    (vscode.window.showWarningMessage as unknown as typeof vscode.window.showWarningMessage) = showWarningMessageOriginal;
   });
 
   suite('Webview Registration', () => {
@@ -246,91 +263,28 @@ suite('OverlayHost Tests', () => {
       };
       await storage.saveNote(note);
 
-      // Delete it
+      const sentMessages: unknown[] = [];
+      const panel = createMockPanel((data) => sentMessages.push(data));
+      overlayHost.registerWebview(panel as unknown as vscode.WebviewPanel, 'file:///test.md');
+
       const message: PreviewMessage & { noteId?: string, documentUri?: string } = {
         type: MessageType.deleteComment,
         noteId: 'test-1',
         documentUri: 'file:///test.md',
       };
 
-      const panel = createMockPanel();
-
       await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
 
       const notes = await storage.getNotes('file:///test.md');
       assert.strictEqual(notes.length, 0);
+      assert.deepStrictEqual(
+        sentMessages.find((msg) => typeof msg === 'object' && msg !== null && (msg as { type?: string }).type === 'removeHighlight'),
+        { type: 'removeHighlight', noteId: 'test-1' }
+      );
     });
   });
 
-  suite('Save and Submit to Agent Handler', () => {
-    test.skip('Should save and prepare comment for agent', async () => {
-      // Skip: This test requires full command registration which isn't available in isolated tests
-      // The business logic (save/update/delete) is tested separately
-      // E2E testing of agent integration should be done in integration tests
-      const message: PreviewMessage & {
-        documentUri?: string,
-        selection?: SerializedSelection,
-        commentText?: string
-      } = {
-        type: MessageType.saveAndSubmitToAgent,
-        selection: {
-          quote: { exact: 'test', prefix: '', suffix: '' },
-          position: { start: 0, end: 4 },
-        },
-        commentText: 'Send to agent',
-        documentUri: 'file:///test.md',
-      };
-
-      const panel = createMockPanel();
-
-      await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
-
-      // Note should be deleted after sending to agent
-      const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 0);
-    });
-
-    test.skip('Should update existing comment when submitting with noteId', async () => {
-      // Skip: This test requires full command registration which isn't available in isolated tests
-      // The business logic (save/update/delete) is tested separately
-      // E2E testing of agent integration should be done in integration tests
-      // Create initial comment
-      const note: Note = {
-        id: 'test-1',
-        file: 'file:///test.md',
-        quote: { exact: 'test', prefix: '', suffix: '' },
-        position: { start: 0, end: 4 },
-        text: 'Original',
-        createdAt: new Date().toISOString(),
-      };
-      await storage.saveNote(note);
-
-      // Submit updated version
-      const message: PreviewMessage & {
-        documentUri?: string,
-        noteId?: string,
-        selection?: SerializedSelection,
-        commentText?: string
-      } = {
-        type: MessageType.saveAndSubmitToAgent,
-        noteId: 'test-1',
-        selection: {
-          quote: { exact: 'test', prefix: '', suffix: '' },
-          position: { start: 0, end: 4 },
-        },
-        commentText: 'Updated and sent',
-        documentUri: 'file:///test.md',
-      };
-
-      const panel = createMockPanel();
-
-      await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
-
-      // Note should be deleted after sending to agent
-      const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 0);
-    });
-  });
+  // Save and Submit to Agent tests moved to src/preview/agent.integration.test.ts
 
   suite('Preview Refresh', () => {
     test('Should refresh preview after save', async () => {
@@ -344,6 +298,9 @@ suite('OverlayHost Tests', () => {
           },
         },
       };
+
+      // Register the panel so the handler can find it
+      overlayHost.registerWebview(panel as vscode.WebviewPanel, 'file:///test.md');
 
       const message: PreviewMessage & { documentUri?: string } = {
         type: MessageType.saveComment,

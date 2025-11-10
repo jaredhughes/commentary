@@ -16,7 +16,7 @@ console.log('[OVERLAY.JS] Script is loading...');
   let currentSelection = null;
   let commentBubble = null;
   let highlights = new Map(); // noteId -> highlight element
-  let bubbleJustOpened = false; // Track if bubble was just created to avoid immediate close
+  let bubbleOpenedAt = 0; // Timestamp when bubble was opened (to debounce immediate closes)
   let activeHighlight = null; // Temporary highlight while bubble is open
   let trackedRange = null; // Track the range for repositioning on scroll
   let scrollListener = null; // Reference to scroll listener for cleanup
@@ -85,7 +85,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       tooltip: 'Copy comment to clipboard'
     };
   }
-  
+
   function getSaveButtonConfig() {
     return window.commentaryButtonConfigs?.save || {
       icon: '<i class="codicon codicon-save"></i>',
@@ -93,7 +93,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       tooltip: 'Save comment'
     };
   }
-  
+
   function getDeleteButtonConfig() {
     return window.commentaryButtonConfigs?.delete || {
       icon: '<i class="codicon codicon-trash"></i>',
@@ -131,6 +131,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Listen for mouseup to detect selections
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
+
+    // Intercept clicks on markdown links to open in Commentary
+    document.addEventListener('click', handleLinkClick);
+    console.log('[OVERLAY.JS] link click listener added');
 
     // Listen for messages from extension
     window.addEventListener('message', handleHostMessage);
@@ -175,12 +179,11 @@ console.log('[OVERLAY.JS] Script is loading...');
   function handleMouseUp(event) {
     console.log('[OVERLAY] handleMouseUp fired, target:', event.target);
     console.log('[OVERLAY] commentBubble exists:', !!commentBubble);
-    console.log('[OVERLAY] bubbleJustOpened:', bubbleJustOpened);
 
-    // Ignore events that fire immediately after opening the bubble
-    if (bubbleJustOpened) {
-      console.log('[OVERLAY] Ignoring mouseup - bubble just opened');
-      bubbleJustOpened = false;
+    // Ignore events that fire within 100ms of opening the bubble (debounce)
+    const timeSinceOpen = Date.now() - bubbleOpenedAt;
+    if (bubbleOpenedAt > 0 && timeSinceOpen < 100) {
+      console.log('[OVERLAY] Ignoring mouseup - bubble just opened', timeSinceOpen, 'ms ago');
       return;
     }
 
@@ -228,8 +231,8 @@ console.log('[OVERLAY.JS] Script is loading...');
       createActiveHighlight(range);
 
       showBubble(selection, event.clientX, event.clientY);
-      bubbleJustOpened = true; // Set flag to ignore next mouseup
-      console.log('[OVERLAY] bubbleJustOpened flag set');
+      bubbleOpenedAt = Date.now(); // Set timestamp to debounce immediate closes
+      console.log('[OVERLAY] bubbleOpenedAt timestamp set');
     }
   }
 
@@ -248,7 +251,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Get text position
     const position = getTextPosition(range);
 
-    console.log('[OVERLAY] Serialized selection:', {exact, prefix, suffix, position});
+    console.log('[OVERLAY] Serialized selection:', { exact, prefix, suffix, position });
 
     return {
       quote: {
@@ -304,13 +307,30 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get text position (character offsets from document start)
    */
   function getTextPosition(range) {
-    // Simplified - in production, calculate accurate offsets
-    const bodyText = document.body.textContent || '';
-    const selectedText = range.toString();
-    const start = bodyText.indexOf(selectedText);
-    const end = start + selectedText.length;
+    try {
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(document.body);
+      preRange.setEnd(range.startContainer, range.startOffset);
 
-    return { start, end };
+      const start = preRange.toString().length;
+      const length = range.toString().length;
+      const end = start + length;
+
+      if (typeof preRange.detach === 'function') {
+        preRange.detach();
+      }
+
+      return { start, end };
+    } catch (error) {
+      console.error('[OVERLAY] Failed to calculate precise text position, falling back to indexOf', error);
+
+      const bodyText = document.body.textContent || '';
+      const selectedText = range.toString();
+      const start = bodyText.indexOf(selectedText);
+      const end = start === -1 ? -1 : start + selectedText.length;
+
+      return { start, end };
+    }
   }
 
   /**
@@ -535,10 +555,10 @@ console.log('[OVERLAY.JS] Script is loading...');
       }
     };
     document.addEventListener('keydown', globalEscapeHandler);
-    
+
     // Clean up global handler when bubble is hidden
     const originalHideBubble = hideBubble;
-    hideBubble = function() {
+    hideBubble = function () {
       document.removeEventListener('keydown', globalEscapeHandler);
       hideBubble = originalHideBubble; // Restore original
       originalHideBubble();
@@ -553,15 +573,13 @@ console.log('[OVERLAY.JS] Script is loading...');
       deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
         console.log('[OVERLAY] Delete button clicked, noteId:', noteId);
-        if (confirm('Delete this comment?')) {
-          console.log('[OVERLAY] User confirmed deletion');
-          postMessage({
-            type: 'deleteComment',
-            noteId: noteId,
-            documentUri: window.commentaryDocumentUri
-          });
-          hideBubble();
-        }
+        postMessage({
+          type: 'deleteComment',
+          noteId: noteId,
+          documentUri: window.commentaryDocumentUri
+        });
+        // Don't hide bubble here - wait for host's removeHighlight message
+        // This way bubble stays open if user cancels deletion
       };
       buttonContainer.appendChild(deleteBtn);
     }
@@ -811,11 +829,16 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     // Try to find the text using the quote selector
-    const range = findTextRange(note.quote);
+    let range = findTextRange(note.quote);
 
     if (!range) {
-      console.warn('[OVERLAY] Could not anchor note:', note.id, 'selected text:', note.quote.exact.substring(0, 30));
-      return false;
+      console.warn('[OVERLAY] Could not anchor note via quote:', note.id, 'selected text:', note.quote.exact.substring(0, 30));
+      range = findRangeFromPosition(note.position);
+      if (range) {
+        console.warn('[OVERLAY] Falling back to position anchoring for note:', note.id);
+      } else {
+        return false;
+      }
     }
 
     // Create highlight mark element
@@ -824,28 +847,27 @@ console.log('[OVERLAY.JS] Script is loading...');
     mark.dataset.noteId = note.id;
     mark.title = note.text;
 
-    // Wrap the range
-    try {
-      range.surroundContents(mark);
-      highlights.set(note.id, mark);
-
-      // Add click handler to edit comment
-      mark.addEventListener('click', () => {
-        console.log('[OVERLAY] Click on highlight', note.id);
-        // Request the full note data from extension to edit
-        postMessage({
-          type: 'editHighlightComment',
-          noteId: note.id,
-        });
-        bubbleJustOpened = true;
-      });
-
-      console.log('[OVERLAY] Successfully painted highlight:', note.id);
-      return true;
-    } catch (error) {
-      console.error('[OVERLAY] Failed to paint highlight:', note.id, error);
+    const created = wrapRangeWithMark(range, mark);
+    if (!created) {
+      console.error('[OVERLAY] Failed to paint highlight:', note.id);
       return false;
     }
+
+    highlights.set(note.id, mark);
+
+    // Add click handler to edit comment
+    mark.addEventListener('click', () => {
+      console.log('[OVERLAY] Click on highlight', note.id);
+      // Request the full note data from extension to edit
+      postMessage({
+        type: 'editHighlightComment',
+        noteId: note.id,
+      });
+      bubbleOpenedAt = Date.now();
+    });
+
+    console.log('[OVERLAY] Successfully painted highlight:', note.id);
+    return true;
   }
 
   /**
@@ -947,6 +969,46 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Fallback: rebuild range using stored character offsets
+   */
+  function findRangeFromPosition(position) {
+    if (!position) {
+      return null;
+    }
+
+    const start = Number(position.start);
+    const end = Number(position.end);
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || start < 0) {
+      return null;
+    }
+
+    return findRangeAtIndex(start, end - start);
+  }
+
+  /**
+   * Safely wrap DOM range with a <mark>, with fallback for complex selections
+   */
+  function wrapRangeWithMark(range, mark) {
+    try {
+      range.surroundContents(mark);
+      return true;
+    } catch (error) {
+      console.warn('[OVERLAY] surroundContents failed, attempting extract/insert fallback', error);
+
+      try {
+        const extracted = range.extractContents();
+        mark.appendChild(extracted);
+        range.insertNode(mark);
+        return true;
+      } catch (fallbackError) {
+        console.error('[OVERLAY] highlight fallback failed', fallbackError);
+        return false;
+      }
+    }
+  }
+
+  /**
    * Clear all highlights
    */
   function clearHighlights() {
@@ -987,6 +1049,13 @@ console.log('[OVERLAY.JS] Script is loading...');
         parent.insertBefore(mark.firstChild, mark);
       }
       parent.removeChild(mark);
+
+      // Normalize parent to merge fragmented text nodes
+      // This prevents text position corruption from accumulated unwrapping
+      if (parent.normalize) {
+        parent.normalize();
+      }
+
       highlights.delete(noteId);
     }
   }
@@ -1022,10 +1091,23 @@ console.log('[OVERLAY.JS] Script is loading...');
     };
 
     // Get the highlight element to position near it
-    const mark = highlights.get(note.id);
+    let mark = highlights.get(note.id);
     if (!mark) {
-      console.error('[OVERLAY] No highlight found for note:', note.id);
+      console.warn('[OVERLAY] No highlight found for note, attempting to rebuild:', note.id);
+      const rebuilt = paintHighlight(note);
+      if (rebuilt) {
+        mark = highlights.get(note.id);
+      }
+    }
+
+    if (!mark) {
+      console.error('[OVERLAY] Unable to rebuild highlight for note:', note.id);
       console.error('[OVERLAY] Available highlight IDs:', Array.from(highlights.keys()));
+
+      // Reset editing state to prevent stale state corruption
+      editingNoteId = null;
+      currentSelection = null;
+      isDocumentLevelComment = false;
 
       // Show a user-friendly message
       alert('Could not find this comment in the document. Try refreshing the preview.');
@@ -1036,7 +1118,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     if (shouldScroll) {
       mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    
+
     // Always add visual emphasis
     mark.classList.add('commentary-highlight-focus');
     setTimeout(() => {
@@ -1104,9 +1186,15 @@ console.log('[OVERLAY.JS] Script is loading...');
         paintHighlights(message.notes || []);
         break;
 
-      case 'removeHighlight':
-        removeHighlight(message.noteId);
+      case 'removeHighlight': {
+        const noteIdToRemove = message.noteId;
+        const shouldClose = editingNoteId === noteIdToRemove;
+        removeHighlight(noteIdToRemove);
+        if (shouldClose) {
+          hideBubble();
+        }
         break;
+      }
 
       case 'scrollToHighlight':
         scrollToHighlight(message.noteId);
@@ -1163,6 +1251,43 @@ console.log('[OVERLAY.JS] Script is loading...');
           }
         }
         break;
+    }
+  }
+
+  /**
+   * Handle clicks on links to open markdown files in Commentary
+   */
+  function handleLinkClick(event) {
+    const target = event.target;
+
+    // Check if click is on a link or inside a link
+    const link = target.closest('a[href]');
+    if (!link) {
+      return;
+    }
+
+    const href = link.getAttribute('href');
+    if (!href) {
+      return;
+    }
+
+    // Only intercept relative .md links (not external URLs or anchors)
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+      return;
+    }
+
+    // Check if it's a markdown file (strip fragments/queries before checking extension)
+    const normalizedHref = href.split('#')[0].split('?')[0];
+    if (normalizedHref.toLowerCase().endsWith('.md')) {
+      event.preventDefault();
+      console.log('[OVERLAY] Intercepted markdown link:', href);
+
+      // Send message to extension to open in Commentary
+      postMessage({
+        type: 'openMarkdownLink',
+        href: href,
+        documentUri: window.commentaryDocumentUri,
+      });
     }
   }
 

@@ -1,0 +1,19 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running pre-push checks..."
+echo ""
+
+echo "Linting..."
+npm run lint || { echo "Linting failed"; exit 1; }
+echo ""
+
+echo "TypeScript compilation check..."
+npm run validate || { echo "TypeScript compilation failed"; exit 1; }
+echo ""
+
+echo "Running tests..."
+npm test || { echo "Tests failed"; exit 1; }
+echo ""
+
+echo "All checks passed! Pushing..."

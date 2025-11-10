@@ -5,7 +5,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import MarkdownIt from 'markdown-it';
-import markdownItAnchor from 'markdown-it-anchor';
 import markdownItTaskLists from 'markdown-it-task-lists';
 import hljs from 'highlight.js';
 import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from '../utils/buttonConfig';
@@ -44,9 +43,6 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         return '<pre class="hljs"><code>' + this.md.utils.escapeHtml(str) + '</code></pre>';
       }
     })
-      .use(markdownItAnchor, {
-        permalink: markdownItAnchor.permalink.headerLink(),
-      })
       .use(markdownItTaskLists, {
         enabled: true,
         label: true,
@@ -333,7 +329,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
     const themeName = this.getThemeName();
-    
+
     // Get button configurations from our pure utility
     const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
@@ -349,7 +345,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const agentBtnConfig = getAgentButtonConfig(provider, hasExplicitCursorCli);
     const saveBtnConfig = getSaveButtonConfig(isMac);
     const deleteBtnConfig = getDeleteButtonConfig();
-    
+
     console.log('[MarkdownWebview] Theme loading:', {
       themeName,
       configuredTheme: config.get<string>('theme.name'),
@@ -425,6 +421,52 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     @media (max-width: 480px) {
       body { padding: 56px 12px 12px 12px; }
     }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+      color: var(--commentary-heading-color);
+    }
+
+    .markdown-body h1 > a,
+    .markdown-body h2 > a,
+    .markdown-body h3 > a,
+    .markdown-body h4 > a,
+    .markdown-body h5 > a,
+    .markdown-body h6 > a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .markdown-body h1 > a:hover,
+    .markdown-body h2 > a:hover,
+    .markdown-body h3 > a:hover,
+    .markdown-body h4 > a:hover,
+    .markdown-body h5 > a:hover,
+    .markdown-body h6 > a:hover,
+    .markdown-body h1 > a:focus,
+    .markdown-body h2 > a:focus,
+    .markdown-body h3 > a:focus,
+    .markdown-body h4 > a:focus,
+    .markdown-body h5 > a:focus,
+    .markdown-body h6 > a:focus,
+    .markdown-body h1 > a:active,
+    .markdown-body h2 > a:active,
+    .markdown-body h3 > a:active,
+    .markdown-body h4 > a:active,
+    .markdown-body h5 > a:active,
+    .markdown-body h6 > a:active {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .markdown-body a {
+      color: var(--commentary-link-color);
+      text-decoration-color: currentColor;
+    }
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->
@@ -435,7 +477,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
-  
+
   <script nonce="${nonce}">
     // Debug theme loading
     console.log('[Commentary Webview] Theme loading:', {
@@ -445,13 +487,13 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       highlightUri: '${highlightUriWithCache}',
       isDarkTheme: ${isDarkTheme},
     });
-    
+
     // Validate theme file loaded
     document.addEventListener('DOMContentLoaded', () => {
       const themeLink = document.querySelector('link[data-theme-name]');
       const highlightLink = document.querySelector('link[data-highlight-theme]');
       const codiconLink = document.querySelector('link[data-codicons]');
-      
+
       // Note: Can't read cssRules due to CORS, just check if sheet loaded
       const getSheetInfo = (link) => {
         if (!link) return null;
@@ -468,14 +510,14 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
           };
         }
       };
-      
+
       console.log('[Commentary Webview] DOM loaded, checking stylesheets:', {
         themeLink: getSheetInfo(themeLink),
         highlightLink: getSheetInfo(highlightLink),
         codiconLink: getSheetInfo(codiconLink),
         totalStylesheets: document.styleSheets.length,
       });
-      
+
       // Check for CSS variables set by themes
       const rootStyles = getComputedStyle(document.documentElement);
       const sampleVars = [
@@ -484,26 +526,26 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         '--pico-color',
         'color-scheme',
       ];
-      
+
       const cssVars = {};
       sampleVars.forEach(varName => {
         cssVars[varName] = rootStyles.getPropertyValue(varName) || 'not set';
       });
-      
+
       console.log('[Commentary Webview] CSS variables on :root:', cssVars);
       console.log('[Commentary Webview] Computed body styles:', {
         backgroundColor: rootStyles.getPropertyValue('background-color'),
         color: rootStyles.getPropertyValue('color'),
         fontFamily: rootStyles.getPropertyValue('font-family'),
       });
-      
+
       // Test if codicon font is available
       const testCodeIcon = document.createElement('i');
       testCodeIcon.className = 'codicon codicon-trash';
       testCodeIcon.style.position = 'absolute';
       testCodeIcon.style.left = '-9999px';
       document.body.appendChild(testCodeIcon);
-      
+
       setTimeout(() => {
         const testStyles = getComputedStyle(testCodeIcon);
         console.log('[Commentary Webview] Codicon test:', {

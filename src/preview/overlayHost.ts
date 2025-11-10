@@ -15,12 +15,13 @@ import {
   EditHighlightCommentMessage,
   SendToAgentMessage,
   Note,
+  NotesChangedEvent,
   PreviewMessage
 } from '../types';
 
 export class OverlayHost {
   private messageHandler: MessageHandler;
-  private onNotesChangedEmitter = new vscode.EventEmitter<void>();
+  private onNotesChangedEmitter = new vscode.EventEmitter<NotesChangedEvent>();
   private webviewPanels: Map<string, vscode.WebviewPanel> = new Map();
 
   public readonly onNotesChanged = this.onNotesChangedEmitter.event;
@@ -60,8 +61,8 @@ export class OverlayHost {
 
     await this.messageHandler.handleMessage(messageWithUri);
 
-    // After handling, refresh the preview
-    await this.refreshPreviewForDocument(documentUri, panel);
+    // Note: Handlers (saveComment, saveAndSubmitToAgent, etc.) manage their own preview refresh
+    // to avoid redundant refreshes. deleteComment doesn't need a refresh as the overlay handles highlight removal.
   }
 
   private setupMessageHandlers(): void {
@@ -102,7 +103,7 @@ export class OverlayHost {
             await this.refreshPreviewForDocument(documentUri, panel);
           }
 
-          this.onNotesChangedEmitter.fire();
+          this.onNotesChangedEmitter.fire({ type: 'updated', note: existingDocComment });
           return;
         }
       }
@@ -126,7 +127,7 @@ export class OverlayHost {
         await this.refreshPreviewForDocument(documentUri, panel);
       }
 
-      this.onNotesChangedEmitter.fire();
+      this.onNotesChangedEmitter.fire({ type: 'added', note });
     });
 
     // Handle save and submit to agent (atomic operation)
@@ -151,6 +152,7 @@ export class OverlayHost {
 
       let noteId: string;
       let note: Note;
+      let changeEvent: NotesChangedEvent | undefined;
 
       // Check if this is editing an existing note or creating a new one
       if (msg.noteId) {
@@ -164,6 +166,7 @@ export class OverlayHost {
           note = existingNote;
           noteId = msg.noteId;
           console.log('Updated existing note:', noteId);
+          changeEvent = { type: 'updated', note: existingNote };
         } else {
           console.error('Note not found for editing:', msg.noteId);
           vscode.window.showErrorMessage('Comment not found');
@@ -184,6 +187,7 @@ export class OverlayHost {
             note = existingDocComment;
             noteId = existingDocComment.id;
             console.log('Updated existing document comment:', noteId);
+            changeEvent = { type: 'updated', note: existingDocComment };
           } else {
             // Create new document comment
             note = {
@@ -198,6 +202,7 @@ export class OverlayHost {
             await this.storage.saveNote(note);
             noteId = note.id;
             console.log('Created new document comment:', noteId);
+            changeEvent = { type: 'added', note };
           }
         } else {
           // Create new regular comment
@@ -213,6 +218,7 @@ export class OverlayHost {
           await this.storage.saveNote(note);
           noteId = note.id;
           console.log('Created new comment:', noteId);
+          changeEvent = { type: 'added', note };
         }
       }
 
@@ -222,7 +228,9 @@ export class OverlayHost {
         await this.refreshPreviewForDocument(documentUri, panel);
       }
 
-      this.onNotesChangedEmitter.fire();
+      if (changeEvent) {
+        this.onNotesChangedEmitter.fire(changeEvent);
+      }
 
       // Now send to agent
       console.log('Sending note to agent:', noteId);
@@ -247,6 +255,16 @@ export class OverlayHost {
         return;
       }
 
+      const confirmation = await vscode.window.showWarningMessage(
+        'Delete this comment?',
+        { modal: true },
+        'Delete'
+      );
+
+      if (confirmation !== 'Delete') {
+        return;
+      }
+
       await this.storage.deleteNote(msg.noteId, documentUri);
 
       // Send removeHighlight message to the webview
@@ -258,7 +276,7 @@ export class OverlayHost {
         });
       }
 
-      this.onNotesChangedEmitter.fire();
+      this.onNotesChangedEmitter.fire({ type: 'deleted', noteId: msg.noteId, documentUri });
     });
 
     // Handle ready message (preview loaded)
@@ -364,8 +382,28 @@ export class OverlayHost {
             await this.refreshPreviewForDocument(documentUri, panel);
           }
 
-          this.onNotesChangedEmitter.fire();
+          this.onNotesChangedEmitter.fire({ type: 'updated', note });
         }
+      }
+    });
+
+    // Handle markdown link clicks
+    this.messageHandler.on(MessageType.openMarkdownLink, async (msg: PreviewMessage & { href?: string; documentUri?: string }) => {
+      console.log('OpenMarkdownLink handler called:', msg);
+
+      if (!msg.href || !msg.documentUri) {
+        return;
+      }
+
+      try {
+        // Resolve the link relative to the current document
+        const currentUri = vscode.Uri.parse(msg.documentUri);
+        const linkUri = vscode.Uri.joinPath(currentUri, '..', msg.href);
+
+        // Open in Commentary preview
+        await vscode.commands.executeCommand('commentary.openPreview', linkUri);
+      } catch (error) {
+        console.error('Failed to open markdown link:', error);
       }
     });
 
