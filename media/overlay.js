@@ -201,7 +201,6 @@ console.log('[OVERLAY.JS] Script is loading...');
     const hasValidSelection = hasSelection && text.length > 0;
 
     console.log('[OVERLAY] Has valid selection:', hasValidSelection);
-    console.log('[OVERLAY] Click detail (1=single, 2=double, 3=triple):', event.detail);
 
     // If bubble is open and user clicked outside
     if (commentBubble) {
