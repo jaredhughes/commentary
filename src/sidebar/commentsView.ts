@@ -38,10 +38,18 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   refresh(event?: NotesChangedEvent): void {
     console.log('[CommentsView] refresh() called with event:', event);
-    this.folderTree = null; // Invalidate cache
-    this.fileItemsByUri.clear();
-    this.commentItemsById.clear();
-    this.commentIdsByFileUri.clear();
+    
+    if (event) {
+      // Selective cache invalidation: only clear cache for the affected file
+      this.clearCommentCacheForFile(event.type === 'deleted' ? event.documentUri! : event.note.file);
+      this.folderTree = null; // Still invalidate folder tree since it includes comment counts
+    } else {
+      // Full refresh: clear all caches
+      this.folderTree = null;
+      this.fileItemsByUri.clear();
+      this.commentItemsById.clear();
+      this.commentIdsByFileUri.clear();
+    }
 
     if (event) {
       this.pendingRevealAttempts = 0;
