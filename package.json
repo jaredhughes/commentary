@@ -516,6 +516,7 @@
     "lint": "eslint src --ext ts --max-warnings 100",
     "test": "node ./out/test/runTest.js",
     "validate": "npm run lint && tsc --noEmit",
+    "package": "npm run compile && npm run vscode:prepublish && vsce package --no-git-tag-version --out vsix/",
     "prepare": "husky"
   },
   "devDependencies": {
