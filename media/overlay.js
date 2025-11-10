@@ -16,7 +16,7 @@ console.log('[OVERLAY.JS] Script is loading...');
   let currentSelection = null;
   let commentBubble = null;
   let highlights = new Map(); // noteId -> highlight element
-  let bubbleJustOpened = false; // Track if bubble was just created to avoid immediate close
+  let bubbleOpenedAt = 0; // Timestamp when bubble was opened (to debounce immediate closes)
   let activeHighlight = null; // Temporary highlight while bubble is open
   let trackedRange = null; // Track the range for repositioning on scroll
   let scrollListener = null; // Reference to scroll listener for cleanup
@@ -179,12 +179,11 @@ console.log('[OVERLAY.JS] Script is loading...');
   function handleMouseUp(event) {
     console.log('[OVERLAY] handleMouseUp fired, target:', event.target);
     console.log('[OVERLAY] commentBubble exists:', !!commentBubble);
-    console.log('[OVERLAY] bubbleJustOpened:', bubbleJustOpened);
 
-    // Ignore events that fire immediately after opening the bubble
-    if (bubbleJustOpened) {
-      console.log('[OVERLAY] Ignoring mouseup - bubble just opened');
-      bubbleJustOpened = false;
+    // Ignore events that fire within 100ms of opening the bubble (debounce)
+    const timeSinceOpen = Date.now() - bubbleOpenedAt;
+    if (bubbleOpenedAt > 0 && timeSinceOpen < 100) {
+      console.log('[OVERLAY] Ignoring mouseup - bubble just opened', timeSinceOpen, 'ms ago');
       return;
     }
 
@@ -232,8 +231,8 @@ console.log('[OVERLAY.JS] Script is loading...');
       createActiveHighlight(range);
 
       showBubble(selection, event.clientX, event.clientY);
-      bubbleJustOpened = true; // Set flag to ignore next mouseup
-      console.log('[OVERLAY] bubbleJustOpened flag set');
+      bubbleOpenedAt = Date.now(); // Set timestamp to debounce immediate closes
+      console.log('[OVERLAY] bubbleOpenedAt timestamp set');
     }
   }
 
@@ -863,7 +862,7 @@ console.log('[OVERLAY.JS] Script is loading...');
         type: 'editHighlightComment',
         noteId: note.id,
       });
-      bubbleJustOpened = true;
+      bubbleOpenedAt = Date.now();
     });
 
     console.log('[OVERLAY] Successfully painted highlight:', note.id);
