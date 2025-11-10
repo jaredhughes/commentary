@@ -94,7 +94,7 @@ suite('CommentsView Integration Tests', () => {
         text: 'Test comment',
         createdAt: new Date().toISOString(),
       };
-      
+
       const event: NotesChangedEvent = { type: 'added', note };
       commentsView.refresh(event);
 
@@ -113,7 +113,7 @@ suite('CommentsView Integration Tests', () => {
         text: 'Updated text',
         createdAt: new Date().toISOString(),
       };
-      
+
       const event: NotesChangedEvent = { type: 'updated', note };
       commentsView.refresh(event);
 

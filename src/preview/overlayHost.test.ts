@@ -284,75 +284,7 @@ suite('OverlayHost Tests', () => {
     });
   });
 
-  suite('Save and Submit to Agent Handler', () => {
-    test.skip('Should save and prepare comment for agent', async () => {
-      // Skip: This test requires full command registration which isn't available in isolated tests
-      // The business logic (save/update/delete) is tested separately
-      // E2E testing of agent integration should be done in integration tests
-      const message: PreviewMessage & {
-        documentUri?: string,
-        selection?: SerializedSelection,
-        commentText?: string
-      } = {
-        type: MessageType.saveAndSubmitToAgent,
-        selection: {
-          quote: { exact: 'test', prefix: '', suffix: '' },
-          position: { start: 0, end: 4 },
-        },
-        commentText: 'Send to agent',
-        documentUri: 'file:///test.md',
-      };
-
-      const panel = createMockPanel();
-
-      await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
-
-      // Note should be deleted after sending to agent
-      const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 0);
-    });
-
-    test.skip('Should update existing comment when submitting with noteId', async () => {
-      // Skip: This test requires full command registration which isn't available in isolated tests
-      // The business logic (save/update/delete) is tested separately
-      // E2E testing of agent integration should be done in integration tests
-      // Create initial comment
-      const note: Note = {
-        id: 'test-1',
-        file: 'file:///test.md',
-        quote: { exact: 'test', prefix: '', suffix: '' },
-        position: { start: 0, end: 4 },
-        text: 'Original',
-        createdAt: new Date().toISOString(),
-      };
-      await storage.saveNote(note);
-
-      // Submit updated version
-      const message: PreviewMessage & {
-        documentUri?: string,
-        noteId?: string,
-        selection?: SerializedSelection,
-        commentText?: string
-      } = {
-        type: MessageType.saveAndSubmitToAgent,
-        noteId: 'test-1',
-        selection: {
-          quote: { exact: 'test', prefix: '', suffix: '' },
-          position: { start: 0, end: 4 },
-        },
-        commentText: 'Updated and sent',
-        documentUri: 'file:///test.md',
-      };
-
-      const panel = createMockPanel();
-
-      await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
-
-      // Note should be deleted after sending to agent
-      const notes = await storage.getNotes('file:///test.md');
-      assert.strictEqual(notes.length, 0);
-    });
-  });
+  // Save and Submit to Agent tests moved to src/preview/agent.integration.test.ts
 
   suite('Preview Refresh', () => {
     test('Should refresh preview after save', async () => {
