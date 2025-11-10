@@ -173,7 +173,7 @@ suite('Storage Persistence Integration Tests', () => {
       let notes = await storage.getNotes(note.file);
       assert.strictEqual(notes.length, 1, 'Should have 1 note before delete');
 
-      await storage.deleteNote(note.file, note.id);
+      await storage.deleteNote(note.id, note.file);
       notes = await storage.getNotes(note.file);
       assert.ok(notes.length === 0 || notes.length === 1, 'Delete should attempt to remove note');
     });
