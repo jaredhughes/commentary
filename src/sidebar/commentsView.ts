@@ -7,6 +7,7 @@ import { StorageManager } from '../storage';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { FolderTreeItem, FileTreeItem, CommentTreeItem } from './treeItems';
 import { buildFolderTree, getWorkspaceRelativePath, getDisplayPath, FileNode, FolderNode, isFileInWorkspace } from '../utils/fileTree';
+import { NotesChangedEvent } from '../types';
 
 export { CommentTreeItem, FileTreeItem, FolderTreeItem };
 
@@ -15,6 +16,10 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
   private treeView: vscode.TreeView<vscode.TreeItem> | undefined;
   private folderTree: FolderNode | null = null; // Cache the folder tree
+  private fileItemsByUri = new Map<string, FileTreeItem>();
+  private commentItemsById = new Map<string, CommentTreeItem>();
+  private pendingReveal: { fileUri: string; noteId?: string } | null = null;
+  private pendingRevealAttempts = 0;
 
   constructor(
     private storage: StorageManager,
@@ -26,9 +31,23 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.updateEmptyMessage(); // Set initial message
   }
 
-  refresh(): void {
+  refresh(event?: NotesChangedEvent): void {
     console.log('[CommentsView] refresh() called');
     this.folderTree = null; // Invalidate cache
+    this.fileItemsByUri.clear();
+    this.commentItemsById.clear();
+
+    if (event) {
+      this.pendingRevealAttempts = 0;
+      if (event.type === 'added' || event.type === 'updated') {
+        this.pendingReveal = { fileUri: event.note.file, noteId: event.note.id };
+      } else if (event.type === 'deleted') {
+        this.pendingReveal = { fileUri: event.documentUri };
+      }
+    } else {
+      this.pendingReveal = null;
+    }
+
     this._onDidChangeTreeData.fire();
     console.log('[CommentsView] _onDidChangeTreeData fired');
 
@@ -37,6 +56,12 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Update empty state message
     this.updateEmptyMessage();
+
+    if (this.pendingReveal) {
+      setTimeout(() => {
+        void this.revealPending();
+      }, 50);
+    }
   }
 
   private async updateContext(): Promise<void> {
@@ -113,12 +138,14 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
-      items.push(new FileTreeItem(
+      const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
         collapsibleState
-      ));
+      );
+      this.fileItemsByUri.set(file.uri, fileItem);
+      items.push(fileItem);
     }
 
     // Sort: folders first, then files
@@ -168,12 +195,14 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
-      items.push(new FileTreeItem(
+      const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
         collapsibleState
-      ));
+      );
+      this.fileItemsByUri.set(file.uri, fileItem);
+      items.push(fileItem);
     }
 
     // Sort: folders first, then files
@@ -196,9 +225,13 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const notes = await this.storage.getNotes(fileUri);
     console.log('[CommentsView] Got', notes.length, 'notes');
 
-    const items = notes.map(
-      (note) => new CommentTreeItem(note, vscode.TreeItemCollapsibleState.None)
-    );
+    this.clearCommentCacheForFile(fileUri);
+
+    const items = notes.map((note) => {
+      const item = new CommentTreeItem(note, vscode.TreeItemCollapsibleState.None);
+      this.commentItemsById.set(note.id, item);
+      return item;
+    });
 
     console.log('[CommentsView] Returning comment items for file:', items.length);
     return items;
@@ -287,6 +320,72 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       count += subfolder.files.length + this.countSubfolderFiles(subfolder);
     }
     return count;
+  }
+
+  private clearCommentCacheForFile(fileUri: string): void {
+    for (const [id, item] of this.commentItemsById.entries()) {
+      if (item.note.file === fileUri) {
+        this.commentItemsById.delete(id);
+      }
+    }
+  }
+
+  private async revealPending(): Promise<void> {
+    if (!this.pendingReveal || !this.treeView) {
+      return;
+    }
+
+    const { fileUri, noteId } = this.pendingReveal;
+    const fileItem = this.fileItemsByUri.get(fileUri);
+
+    if (!fileItem) {
+      this.scheduleRevealRetry();
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(fileItem, { expand: true, focus: false, select: !noteId });
+    } catch (error) {
+      console.error('[CommentsView] Failed to reveal file item', error);
+    }
+
+    if (!noteId) {
+      this.pendingReveal = null;
+      this.pendingRevealAttempts = 0;
+      return;
+    }
+
+    const commentItem = this.commentItemsById.get(noteId);
+    if (!commentItem) {
+      this.scheduleRevealRetry();
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(commentItem, { select: true, focus: true, expand: true });
+    } catch (error) {
+      console.error('[CommentsView] Failed to reveal comment item', error);
+    }
+
+    this.pendingReveal = null;
+    this.pendingRevealAttempts = 0;
+  }
+
+  private scheduleRevealRetry(): void {
+    if (!this.pendingReveal) {
+      return;
+    }
+
+    this.pendingRevealAttempts += 1;
+    if (this.pendingRevealAttempts > 6) {
+      console.warn('[CommentsView] Unable to reveal pending comment after multiple attempts');
+      this.pendingReveal = null;
+      return;
+    }
+
+    setTimeout(() => {
+      void this.revealPending();
+    }, 100);
   }
 
   dispose(): void {
