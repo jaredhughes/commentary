@@ -197,16 +197,11 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Check for selection first
     const selection = window.getSelection();
     const hasSelection = selection && !selection.isCollapsed;
-
-    // Handle triple-click to select block element
-    if (event.detail === 3 && hasSelection) {
-      expandToBlock(selection, event.target);
-    }
-
     const text = hasSelection ? selection.toString().trim() : '';
     const hasValidSelection = hasSelection && text.length > 0;
 
     console.log('[OVERLAY] Has valid selection:', hasValidSelection);
+    console.log('[OVERLAY] Click detail (1=single, 2=double, 3=triple):', event.detail);
 
     // If bubble is open and user clicked outside
     if (commentBubble) {
@@ -1289,50 +1284,6 @@ console.log('[OVERLAY.JS] Script is loading...');
    */
   function postMessage(message) {
     window.commentaryPostMessage(message);
-  }
-
-  /**
-   * Expand selection to nearest block element on triple-click
-   */
-  function expandToBlock(selection, target) {
-    if (!selection || !selection.rangeCount) {
-      return;
-    }
-
-    // Find the nearest block-level ancestor
-    let element = target;
-    while (element && element !== document.body) {
-      if (element.nodeType === Node.ELEMENT_NODE) {
-        const tag = element.tagName;
-        const display = window.getComputedStyle(element).display;
-
-        // Check if it's a block element
-        if (tag === 'P' || tag === 'LI' || tag === 'BLOCKQUOTE' ||
-          tag === 'PRE' || tag === 'DIV' ||
-          tag.match(/^H[1-6]$/) ||
-          display === 'block' || display === 'list-item') {
-
-          // Don't expand if it's our UI elements
-          if (element.classList &&
-            (element.classList.contains('commentary-bubble') ||
-              element.classList.contains('commentary-doc-button'))) {
-            return;
-          }
-
-          // Select the entire block
-          try {
-            const range = document.createRange();
-            range.selectNodeContents(element);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } catch (error) {
-            console.error('[OVERLAY] Failed to expand selection to block', error);
-          }
-          return;
-        }
-      }
-      element = element.parentElement;
-    }
   }
 
   // Initialize when DOM is ready

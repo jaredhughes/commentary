@@ -388,7 +388,7 @@ export class OverlayHost {
     });
 
     // Handle markdown link clicks
-    this.messageHandler.on(MessageType.openMarkdownLink as MessageType, async (msg: PreviewMessage & { href?: string; documentUri?: string }) => {
+    this.messageHandler.on(MessageType.openMarkdownLink, async (msg: PreviewMessage & { href?: string; documentUri?: string }) => {
       console.log('OpenMarkdownLink handler called:', msg);
 
       if (!msg.href || !msg.documentUri) {
