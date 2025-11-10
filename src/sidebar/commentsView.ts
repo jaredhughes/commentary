@@ -38,7 +38,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   refresh(event?: NotesChangedEvent): void {
     console.log('[CommentsView] refresh() called with event:', event);
-    
+
     if (event) {
       // Selective cache invalidation: only clear cache for the affected file
       this.clearCommentCacheForFile(event.type === 'deleted' ? event.documentUri! : event.note.file);
