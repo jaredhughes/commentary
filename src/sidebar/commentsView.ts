@@ -100,6 +100,31 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     return element;
   }
 
+  getParent(element: vscode.TreeItem): vscode.TreeItem | undefined {
+    if (element instanceof CommentTreeItem) {
+      // Return parent FileTreeItem
+      return this.fileItemsByUri.get(element.note.file);
+    }
+
+    if (element instanceof FileTreeItem) {
+      // Return parent FolderTreeItem if file is nested
+      if (!this.folderTree) {
+        return undefined;
+      }
+      return this.findParentFolderForFile(this.folderTree, element.fileUri);
+    }
+
+    if (element instanceof FolderTreeItem) {
+      // Return parent folder or undefined if at root
+      if (!this.folderTree) {
+        return undefined;
+      }
+      return this.findParentFolderForFolder(this.folderTree, element.folderPath);
+    }
+
+    return undefined;
+  }
+
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
     console.log('[CommentsView] getChildren called, element:', element);
 
@@ -235,7 +260,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const notes = await this.storage.getNotes(fileUri);
     console.log('[CommentsView] Got', notes.length, 'notes');
 
-    this.clearCommentCacheForFile(fileUri);
+    // Only populate cache if not already populated (avoid race with reveal)
     const noteIds = new Set<string>();
 
     const items = notes.map((note) => {
@@ -334,6 +359,62 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       count += subfolder.files.length + this.countSubfolderFiles(subfolder);
     }
     return count;
+  }
+
+  private findParentFolderForFile(root: FolderNode, fileUri: string): FolderTreeItem | undefined {
+    // Check if file is at this level
+    for (const file of root.files) {
+      if (file.uri === fileUri) {
+        // File found at this level - return this folder if not root
+        if (root.path) {
+          return new FolderTreeItem(
+            root.path,
+            root.path.split('/').pop() || root.path,
+            root.files.length + this.countSubfolderFiles(root),
+            root.commentCount
+          );
+        }
+        return undefined; // File is at root level
+      }
+    }
+
+    // Recursively search subfolders
+    for (const folder of root.subfolders.values()) {
+      const found = this.findParentFolderForFile(folder, fileUri);
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  private findParentFolderForFolder(root: FolderNode, folderPath: string): FolderTreeItem | undefined {
+    // Check if this folder is a direct child
+    for (const [folderName, folder] of root.subfolders) {
+      if (folder.path === folderPath) {
+        // Found folder at this level - return parent
+        if (root.path) {
+          return new FolderTreeItem(
+            root.path,
+            root.path.split('/').pop() || root.path,
+            root.files.length + this.countSubfolderFiles(root),
+            root.commentCount
+          );
+        }
+        return undefined; // Folder is at root level
+      }
+    }
+
+    // Recursively search subfolders
+    for (const folder of root.subfolders.values()) {
+      const found = this.findParentFolderForFolder(folder, folderPath);
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
   }
 
   private clearCommentCacheForFile(fileUri: string): void {

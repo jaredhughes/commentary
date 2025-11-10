@@ -48,10 +48,10 @@ code, pre, kbd, samp, tt {
 
 @keyframes highlight-pulse {
   0%, 100% {
-    background-color: rgba(255, 220, 0, 0.4);
+    background-color: var(--commentary-highlight-focus-bg, rgba(255, 220, 0, 0.4));
   }
   50% {
-    background-color: rgba(255, 220, 0, 0.55);
+    background-color: var(--commentary-highlight-active-bg, rgba(255, 220, 0, 0.55));
   }
 }
 
