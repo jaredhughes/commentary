@@ -85,7 +85,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       tooltip: 'Copy comment to clipboard'
     };
   }
-  
+
   function getSaveButtonConfig() {
     return window.commentaryButtonConfigs?.save || {
       icon: '<i class="codicon codicon-save"></i>',
@@ -93,7 +93,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       tooltip: 'Save comment'
     };
   }
-  
+
   function getDeleteButtonConfig() {
     return window.commentaryButtonConfigs?.delete || {
       icon: '<i class="codicon codicon-trash"></i>',
@@ -248,7 +248,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Get text position
     const position = getTextPosition(range);
 
-    console.log('[OVERLAY] Serialized selection:', {exact, prefix, suffix, position});
+    console.log('[OVERLAY] Serialized selection:', { exact, prefix, suffix, position });
 
     return {
       quote: {
@@ -535,10 +535,10 @@ console.log('[OVERLAY.JS] Script is loading...');
       }
     };
     document.addEventListener('keydown', globalEscapeHandler);
-    
+
     // Clean up global handler when bubble is hidden
     const originalHideBubble = hideBubble;
-    hideBubble = function() {
+    hideBubble = function () {
       document.removeEventListener('keydown', globalEscapeHandler);
       hideBubble = originalHideBubble; // Restore original
       originalHideBubble();
@@ -811,11 +811,16 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     // Try to find the text using the quote selector
-    const range = findTextRange(note.quote);
+    let range = findTextRange(note.quote);
 
     if (!range) {
-      console.warn('[OVERLAY] Could not anchor note:', note.id, 'selected text:', note.quote.exact.substring(0, 30));
-      return false;
+      console.warn('[OVERLAY] Could not anchor note via quote:', note.id, 'selected text:', note.quote.exact.substring(0, 30));
+      range = findRangeFromPosition(note.position);
+      if (range) {
+        console.warn('[OVERLAY] Falling back to position anchoring for note:', note.id);
+      } else {
+        return false;
+      }
     }
 
     // Create highlight mark element
@@ -824,27 +829,28 @@ console.log('[OVERLAY.JS] Script is loading...');
     mark.dataset.noteId = note.id;
     mark.title = note.text;
 
-    const created = tryCreateHighlight(range, mark);
-    if (!created) {
-      console.error('[OVERLAY] Failed to paint highlight:', note.id);
+    // Wrap the range
+    try {
+      range.surroundContents(mark);
+      highlights.set(note.id, mark);
+
+      // Add click handler to edit comment
+      mark.addEventListener('click', () => {
+        console.log('[OVERLAY] Click on highlight', note.id);
+        // Request the full note data from extension to edit
+        postMessage({
+          type: 'editHighlightComment',
+          noteId: note.id,
+        });
+        bubbleJustOpened = true;
+      });
+
+      console.log('[OVERLAY] Successfully painted highlight:', note.id);
+      return true;
+    } catch (error) {
+      console.error('[OVERLAY] Failed to paint highlight:', note.id, error);
       return false;
     }
-
-    highlights.set(note.id, mark);
-
-    // Add click handler to edit comment
-    mark.addEventListener('click', () => {
-      console.log('[OVERLAY] Click on highlight', note.id);
-      // Request the full note data from extension to edit
-      postMessage({
-        type: 'editHighlightComment',
-        noteId: note.id,
-      });
-      bubbleJustOpened = true;
-    });
-
-    console.log('[OVERLAY] Successfully painted highlight:', note.id);
-    return true;
   }
 
   /**
@@ -946,6 +952,24 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Fallback: rebuild range using stored character offsets
+   */
+  function findRangeFromPosition(position) {
+    if (!position) {
+      return null;
+    }
+
+    const start = Number(position.start);
+    const end = Number(position.end);
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || start < 0) {
+      return null;
+    }
+
+    return findRangeAtIndex(start, end - start);
+  }
+
+  /**
    * Clear all highlights
    */
   function clearHighlights() {
@@ -973,29 +997,6 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     console.log('[OVERLAY] All highlights cleared and text nodes normalized');
-  }
-
-  /**
-   * Try to wrap the DOM range with a highlight element.
-   * Falls back to extract/insert strategy when surroundContents fails
-   * (e.g., selections spanning inline anchors or multiple nodes).
-   */
-  function tryCreateHighlight(range, mark) {
-    try {
-      range.surroundContents(mark);
-      return true;
-    } catch (error) {
-      console.warn('[OVERLAY] surroundContents failed, attempting fallback', error);
-      try {
-        const extracted = range.extractContents();
-        mark.appendChild(extracted);
-        range.insertNode(mark);
-        return true;
-      } catch (fallbackError) {
-        console.error('[OVERLAY] Highlight fallback failed', fallbackError);
-        return false;
-      }
-    }
   }
 
   /**
@@ -1058,7 +1059,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     if (shouldScroll) {
       mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    
+
     // Always add visual emphasis
     mark.classList.add('commentary-highlight-focus');
     setTimeout(() => {
