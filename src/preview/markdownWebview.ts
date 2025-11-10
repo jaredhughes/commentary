@@ -5,7 +5,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import MarkdownIt from 'markdown-it';
-import markdownItAnchor from 'markdown-it-anchor';
 import markdownItTaskLists from 'markdown-it-task-lists';
 import hljs from 'highlight.js';
 import { getAgentButtonConfig, getSaveButtonConfig, getDeleteButtonConfig } from '../utils/buttonConfig';
@@ -44,9 +43,6 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         return '<pre class="hljs"><code>' + this.md.utils.escapeHtml(str) + '</code></pre>';
       }
     })
-      .use(markdownItAnchor, {
-        permalink: markdownItAnchor.permalink.headerLink(),
-      })
       .use(markdownItTaskLists, {
         enabled: true,
         label: true,
