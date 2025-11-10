@@ -1278,7 +1278,7 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     // Check if it's a markdown file (strip fragments/queries before checking extension)
     const normalizedHref = href.split('#')[0].split('?')[0];
-    if (normalizedHref.endsWith('.md')) {
+    if (normalizedHref.toLowerCase().endsWith('.md')) {
       event.preventDefault();
       console.log('[OVERLAY] Intercepted markdown link:', href);
 

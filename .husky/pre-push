@@ -17,4 +17,3 @@ npm test || { echo "Tests failed"; exit 1; }
 echo ""
 
 echo "All checks passed! Pushing..."
-
