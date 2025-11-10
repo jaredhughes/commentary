@@ -578,7 +578,8 @@ console.log('[OVERLAY.JS] Script is loading...');
           noteId: noteId,
           documentUri: window.commentaryDocumentUri
         });
-        hideBubble();
+        // Don't hide bubble here - wait for host's removeHighlight message
+        // This way bubble stays open if user cancels deletion
       };
       buttonContainer.appendChild(deleteBtn);
     }
@@ -1048,6 +1049,13 @@ console.log('[OVERLAY.JS] Script is loading...');
         parent.insertBefore(mark.firstChild, mark);
       }
       parent.removeChild(mark);
+
+      // Normalize parent to merge fragmented text nodes
+      // This prevents text position corruption from accumulated unwrapping
+      if (parent.normalize) {
+        parent.normalize();
+      }
+
       highlights.delete(noteId);
     }
   }
@@ -1095,6 +1103,11 @@ console.log('[OVERLAY.JS] Script is loading...');
     if (!mark) {
       console.error('[OVERLAY] Unable to rebuild highlight for note:', note.id);
       console.error('[OVERLAY] Available highlight IDs:', Array.from(highlights.keys()));
+
+      // Reset editing state to prevent stale state corruption
+      editingNoteId = null;
+      currentSelection = null;
+      isDocumentLevelComment = false;
 
       // Show a user-friendly message
       alert('Could not find this comment in the document. Try refreshing the preview.');
