@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-11-10
+
+### Fixed
+- Highlight rendering now works reliably with robust DOM wrapping and position-based fallback anchoring
+- Delete button in comment overlay now properly removes highlights and closes modal
+- Sidebar automatically expands and reveals newly added/updated comments
+- Triple-click now uses native browser behavior for consistent paragraph/line selection
+- Pico themes no longer broken by CSS overrides
+- Water theme headings now visible (removed conflicting color rules)
+- Removed `markdown-it-anchor` plugin to eliminate unwanted heading link styling
+- Switch case variable scoping in overlay message handler
+
+### Added
+- Markdown link navigation: clicking relative `.md` links opens them in Commentary preview
+- Structured `NotesChangedEvent` type for better event tracking across sidebar/commands
+- Debug logging for comment count investigation
+- Comprehensive integration test skeleton (pending proper fixtures)
+- Platform-specific test runner using VS Code 1.85.0 for compatibility
+
+### Changed
+- Test suite now runs successfully on macOS (218 passing)
+- Comments sidebar now caches tree items for efficient reveal operations
+- Folders with comments auto-expand by default
+
 ## [1.1.0] - 2025-11-09
 
 ### Fixed
