@@ -824,28 +824,27 @@ console.log('[OVERLAY.JS] Script is loading...');
     mark.dataset.noteId = note.id;
     mark.title = note.text;
 
-    // Wrap the range
-    try {
-      range.surroundContents(mark);
-      highlights.set(note.id, mark);
-
-      // Add click handler to edit comment
-      mark.addEventListener('click', () => {
-        console.log('[OVERLAY] Click on highlight', note.id);
-        // Request the full note data from extension to edit
-        postMessage({
-          type: 'editHighlightComment',
-          noteId: note.id,
-        });
-        bubbleJustOpened = true;
-      });
-
-      console.log('[OVERLAY] Successfully painted highlight:', note.id);
-      return true;
-    } catch (error) {
-      console.error('[OVERLAY] Failed to paint highlight:', note.id, error);
+    const created = tryCreateHighlight(range, mark);
+    if (!created) {
+      console.error('[OVERLAY] Failed to paint highlight:', note.id);
       return false;
     }
+
+    highlights.set(note.id, mark);
+
+    // Add click handler to edit comment
+    mark.addEventListener('click', () => {
+      console.log('[OVERLAY] Click on highlight', note.id);
+      // Request the full note data from extension to edit
+      postMessage({
+        type: 'editHighlightComment',
+        noteId: note.id,
+      });
+      bubbleJustOpened = true;
+    });
+
+    console.log('[OVERLAY] Successfully painted highlight:', note.id);
+    return true;
   }
 
   /**
@@ -974,6 +973,29 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     console.log('[OVERLAY] All highlights cleared and text nodes normalized');
+  }
+
+  /**
+   * Try to wrap the DOM range with a highlight element.
+   * Falls back to extract/insert strategy when surroundContents fails
+   * (e.g., selections spanning inline anchors or multiple nodes).
+   */
+  function tryCreateHighlight(range, mark) {
+    try {
+      range.surroundContents(mark);
+      return true;
+    } catch (error) {
+      console.warn('[OVERLAY] surroundContents failed, attempting fallback', error);
+      try {
+        const extracted = range.extractContents();
+        mark.appendChild(extracted);
+        range.insertNode(mark);
+        return true;
+      } catch (fallbackError) {
+        console.error('[OVERLAY] Highlight fallback failed', fallbackError);
+        return false;
+      }
+    }
   }
 
   /**
