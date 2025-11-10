@@ -387,6 +387,26 @@ export class OverlayHost {
       }
     });
 
+    // Handle markdown link clicks
+    this.messageHandler.on(MessageType.openMarkdownLink as MessageType, async (msg: PreviewMessage & { href?: string; documentUri?: string }) => {
+      console.log('OpenMarkdownLink handler called:', msg);
+
+      if (!msg.href || !msg.documentUri) {
+        return;
+      }
+
+      try {
+        // Resolve the link relative to the current document
+        const currentUri = vscode.Uri.parse(msg.documentUri);
+        const linkUri = vscode.Uri.joinPath(currentUri, '..', msg.href);
+
+        // Open in Commentary preview
+        await vscode.commands.executeCommand('commentary.openPreview', linkUri);
+      } catch (error) {
+        console.error('Failed to open markdown link:', error);
+      }
+    });
+
     // Handle send to agent (from webview "Submit to agent" button)
     this.messageHandler.on(MessageType.sendToAgent, async (msg: SendToAgentMessage) => {
       console.log('SendToAgent handler called:', msg);

@@ -54,7 +54,8 @@ export enum MessageType {
   ready = 'ready',
   selectionMade = 'selectionMade',
   addDocumentComment = 'addDocumentComment',
-  updateDocumentText = 'updateDocumentText'
+  updateDocumentText = 'updateDocumentText',
+  openMarkdownLink = 'openMarkdownLink'
 }
 
 /**
@@ -138,6 +139,12 @@ export interface UpdateDocumentTextMessage extends BaseMessage {
   newText: string;
 }
 
+export interface OpenMarkdownLinkMessage extends BaseMessage {
+  type: MessageType.openMarkdownLink;
+  href: string;
+  documentUri: string;
+}
+
 export type PreviewMessage =
   | SaveCommentMessage
   | SaveAndSubmitToAgentMessage
@@ -149,7 +156,8 @@ export type PreviewMessage =
   | ReadyMessage
   | SelectionMadeMessage
   | AddDocumentCommentMessage
-  | UpdateDocumentTextMessage;
+  | UpdateDocumentTextMessage
+  | OpenMarkdownLinkMessage;
 
 export interface BaseHostMessage {
   type: HostMessageType;

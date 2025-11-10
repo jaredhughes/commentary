@@ -132,6 +132,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
 
+    // Intercept clicks on markdown links to open in Commentary
+    document.addEventListener('click', handleLinkClick);
+    console.log('[OVERLAY.JS] link click listener added');
+
     // Listen for messages from extension
     window.addEventListener('message', handleHostMessage);
     console.log('[OVERLAY.JS] message listener added');
@@ -193,6 +197,12 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Check for selection first
     const selection = window.getSelection();
     const hasSelection = selection && !selection.isCollapsed;
+
+    // Handle triple-click to select block element
+    if (event.detail === 3 && hasSelection) {
+      expandToBlock(selection, event.target);
+    }
+
     const text = hasSelection ? selection.toString().trim() : '';
     const hasValidSelection = hasSelection && text.length > 0;
 
@@ -1239,10 +1249,90 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Handle clicks on links to open markdown files in Commentary
+   */
+  function handleLinkClick(event) {
+    const target = event.target;
+
+    // Check if click is on a link or inside a link
+    const link = target.closest('a[href]');
+    if (!link) {
+      return;
+    }
+
+    const href = link.getAttribute('href');
+    if (!href) {
+      return;
+    }
+
+    // Only intercept relative .md links (not external URLs or anchors)
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('#')) {
+      return;
+    }
+
+    // Check if it's a markdown file
+    if (href.endsWith('.md')) {
+      event.preventDefault();
+      console.log('[OVERLAY] Intercepted markdown link:', href);
+
+      // Send message to extension to open in Commentary
+      postMessage({
+        type: 'openMarkdownLink',
+        href: href,
+        documentUri: window.commentaryDocumentUri,
+      });
+    }
+  }
+
+  /**
    * Send message to extension host
    */
   function postMessage(message) {
     window.commentaryPostMessage(message);
+  }
+
+  /**
+   * Expand selection to nearest block element on triple-click
+   */
+  function expandToBlock(selection, target) {
+    if (!selection || !selection.rangeCount) {
+      return;
+    }
+
+    // Find the nearest block-level ancestor
+    let element = target;
+    while (element && element !== document.body) {
+      if (element.nodeType === Node.ELEMENT_NODE) {
+        const tag = element.tagName;
+        const display = window.getComputedStyle(element).display;
+
+        // Check if it's a block element
+        if (tag === 'P' || tag === 'LI' || tag === 'BLOCKQUOTE' ||
+          tag === 'PRE' || tag === 'DIV' ||
+          tag.match(/^H[1-6]$/) ||
+          display === 'block' || display === 'list-item') {
+
+          // Don't expand if it's our UI elements
+          if (element.classList &&
+            (element.classList.contains('commentary-bubble') ||
+              element.classList.contains('commentary-doc-button'))) {
+            return;
+          }
+
+          // Select the entire block
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch (error) {
+            console.error('[OVERLAY] Failed to expand selection to block', error);
+          }
+          return;
+        }
+      }
+      element = element.parentElement;
+    }
   }
 
   // Initialize when DOM is ready
