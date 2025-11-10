@@ -299,6 +299,9 @@ suite('OverlayHost Tests', () => {
         },
       };
 
+      // Register the panel so the handler can find it
+      overlayHost.registerWebview(panel as vscode.WebviewPanel, 'file:///test.md');
+
       const message: PreviewMessage & { documentUri?: string } = {
         type: MessageType.saveComment,
         selection: {

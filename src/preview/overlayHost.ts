@@ -61,8 +61,8 @@ export class OverlayHost {
 
     await this.messageHandler.handleMessage(messageWithUri);
 
-    // After handling, refresh the preview
-    await this.refreshPreviewForDocument(documentUri, panel);
+    // Note: Handlers (saveComment, saveAndSubmitToAgent, etc.) manage their own preview refresh
+    // to avoid redundant refreshes. deleteComment doesn't need a refresh as the overlay handles highlight removal.
   }
 
   private setupMessageHandlers(): void {
