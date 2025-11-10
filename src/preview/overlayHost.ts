@@ -247,6 +247,16 @@ export class OverlayHost {
         return;
       }
 
+      const confirmation = await vscode.window.showWarningMessage(
+        'Delete this comment?',
+        { modal: true },
+        'Delete'
+      );
+
+      if (confirmation !== 'Delete') {
+        return;
+      }
+
       await this.storage.deleteNote(msg.noteId, documentUri);
 
       // Send removeHighlight message to the webview

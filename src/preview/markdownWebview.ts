@@ -333,7 +333,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
     const themeName = this.getThemeName();
-    
+
     // Get button configurations from our pure utility
     const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
@@ -349,7 +349,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const agentBtnConfig = getAgentButtonConfig(provider, hasExplicitCursorCli);
     const saveBtnConfig = getSaveButtonConfig(isMac);
     const deleteBtnConfig = getDeleteButtonConfig();
-    
+
     console.log('[MarkdownWebview] Theme loading:', {
       themeName,
       configuredTheme: config.get<string>('theme.name'),
@@ -425,6 +425,52 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     @media (max-width: 480px) {
       body { padding: 56px 12px 12px 12px; }
     }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+      color: var(--commentary-heading-color);
+    }
+
+    .markdown-body h1 > a,
+    .markdown-body h2 > a,
+    .markdown-body h3 > a,
+    .markdown-body h4 > a,
+    .markdown-body h5 > a,
+    .markdown-body h6 > a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .markdown-body h1 > a:hover,
+    .markdown-body h2 > a:hover,
+    .markdown-body h3 > a:hover,
+    .markdown-body h4 > a:hover,
+    .markdown-body h5 > a:hover,
+    .markdown-body h6 > a:hover,
+    .markdown-body h1 > a:focus,
+    .markdown-body h2 > a:focus,
+    .markdown-body h3 > a:focus,
+    .markdown-body h4 > a:focus,
+    .markdown-body h5 > a:focus,
+    .markdown-body h6 > a:focus,
+    .markdown-body h1 > a:active,
+    .markdown-body h2 > a:active,
+    .markdown-body h3 > a:active,
+    .markdown-body h4 > a:active,
+    .markdown-body h5 > a:active,
+    .markdown-body h6 > a:active {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .markdown-body a {
+      color: var(--commentary-link-color);
+      text-decoration-color: currentColor;
+    }
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->
@@ -436,116 +482,6 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
   <!-- Overlay CSS -->
   <link rel="stylesheet" href="${overlayStyleUri}">
 
-  <!-- Commentary base variables (align with VS Code theme tokens) -->
-  <style nonce="${nonce}">
-    :root {
-      --commentary-background: var(--vscode-editor-background, #1e1e1e);
-      --commentary-foreground: var(--vscode-editor-foreground, #d4d4d4);
-      --commentary-heading-color: var(--vscode-settings-headerForeground, var(--commentary-foreground));
-      --commentary-link-color: var(--vscode-textLink-foreground, #3794ff);
-      --commentary-link-hover-color: var(--vscode-textLink-activeForeground, var(--commentary-link-color));
-      --commentary-muted: var(--vscode-descriptionForeground, #8b949e);
-
-      --commentary-panel-bg: var(--vscode-editorWidget-background, #161b22);
-      --commentary-panel-border: var(--vscode-editorWidget-border, rgba(255, 255, 255, 0.1));
-      --commentary-panel-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-
-      --commentary-control-bg: rgba(255, 255, 255, 0.08);
-      --commentary-control-hover-bg: rgba(255, 255, 255, 0.12);
-      --commentary-control-active-bg: rgba(255, 255, 255, 0.04);
-      --commentary-control-border: rgba(255, 255, 255, 0.12);
-      --commentary-control-foreground: rgba(255, 255, 255, 0.85);
-      --commentary-control-hover-foreground: rgba(255, 255, 255, 1);
-      --commentary-control-disabled-foreground: rgba(255, 255, 255, 0.35);
-
-      --commentary-primary-bg: var(--vscode-button-background, #238636);
-      --commentary-primary-border: transparent;
-      --commentary-primary-hover-bg: var(--vscode-button-hoverBackground, #2ea043);
-      --commentary-primary-active-bg: #1f6e2e;
-      --commentary-primary-foreground: var(--vscode-button-foreground, #ffffff);
-      --commentary-primary-hover-foreground: var(--vscode-button-foreground, #ffffff);
-      --commentary-primary-disabled-foreground: rgba(255, 255, 255, 0.3);
-
-      --commentary-danger-bg: var(--vscode-inputValidation-errorBackground, #da3633);
-      --commentary-danger-border: transparent;
-      --commentary-danger-hover-bg: #e5534b;
-      --commentary-danger-active-bg: #c92a2a;
-      --commentary-danger-foreground: var(--vscode-inputValidation-errorForeground, #ffffff);
-      --commentary-danger-hover-foreground: var(--vscode-inputValidation-errorForeground, #ffffff);
-
-      --commentary-highlight-bg: rgba(56, 139, 253, 0.2);
-      --commentary-highlight-border: rgba(56, 139, 253, 0.45);
-      --commentary-highlight-hover-bg: rgba(56, 139, 253, 0.3);
-      --commentary-highlight-hover-border: rgba(56, 139, 253, 0.6);
-      --commentary-highlight-active-bg: rgba(56, 139, 253, 0.25);
-      --commentary-highlight-active-border: rgba(56, 139, 253, 0.5);
-      --commentary-highlight-focus-bg: rgba(56, 139, 253, 0.35);
-      --commentary-highlight-focus-border: rgba(56, 139, 253, 0.7);
-
-      --commentary-selection-bg: rgba(88, 166, 255, 0.35);
-      --commentary-selection-color: var(--commentary-foreground);
-    }
-
-    @supports (color: color-mix(in srgb, black, white)) {
-      :root {
-        --commentary-panel-bg: var(--vscode-editorWidget-background, color-mix(in srgb, var(--commentary-background) 92%, var(--commentary-foreground) 8%));
-        --commentary-panel-border: var(--vscode-editorWidget-border, color-mix(in srgb, var(--commentary-foreground) 18%, transparent));
-        --commentary-panel-shadow: 0 18px 40px color-mix(in srgb, var(--commentary-background) 60%, black 40%);
-
-        --commentary-control-bg: color-mix(in srgb, var(--commentary-background) 85%, var(--commentary-foreground) 15%);
-        --commentary-control-hover-bg: color-mix(in srgb, var(--commentary-control-bg) 75%, var(--commentary-link-color) 25%);
-        --commentary-control-active-bg: color-mix(in srgb, var(--commentary-control-bg) 90%, black 10%);
-        --commentary-control-border: color-mix(in srgb, var(--commentary-foreground) 16%, transparent);
-        --commentary-control-foreground: color-mix(in srgb, var(--commentary-foreground) 90%, white 10%);
-        --commentary-control-hover-foreground: color-mix(in srgb, var(--commentary-foreground) 100%, white 0%);
-        --commentary-control-disabled-foreground: color-mix(in srgb, var(--commentary-foreground) 35%, transparent);
-
-        --commentary-primary-border: color-mix(in srgb, var(--commentary-primary-bg) 40%, transparent);
-        --commentary-danger-border: color-mix(in srgb, var(--commentary-danger-bg) 40%, transparent);
-
-        --commentary-highlight-bg: color-mix(in srgb, var(--commentary-link-color) 24%, transparent);
-        --commentary-highlight-border: color-mix(in srgb, var(--commentary-link-color) 48%, transparent);
-        --commentary-highlight-hover-bg: color-mix(in srgb, var(--commentary-link-color) 34%, transparent);
-        --commentary-highlight-hover-border: color-mix(in srgb, var(--commentary-link-color) 58%, transparent);
-        --commentary-highlight-active-bg: color-mix(in srgb, var(--commentary-link-color) 28%, transparent);
-        --commentary-highlight-active-border: color-mix(in srgb, var(--commentary-link-color) 52%, transparent);
-        --commentary-highlight-focus-bg: color-mix(in srgb, var(--commentary-link-color) 38%, transparent);
-        --commentary-highlight-focus-border: color-mix(in srgb, var(--commentary-link-color) 62%, transparent);
-
-        --commentary-selection-bg: color-mix(in srgb, var(--commentary-link-color) 30%, transparent);
-      }
-    }
-
-    body {
-      color: var(--commentary-foreground);
-      background-color: var(--commentary-background);
-    }
-
-    .markdown-body {
-      color: inherit;
-      background: transparent;
-    }
-
-    .markdown-body h1,
-    .markdown-body h2,
-    .markdown-body h3,
-    .markdown-body h4,
-    .markdown-body h5,
-    .markdown-body h6 {
-      color: var(--commentary-heading-color);
-    }
-
-    .markdown-body a {
-      color: var(--commentary-link-color);
-      text-decoration-color: currentColor;
-    }
-
-    .markdown-body a:hover,
-    .markdown-body a:focus {
-      color: var(--commentary-link-hover-color);
-    }
-  </style>
-  
   <script nonce="${nonce}">
     // Debug theme loading
     console.log('[Commentary Webview] Theme loading:', {
@@ -555,13 +491,13 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       highlightUri: '${highlightUriWithCache}',
       isDarkTheme: ${isDarkTheme},
     });
-    
+
     // Validate theme file loaded
     document.addEventListener('DOMContentLoaded', () => {
       const themeLink = document.querySelector('link[data-theme-name]');
       const highlightLink = document.querySelector('link[data-highlight-theme]');
       const codiconLink = document.querySelector('link[data-codicons]');
-      
+
       // Note: Can't read cssRules due to CORS, just check if sheet loaded
       const getSheetInfo = (link) => {
         if (!link) return null;
@@ -578,14 +514,14 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
           };
         }
       };
-      
+
       console.log('[Commentary Webview] DOM loaded, checking stylesheets:', {
         themeLink: getSheetInfo(themeLink),
         highlightLink: getSheetInfo(highlightLink),
         codiconLink: getSheetInfo(codiconLink),
         totalStylesheets: document.styleSheets.length,
       });
-      
+
       // Check for CSS variables set by themes
       const rootStyles = getComputedStyle(document.documentElement);
       const sampleVars = [
@@ -594,26 +530,26 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         '--pico-color',
         'color-scheme',
       ];
-      
+
       const cssVars = {};
       sampleVars.forEach(varName => {
         cssVars[varName] = rootStyles.getPropertyValue(varName) || 'not set';
       });
-      
+
       console.log('[Commentary Webview] CSS variables on :root:', cssVars);
       console.log('[Commentary Webview] Computed body styles:', {
         backgroundColor: rootStyles.getPropertyValue('background-color'),
         color: rootStyles.getPropertyValue('color'),
         fontFamily: rootStyles.getPropertyValue('font-family'),
       });
-      
+
       // Test if codicon font is available
       const testCodeIcon = document.createElement('i');
       testCodeIcon.className = 'codicon codicon-trash';
       testCodeIcon.style.position = 'absolute';
       testCodeIcon.style.left = '-9999px';
       document.body.appendChild(testCodeIcon);
-      
+
       setTimeout(() => {
         const testStyles = getComputedStyle(testCodeIcon);
         console.log('[Commentary Webview] Codicon test:', {

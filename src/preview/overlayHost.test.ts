@@ -43,13 +43,17 @@ suite('OverlayHost Tests', () => {
   let context: vscode.ExtensionContext;
   let storage: StorageManager;
   let overlayHost: OverlayHost;
+  let showWarningMessageOriginal: typeof vscode.window.showWarningMessage;
 
   // Helper to create a mock panel
-  function createMockPanel(): MockPanel {
+  function createMockPanel(onMessage?: (data: unknown) => void): MockPanel {
     return {
       onDidDispose: () => ({ dispose: () => {} }),
       webview: {
-        postMessage: async () => true,
+        postMessage: async (data: unknown) => {
+          onMessage?.(data);
+          return true;
+        },
       },
     };
   }
@@ -75,22 +79,23 @@ suite('OverlayHost Tests', () => {
       globalStoragePath: '/test/globalStorage',
       logPath: '/test/log',
     } as unknown as vscode.ExtensionContext;
+
+    showWarningMessageOriginal = vscode.window.showWarningMessage;
   });
 
   setup(() => {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     storage = new StorageManager(context, workspaceRoot);
     overlayHost = new OverlayHost(context, storage);
+ 
+    (vscode.window.showWarningMessage as unknown as typeof vscode.window.showWarningMessage) = async () => 'Delete';
   });
 
   teardown(async () => {
-    // Clean up test data
-    if (context && context.workspaceState) {
-      await context.workspaceState.update('commentary.notes', undefined);
-    }
     if (overlayHost) {
       overlayHost.dispose();
     }
+    (vscode.window.showWarningMessage as unknown as typeof vscode.window.showWarningMessage) = showWarningMessageOriginal;
   });
 
   suite('Webview Registration', () => {
@@ -246,19 +251,24 @@ suite('OverlayHost Tests', () => {
       };
       await storage.saveNote(note);
 
-      // Delete it
+      const sentMessages: unknown[] = [];
+      const panel = createMockPanel((data) => sentMessages.push(data));
+      overlayHost.registerWebview(panel as unknown as vscode.WebviewPanel, 'file:///test.md');
+
       const message: PreviewMessage & { noteId?: string, documentUri?: string } = {
         type: MessageType.deleteComment,
         noteId: 'test-1',
         documentUri: 'file:///test.md',
       };
 
-      const panel = createMockPanel();
-
       await overlayHost.handlePreviewMessage(message as PreviewMessage, 'file:///test.md', panel as vscode.WebviewPanel);
 
       const notes = await storage.getNotes('file:///test.md');
       assert.strictEqual(notes.length, 0);
+      assert.deepStrictEqual(
+        sentMessages.find((msg) => typeof msg === 'object' && msg !== null && (msg as { type?: string }).type === 'removeHighlight'),
+        { type: 'removeHighlight', noteId: 'test-1' }
+      );
     });
   });
 

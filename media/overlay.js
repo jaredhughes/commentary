@@ -304,13 +304,30 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get text position (character offsets from document start)
    */
   function getTextPosition(range) {
-    // Simplified - in production, calculate accurate offsets
-    const bodyText = document.body.textContent || '';
-    const selectedText = range.toString();
-    const start = bodyText.indexOf(selectedText);
-    const end = start + selectedText.length;
+    try {
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(document.body);
+      preRange.setEnd(range.startContainer, range.startOffset);
 
-    return { start, end };
+      const start = preRange.toString().length;
+      const length = range.toString().length;
+      const end = start + length;
+
+      if (typeof preRange.detach === 'function') {
+        preRange.detach();
+      }
+
+      return { start, end };
+    } catch (error) {
+      console.error('[OVERLAY] Failed to calculate precise text position, falling back to indexOf', error);
+
+      const bodyText = document.body.textContent || '';
+      const selectedText = range.toString();
+      const start = bodyText.indexOf(selectedText);
+      const end = start === -1 ? -1 : start + selectedText.length;
+
+      return { start, end };
+    }
   }
 
   /**
@@ -553,15 +570,12 @@ console.log('[OVERLAY.JS] Script is loading...');
       deleteBtn.className = 'commentary-btn commentary-btn-danger commentary-btn-icon commentary-btn-right';
       deleteBtn.onclick = () => {
         console.log('[OVERLAY] Delete button clicked, noteId:', noteId);
-        if (confirm('Delete this comment?')) {
-          console.log('[OVERLAY] User confirmed deletion');
-          postMessage({
-            type: 'deleteComment',
-            noteId: noteId,
-            documentUri: window.commentaryDocumentUri
-          });
-          hideBubble();
-        }
+        postMessage({
+          type: 'deleteComment',
+          noteId: noteId,
+          documentUri: window.commentaryDocumentUri
+        });
+        hideBubble();
       };
       buttonContainer.appendChild(deleteBtn);
     }
@@ -829,28 +843,27 @@ console.log('[OVERLAY.JS] Script is loading...');
     mark.dataset.noteId = note.id;
     mark.title = note.text;
 
-    // Wrap the range
-    try {
-      range.surroundContents(mark);
-      highlights.set(note.id, mark);
-
-      // Add click handler to edit comment
-      mark.addEventListener('click', () => {
-        console.log('[OVERLAY] Click on highlight', note.id);
-        // Request the full note data from extension to edit
-        postMessage({
-          type: 'editHighlightComment',
-          noteId: note.id,
-        });
-        bubbleJustOpened = true;
-      });
-
-      console.log('[OVERLAY] Successfully painted highlight:', note.id);
-      return true;
-    } catch (error) {
-      console.error('[OVERLAY] Failed to paint highlight:', note.id, error);
+    const created = wrapRangeWithMark(range, mark);
+    if (!created) {
+      console.error('[OVERLAY] Failed to paint highlight:', note.id);
       return false;
     }
+
+    highlights.set(note.id, mark);
+
+    // Add click handler to edit comment
+    mark.addEventListener('click', () => {
+      console.log('[OVERLAY] Click on highlight', note.id);
+      // Request the full note data from extension to edit
+      postMessage({
+        type: 'editHighlightComment',
+        noteId: note.id,
+      });
+      bubbleJustOpened = true;
+    });
+
+    console.log('[OVERLAY] Successfully painted highlight:', note.id);
+    return true;
   }
 
   /**
@@ -970,6 +983,28 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Safely wrap DOM range with a <mark>, with fallback for complex selections
+   */
+  function wrapRangeWithMark(range, mark) {
+    try {
+      range.surroundContents(mark);
+      return true;
+    } catch (error) {
+      console.warn('[OVERLAY] surroundContents failed, attempting extract/insert fallback', error);
+
+      try {
+        const extracted = range.extractContents();
+        mark.appendChild(extracted);
+        range.insertNode(mark);
+        return true;
+      } catch (fallbackError) {
+        console.error('[OVERLAY] highlight fallback failed', fallbackError);
+        return false;
+      }
+    }
+  }
+
+  /**
    * Clear all highlights
    */
   function clearHighlights() {
@@ -1045,9 +1080,17 @@ console.log('[OVERLAY.JS] Script is loading...');
     };
 
     // Get the highlight element to position near it
-    const mark = highlights.get(note.id);
+    let mark = highlights.get(note.id);
     if (!mark) {
-      console.error('[OVERLAY] No highlight found for note:', note.id);
+      console.warn('[OVERLAY] No highlight found for note, attempting to rebuild:', note.id);
+      const rebuilt = paintHighlight(note);
+      if (rebuilt) {
+        mark = highlights.get(note.id);
+      }
+    }
+
+    if (!mark) {
+      console.error('[OVERLAY] Unable to rebuild highlight for note:', note.id);
       console.error('[OVERLAY] Available highlight IDs:', Array.from(highlights.keys()));
 
       // Show a user-friendly message
@@ -1128,7 +1171,12 @@ console.log('[OVERLAY.JS] Script is loading...');
         break;
 
       case 'removeHighlight':
-        removeHighlight(message.noteId);
+        const noteIdToRemove = message.noteId;
+        const shouldClose = editingNoteId === noteIdToRemove;
+        removeHighlight(noteIdToRemove);
+        if (shouldClose) {
+          hideBubble();
+        }
         break;
 
       case 'scrollToHighlight':
