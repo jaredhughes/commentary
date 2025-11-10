@@ -391,7 +391,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   private findParentFolderForFolder(root: FolderNode, folderPath: string): FolderTreeItem | undefined {
     // Check if this folder is a direct child
-    for (const [folderName, folder] of root.subfolders) {
+    for (const [, folder] of root.subfolders) {
       if (folder.path === folderPath) {
         // Found folder at this level - return parent
         if (root.path) {
