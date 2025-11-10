@@ -1170,7 +1170,7 @@ console.log('[OVERLAY.JS] Script is loading...');
         paintHighlights(message.notes || []);
         break;
 
-      case 'removeHighlight':
+      case 'removeHighlight': {
         const noteIdToRemove = message.noteId;
         const shouldClose = editingNoteId === noteIdToRemove;
         removeHighlight(noteIdToRemove);
@@ -1178,6 +1178,7 @@ console.log('[OVERLAY.JS] Script is loading...');
           hideBubble();
         }
         break;
+      }
 
       case 'scrollToHighlight':
         scrollToHighlight(message.noteId);
