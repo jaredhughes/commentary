@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Pico themes now load and display correctly by adding `data-theme` attribute to HTML element based on VS Code color theme
+- Pico theme switching now properly updates `data-theme` attribute when changing themes dynamically
+
 ## [1.1.1] - 2025-11-10
 
 ### Fixed
