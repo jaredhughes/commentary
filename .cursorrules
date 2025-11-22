@@ -10,6 +10,11 @@ When implementing features or fixes:
 5. **ALWAYS** update CHANGELOG.md for user-facing changes
 6. **ALWAYS** follow existing code patterns exactly (see patterns section below)
 
+**Additional Resources:**
+- For detailed step-by-step workflows: See `docs/AI_IMPLEMENTATION_GUIDE.md`
+- For troubleshooting common issues: See `docs/AI_IMPLEMENTATION_GUIDE.md` troubleshooting section
+- For quick reference: See `.github/AI_QUICK_START.md`
+
 ## Project Overview
 
 Commentary is a VS Code extension that adds Google Docs-style commenting to rendered Markdown previews. Comments are stored separately from source files and can be sent to AI agents for review.
@@ -458,6 +463,7 @@ this.context.subscriptions.push(
 
 - [ ] Read issue description completely
 - [ ] Search codebase for similar implementations
+- [ ] Read `docs/AI_IMPLEMENTATION_GUIDE.md` if implementing complex feature (has troubleshooting section)
 - [ ] Identify which files need modification
 - [ ] Plan implementation following existing patterns
 - [ ] Write tests first (TDD) or alongside implementation
