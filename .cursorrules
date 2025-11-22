@@ -10,6 +10,14 @@ When implementing features or fixes:
 5. **ALWAYS** update CHANGELOG.md for user-facing changes
 6. **ALWAYS** follow existing code patterns exactly (see patterns section below)
 
+**Documentation Rules:**
+- **NEVER** create new markdown files unless explicitly requested
+- **NEVER** create "setup guides" or "troubleshooting docs" unless they solve a real problem
+- **NEVER** create meta-documentation explaining what was done (documentation should be actionable)
+- **ONLY** create docs when: user explicitly requests, or it's essential for the feature (like API docs)
+- **PREFER** updating existing files (README.md, CHANGELOG.md, .cursorrules) over creating new ones
+- **BE STRATEGIC** - every doc file should have a clear purpose and audience
+
 **Additional Resources:**
 - For detailed step-by-step workflows: See `docs/AI_IMPLEMENTATION_GUIDE.md`
 - For troubleshooting common issues: See `docs/AI_IMPLEMENTATION_GUIDE.md` troubleshooting section
