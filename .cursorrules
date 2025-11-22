@@ -1,94 +1,472 @@
-# Commentary Extension - Cursor AI Rules
+# Commentary Extension - AI Agent Implementation Rules
+
+## CRITICAL: AI Agent Instructions
+
+When implementing features or fixes:
+1. **ALWAYS** read the entire issue description and all comments
+2. **ALWAYS** search the codebase for similar patterns before implementing
+3. **ALWAYS** write tests before or alongside implementation
+4. **ALWAYS** run `npm run validate && npm test` before committing
+5. **ALWAYS** update CHANGELOG.md for user-facing changes
+6. **ALWAYS** follow existing code patterns exactly (see patterns section below)
 
 ## Project Overview
 
-Commentary is a VS Code extension that brings Google Docs-style commenting to rendered Markdown previews. It allows users to:
-- Select text in rendered Markdown and add inline comments
-- Store comments outside the source file (workspace storage or sidecar JSON files)
-- Send comments to AI agents (Claude, Cursor, OpenAI, or custom) for review
-- Export/import comments for sharing and collaboration
+Commentary is a VS Code extension that adds Google Docs-style commenting to rendered Markdown previews. Comments are stored separately from source files and can be sent to AI agents for review.
 
-## Architecture
+**Key Constraint**: Comments NEVER modify the source Markdown file. All annotations are stored externally.
 
-### Core Components
-- `src/extension.ts` - Main activation and registration
-- `src/preview/` - Custom webview editor for Markdown with overlay
-- `src/sidebar/` - Comments tree view and commands
-- `src/agent/` - AI agent integration (provider-agnostic)
-- `src/storage/` - Workspace and sidecar storage backends
-- `media/overlay.js` - Client-side selection, bubble, and highlight rendering
+## File Structure & Responsibilities
 
-### Key Design Principles
-1. **Separation of concerns**: Comments stored separately from source Markdown
-2. **Smart anchoring**: 3-layer fallback (TextQuoteSelector → TextPositionSelector → fuzzy search)
-3. **Provider-agnostic**: Support multiple AI agents via unified interface
-4. **Themeable**: Built-in themes + custom CSS support
+### Core Entry Point
+- `src/extension.ts` - Extension activation, component initialization, lifecycle management
+  - Registers all commands, providers, and event handlers
+  - Manages extension context subscriptions
+  - Handles activation events and cleanup
 
-## AI Agent Integration
+### Preview System (Webview + Overlay)
+- `src/preview/markdownWebview.ts` - Custom editor provider for Markdown files
+  - Renders Markdown to HTML using markdown-it
+  - Manages webview panels and lifecycle
+  - Handles theme loading and CSS injection
+  - Bridges webview messages to extension host
+- `src/preview/overlayHost.ts` - Coordinates overlay UI and highlights
+  - Manages highlight rendering and positioning
+  - Handles comment bubble UI
+  - Coordinates with webview for visual updates
+- `src/preview/rendererBridge.ts` - Message passing between webview and host
+- `media/overlay.js` - Client-side JavaScript for selection and UI
+  - **CRITICAL**: This is vanilla JS, NOT TypeScript. Do not convert.
+  - Handles text selection, comment bubble rendering, highlight clicks
+  - Communicates via postMessage to extension host
 
-When reviewing markdown comments from this extension:
-- Comments include the selected text (quote) and configurable context lines before/after
-- The file being commented on is usually a documentation file (*.md)
-- Users are asking for feedback on specific sections of their documentation
-- Comments may reference multiple sections across the same document
-- Responses should be constructive and focused on improving clarity, accuracy, and readability
+### Sidebar (Tree View)
+- `src/sidebar/commentsView.ts` - Tree view provider for comments sidebar
+  - Displays comments organized by file
+  - Handles tree item rendering and expansion
+  - Manages comment navigation and selection
+- `src/sidebar/commands.ts` - All command handlers
+  - Delete comment, delete all, send to agent, edit comment
+  - Document navigation and opening
+  - Theme selection
+- `src/sidebar/treeItems.ts` - Tree item type definitions
+- `src/sidebar/documentNavigation.ts` - Navigation service for opening documents
 
-## Code Style
+### Storage Layer
+- `src/storage/index.ts` - StorageManager abstraction
+  - Switches between workspace and sidecar storage based on config
+  - Provides unified interface for all storage operations
+- `src/storage/workspaceStorage.ts` - VS Code workspace state storage
+  - Uses `context.workspaceState` Memento API
+  - Not tracked by git
+- `src/storage/sidecarStorage.ts` - File-based JSON storage
+  - Stores comments in `.comments/` directory
+  - Git-trackable, shareable format
+  - One JSON file per Markdown file
 
-- TypeScript strict mode enabled
-- No explicit 'any' types (use generics or specific types)
-- Use async/await for asynchronous operations
-- Prefer VS Code API patterns (commands, configuration, webviews)
-- Log errors to console, show user-friendly messages via vscode.window
+### Agent Integration
+- `src/agent/client.ts` - High-level agent client
+  - Orchestrates sending comments to AI agents
+  - Handles progress indicators and error messages
+  - Manages comment deletion after successful send
+- `src/agent/providerAdapter.ts` - Provider abstraction layer
+  - Detects available methods (CLI, API, clipboard)
+  - Routes requests to appropriate provider implementation
+- `src/agent/providers/` - Provider-specific implementations
+  - `claude.ts`, `cursor.ts`, `openai.ts` - Provider-specific logic
+  - `types.ts` - Provider type definitions
+- `src/agent/payload.ts` - Request payload builder
+  - Formats comments with context lines
+  - Builds prompts for different agent types
+- `src/agent/apiIntegration.ts` - Direct API integration (Claude API)
 
-## When Modifying Agent Integration
+### Types & Messaging
+- `src/types.ts` - Core type definitions
+  - `Note` interface (comment structure)
+  - `TextQuoteSelector`, `TextPositionSelector` (anchoring)
+  - `MessageType`, `HostMessageType` enums
+  - All message interfaces
+- `src/messaging.ts` - Message handling utilities
+  - `MessageHandler` for registering message listeners
+  - `PreviewBridge` for sending messages to webview
 
-If making changes to `src/agent/client.ts` or `src/agent/payload.ts`:
-1. Ensure all providers (claude, cursor, openai, custom) are handled consistently
-2. Test both CLI integration (when available) and clipboard fallback
-3. Maintain backwards compatibility with existing comment payloads
-4. Update configuration schema in package.json if adding new settings
+### Utilities
+- `src/utils/` - Pure utility functions
+  - `textPosition.ts` - Text position calculations
+  - `filePath.ts` - File path utilities
+  - `buttonConfig.ts` - Button configuration helpers
+  - `asyncMutex.ts` - Async mutex for concurrency control
 
-## Testing
+### Decorations
+- `src/decorations/fileDecorationProvider.ts` - File tree decorations
+  - Shows comment count badges on Markdown files
 
-- Test suite in `src/test/suite/extension.test.ts`
-- Run tests with `npm test`
-- Manual testing: Press F5 to launch Extension Development Host
-- Test with both workspace and sidecar storage modes
-- Verify comments survive document edits (smart anchoring)
+## Code Patterns (CRITICAL - Follow Exactly)
 
-## Important Files to Preserve
+### VS Code Extension Patterns
 
-- `media/overlay.js` - Complex selection and rendering logic
-- `src/types.ts` - Shared type definitions used across the extension
-- `package.json` - VS Code extension manifest and configuration schema
+**Command Registration:**
+```typescript
+this.context.subscriptions.push(
+  vscode.commands.registerCommand('commentary.commandName', async (arg?: Type) => {
+    // Implementation
+  })
+);
+```
 
-## Common Tasks
+**Configuration Access:**
+```typescript
+const config = vscode.workspace.getConfiguration('commentary');
+const value = config.get<string>('setting.name', 'defaultValue');
+```
 
-### Adding a new AI provider
-1. Update `package.json` configuration enum
-2. Add case to `getProviderDisplayName()` in `client.ts`
-3. Implement provider-specific CLI method (if applicable)
-4. Update README.md with setup instructions
+**Show Messages:**
+```typescript
+// Info: vscode.window.showInformationMessage('Message');
+// Warning: vscode.window.showWarningMessage('Message', 'Action');
+// Error: vscode.window.showErrorMessage('Message');
+// With progress: vscode.window.withProgress({...}, async (progress) => {...});
+```
 
-### Modifying comment storage format
-1. Update types in `src/types.ts`
-2. Implement migration logic in storage backends
-3. Increment storage version constant
-4. Test import/export functionality
+**Webview Message Handling:**
+```typescript
+webviewPanel.webview.onDidReceiveMessage(
+  (message: PreviewMessage) => this.handleMessage(message, document, webviewPanel),
+  null,
+  this.context.subscriptions
+);
+```
 
-### Changing selection/highlight behavior
-1. Modify `media/overlay.js` (client-side script)
-2. Update messaging protocol if needed (`src/messaging.ts`)
-3. Test with various Markdown structures (headings, code blocks, lists)
+**Storage Access:**
+```typescript
+// Via StorageManager (preferred)
+await this.storage.saveNote(note);
+const notes = await this.storage.getNotes(fileUri);
 
-## Dependencies
+// Direct (only in storage implementations)
+await this.context.workspaceState.update('commentary.notes', data);
+const data = this.context.workspaceState.get<Record<string, Note[]>>('commentary.notes', {});
+```
 
-- VS Code Extension API (^1.85.0)
-- markdown-it for Markdown rendering
-- markdown-it-anchor, markdown-it-github-headings for enhanced navigation
-- markdown-it-task-lists for GitHub-style task list support
+### Type Definitions Pattern
 
-## License
+**Always define types in `src/types.ts` first:**
+```typescript
+export interface NewType {
+  id: string;
+  property: string;
+}
 
-MIT License - See LICENSE file for details
+export enum NewMessageType {
+  actionName = 'actionName',
+}
+```
+
+**Then use throughout codebase:**
+```typescript
+import { NewType, NewMessageType } from '../types';
+```
+
+### Error Handling Pattern
+
+**Always use try-catch with user-friendly messages:**
+```typescript
+try {
+  await someOperation();
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  vscode.window.showErrorMessage(`Operation failed: ${message}`);
+  console.error('[ComponentName] Error:', error);
+}
+```
+
+### Async/Await Pattern
+
+**Always use async/await, never raw promises:**
+```typescript
+// ✅ CORRECT
+async function doSomething(): Promise<void> {
+  const result = await someAsyncOperation();
+  return result;
+}
+
+// ❌ WRONG
+function doSomething(): Promise<void> {
+  return someAsyncOperation().then(result => result);
+}
+```
+
+### Testing Patterns
+
+**Test Structure:**
+```typescript
+import * as assert from 'assert';
+import * as vscode from 'vscode';
+
+suite('ComponentName Tests', () => {
+  let mockContext: vscode.ExtensionContext;
+
+  setup(() => {
+    // Create mock context
+    mockContext = {
+      workspaceState: new MockMemento(),
+      // ... other required properties
+    } as unknown as vscode.ExtensionContext;
+  });
+
+  test('Should do something', async () => {
+    // Arrange
+    const component = new Component(mockContext);
+    
+    // Act
+    const result = await component.doSomething();
+    
+    // Assert
+    assert.strictEqual(result, expectedValue);
+  });
+});
+```
+
+**Mock Extension Context Pattern:**
+```typescript
+const mockContext = {
+  subscriptions: [],
+  workspaceState: {
+    get: (key: string, defaultValue?: T) => storedData[key] ?? defaultValue,
+    update: async (key: string, value: T) => { storedData[key] = value; },
+  },
+  globalState: { /* same pattern */ },
+  extensionUri: vscode.Uri.file('/test'),
+  extensionPath: '/test',
+  // ... other required properties
+} as unknown as vscode.ExtensionContext;
+```
+
+### Adding New Features - Step by Step
+
+**1. Add Types (if needed):**
+- Update `src/types.ts` with new interfaces/enums
+- Export from types file
+
+**2. Implement Core Logic:**
+- Create new file in appropriate directory
+- Follow existing patterns exactly
+- Import types from `src/types.ts`
+- Use StorageManager for storage operations
+- Use AgentClient for agent operations
+
+**3. Register Commands (if needed):**
+- Add command to `package.json` `contributes.commands`
+- Register handler in `src/sidebar/commands.ts` or `src/extension.ts`
+- Add to appropriate menu in `package.json` `contributes.menus`
+
+**4. Write Tests:**
+- Create `componentName.test.ts` next to component file
+- Test happy path, error cases, edge cases
+- Use mock contexts and dependencies
+
+**5. Update Configuration (if needed):**
+- Add setting to `package.json` `contributes.configuration.properties`
+- Use `vscode.workspace.getConfiguration()` to access
+
+**6. Update Documentation:**
+- Update README.md if user-facing
+- Update CHANGELOG.md for user-visible changes
+- Add inline comments for complex logic
+
+## Common Implementation Tasks
+
+### Adding a New AI Provider
+
+**Step 1:** Update `package.json` configuration:
+```json
+"commentary.agent.provider": {
+  "enum": ["claude", "cursor", "openai", "custom", "vscode", "NEW_PROVIDER"]
+}
+```
+
+**Step 2:** Create provider file `src/agent/providers/newprovider.ts`:
+```typescript
+import { ProviderMethod, ProviderConfig } from './types';
+
+export async function sendViaNewProvider(
+  prompt: string,
+  config: ProviderConfig
+): Promise<ProviderMethod> {
+  // Implementation
+}
+```
+
+**Step 3:** Update `src/agent/providerAdapter.ts`:
+- Add provider detection logic
+- Add case in `sendRequest()` method
+
+**Step 4:** Update `src/agent/client.ts`:
+- Add case in `getProviderDisplayName()` if needed
+
+**Step 5:** Add tests in `src/agent/providers/newprovider.test.ts`
+
+**Step 6:** Update README.md with setup instructions
+
+### Modifying Comment Storage Format
+
+**Step 1:** Update `Note` interface in `src/types.ts` (add migration logic if breaking)
+
+**Step 2:** Update storage implementations:
+- `src/storage/workspaceStorage.ts` - Add migration in `getNotes()`
+- `src/storage/sidecarStorage.ts` - Add migration in `getNotes()`
+
+**Step 3:** Update import/export logic if format changed
+
+**Step 4:** Write migration tests
+
+**Step 5:** Update CHANGELOG.md
+
+### Changing Selection/Highlight Behavior
+
+**Step 1:** Modify `media/overlay.js` (client-side JavaScript)
+- This is vanilla JS, not TypeScript
+- Use `postMessage()` to send messages to extension host
+- Message types defined in `src/types.ts`
+
+**Step 2:** Update message handlers in `src/preview/overlayHost.ts` or `src/preview/markdownWebview.ts`
+
+**Step 3:** Update types in `src/types.ts` if message format changed
+
+**Step 4:** Test with various Markdown structures (headings, code blocks, lists, tables)
+
+### Adding a New Command
+
+**Step 1:** Add command definition to `package.json`:
+```json
+{
+  "command": "commentary.newCommand",
+  "title": "New Command",
+  "category": "Commentary"
+}
+```
+
+**Step 2:** Register handler in `src/sidebar/commands.ts`:
+```typescript
+this.context.subscriptions.push(
+  vscode.commands.registerCommand('commentary.newCommand', async () => {
+    // Implementation
+  })
+);
+```
+
+**Step 3:** Add to menu in `package.json` if needed:
+```json
+"menus": {
+  "commandPalette": [{
+    "command": "commentary.newCommand",
+    "when": "true"
+  }]
+}
+```
+
+**Step 4:** Write tests
+
+**Step 5:** Update README.md if user-facing
+
+## Testing Requirements
+
+**Before every commit:**
+1. Run `npm run validate` (lint + type check)
+2. Run `npm test` (all tests must pass)
+3. Manual test in Extension Development Host (F5)
+
+**Test Coverage:**
+- Unit tests for all utility functions
+- Integration tests for component interactions
+- Mock VS Code API for isolated testing
+- Test both workspace and sidecar storage modes
+- Test with different themes
+- Test with different AI providers
+
+**Test File Naming:**
+- `componentName.test.ts` - Unit tests
+- `componentName.integration.test.ts` - Integration tests
+
+## Dependencies & Constraints
+
+**VS Code API:** `^1.85.0` - Use latest stable patterns
+**TypeScript:** Strict mode, no `any` types
+**Node.js:** 18.x or 20.x
+**Markdown Rendering:** markdown-it with plugins
+- markdown-it-task-lists (GitHub task lists)
+- highlight.js (syntax highlighting)
+
+**Critical Constraints:**
+- Comments NEVER modify source files
+- Storage must support both workspace and sidecar modes
+- All providers must support CLI, API, or clipboard fallback
+- Themes must be loadable from `media/themes/` directory
+- Webview scripts must use postMessage for communication
+
+## Error Handling Standards
+
+**User-Facing Errors:**
+- Use `vscode.window.showErrorMessage()` with clear messages
+- Never expose stack traces to users
+- Provide actionable error messages
+
+**Developer Errors:**
+- Log to console with component prefix: `console.error('[ComponentName] Error:', error)`
+- Use output channel for detailed logs: `outputChannel.appendLine('Message')`
+
+**Error Recovery:**
+- Always provide fallback behavior when possible
+- Gracefully degrade functionality rather than crashing
+- Validate inputs before operations
+
+## Performance Considerations
+
+- Use `vscode.window.withProgress()` for long operations
+- Debounce document change events (see `extension.ts` documentChangeTimer pattern)
+- Cache tree items in sidebar (see `commentsView.ts`)
+- Lazy-load webview content
+- Minimize webview message frequency
+
+## Git Workflow for AI Agents
+
+**When implementing an issue:**
+1. Create branch: `git checkout -b feature/issue-number-description`
+2. Make changes following patterns above
+3. Write/update tests
+4. Run `npm run validate && npm test`
+5. Update CHANGELOG.md if user-facing
+6. Commit with conventional commit: `feat: description` or `fix: description`
+7. Push and create PR using template
+
+**Commit Message Format:**
+- `feat: add new feature`
+- `fix: fix bug description`
+- `refactor: refactor component`
+- `test: add tests for component`
+- `docs: update documentation`
+
+## Critical Files to Understand Before Modifying
+
+1. **`src/types.ts`** - All type definitions, understand before changing anything
+2. **`src/extension.ts`** - Activation and lifecycle, understand before adding components
+3. **`media/overlay.js`** - Complex client-side logic, be very careful modifying
+4. **`package.json`** - Extension manifest, understand contributes section
+5. **`src/storage/index.ts`** - Storage abstraction, understand before changing storage
+
+## AI Agent Checklist for Issue Implementation
+
+- [ ] Read issue description completely
+- [ ] Search codebase for similar implementations
+- [ ] Identify which files need modification
+- [ ] Plan implementation following existing patterns
+- [ ] Write tests first (TDD) or alongside implementation
+- [ ] Implement feature following code patterns exactly
+- [ ] Run `npm run validate` - fix all lint/type errors
+- [ ] Run `npm test` - ensure all tests pass
+- [ ] Test manually in Extension Development Host (F5)
+- [ ] Test with both storage modes (workspace and sidecar)
+- [ ] Update CHANGELOG.md if user-facing change
+- [ ] Update README.md if feature needs documentation
+- [ ] Commit with conventional commit message
+- [ ] Create PR using template, link to issue
