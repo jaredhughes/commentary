@@ -451,13 +451,20 @@ this.context.subscriptions.push(
 ## Git Workflow for AI Agents
 
 **When implementing an issue:**
-1. Create branch: `git checkout -b feature/issue-number-description`
+1. **Create branch/worktree:** Use `issue-{number}` format (e.g., `issue-13`, `issue-14`)
+   - Preferred: `git worktree add ../commentary-issue-{num} -b issue-{num}`
+   - Alternative: `git checkout -b issue-{num}` (if not using worktree)
+   - Branch name MUST match issue number exactly: `issue-13` for issue #13
 2. Make changes following patterns above
 3. Write/update tests
 4. Run `npm run validate && npm test`
 5. Update CHANGELOG.md if user-facing
 6. Commit with conventional commit: `feat: description` or `fix: description`
 7. Push and create PR using template
+8. **CRITICAL:** PR description MUST include `Closes #123` or `Fixes #123` to auto-close issue on merge
+   - Use `Closes #123` for features
+   - Use `Fixes #123` for bugs
+   - Place at end of PR description or in commit message
 
 **Commit Message Format:**
 - `feat: add new feature`
@@ -477,6 +484,7 @@ this.context.subscriptions.push(
 ## AI Agent Checklist for Issue Implementation
 
 - [ ] Read issue description completely
+- [ ] Create branch/worktree: `git worktree add ../commentary-issue-{num} -b issue-{num}` (use exact issue number)
 - [ ] Search codebase for similar implementations
 - [ ] Read `docs/AI_IMPLEMENTATION_GUIDE.md` if implementing complex feature (has troubleshooting section)
 - [ ] Identify which files need modification
@@ -491,3 +499,4 @@ this.context.subscriptions.push(
 - [ ] Update README.md if feature needs documentation
 - [ ] Commit with conventional commit message
 - [ ] Create PR using template, link to issue
+- [ ] **CRITICAL:** PR description MUST include `Closes #123` or `Fixes #123` (use exact issue number)
