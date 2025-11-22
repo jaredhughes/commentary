@@ -18,6 +18,13 @@ When implementing features or fixes:
 - **PREFER** updating existing files (README.md, CHANGELOG.md, .cursorrules) over creating new ones
 - **BE STRATEGIC** - every doc file should have a clear purpose and audience
 
+**File Management Rules:**
+- **NEVER** commit ephemeral/temporary files (issue drafts, PR drafts, local notes, etc.)
+- **NEVER** commit files created only to generate GitHub issues/PRs via CLI
+- **ALWAYS** check `git status` before committing - verify no temporary files are staged
+- **ALWAYS** use `.gitignore` for temporary files, or delete them before committing
+- **IF** a file is only used once (like `gh issue create --body-file`), delete it immediately after use
+
 **Additional Resources:**
 - For detailed step-by-step workflows: See `docs/AI_IMPLEMENTATION_GUIDE.md`
 - For troubleshooting common issues: See `docs/AI_IMPLEMENTATION_GUIDE.md` troubleshooting section
