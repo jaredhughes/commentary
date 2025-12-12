@@ -26,9 +26,10 @@ console.log('[OVERLAY.JS] Script is loading...');
   /**
    * Update the theme stylesheet dynamically
    * @param {string} themeName - The name of the theme to load
+   * @param {boolean} [vsCodeIsDark] - Whether VS Code is using a dark theme (for Pico themes)
    */
-  function updateThemeStylesheet(themeName) {
-    console.log('[OVERLAY] updateThemeStylesheet called with:', themeName);
+  function updateThemeStylesheet(themeName, vsCodeIsDark) {
+    console.log('[OVERLAY] updateThemeStylesheet called with:', themeName, 'vsCodeIsDark:', vsCodeIsDark);
 
     // Find the existing theme link element
     const themeLink = document.querySelector('link[data-theme-name]');
@@ -56,8 +57,28 @@ console.log('[OVERLAY.JS] Script is loading...');
     themeLink.href = newHref;
     themeLink.setAttribute('data-theme-name', themeName);
 
+    // Pico themes require data-theme attribute for dark/light mode
+    // They use prefers-color-scheme but webviews may not respect it
+    const isPicoTheme = themeName.startsWith('pico-');
+    if (isPicoTheme) {
+      // Use VS Code color theme if provided, otherwise fallback to system preference
+      let isDark = vsCodeIsDark;
+      if (isDark === undefined) {
+        // Fallback to system preference (may not work in webviews)
+        isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      console.log('[OVERLAY] Set data-theme for Pico theme:', isDark ? 'dark' : 'light');
+    } else {
+      // Remove data-theme attribute for non-Pico themes
+      document.documentElement.removeAttribute('data-theme');
+    }
+
     // Also update syntax highlighting theme based on whether theme is dark
-    const isDarkTheme = themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple';
+    // For Pico themes, use vsCodeIsDark since theme names like 'pico-amber' don't indicate dark/light
+    const isDarkTheme = isPicoTheme
+      ? vsCodeIsDark
+      : (themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple');
     const highlightTheme = isDarkTheme ? 'highlight-dark.css' : 'highlight-light.css';
 
     const highlightLink = document.querySelector('link[data-highlight-theme]');
@@ -1232,7 +1253,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       case 'updateTheme':
         // Update theme dynamically by replacing the theme stylesheet
         console.log('[OVERLAY] Theme update requested:', message.themeName);
-        updateThemeStylesheet(message.themeName);
+        updateThemeStylesheet(message.themeName, message.vsCodeIsDark);
         break;
 
       case 'updateProvider':
