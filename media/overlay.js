@@ -876,8 +876,8 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     highlights.set(note.id, mark);
 
-    // Add click handler to edit comment
-    mark.addEventListener('click', () => {
+    // Click handler function to be attached to all marks
+    const clickHandler = () => {
       console.log('[OVERLAY] Click on highlight', note.id);
       // Request the full note data from extension to edit
       postMessage({
@@ -885,7 +885,21 @@ console.log('[OVERLAY.JS] Script is loading...');
         noteId: note.id,
       });
       bubbleOpenedAt = Date.now();
-    });
+    };
+
+    // Add click handler to all marks (handles multi-mark case)
+    if (mark._multiMarks) {
+      // Multiple marks - add handler to each
+      for (const m of mark._multiMarks) {
+        m.addEventListener('click', clickHandler);
+      }
+    } else if (mark._realMark) {
+      // Single mark created in fallback - add handler to the real mark
+      mark._realMark.addEventListener('click', clickHandler);
+    } else {
+      // Simple case - mark was created directly
+      mark.addEventListener('click', clickHandler);
+    }
 
     console.log('[OVERLAY] Successfully painted highlight:', note.id);
     return true;
@@ -1009,24 +1023,193 @@ console.log('[OVERLAY.JS] Script is loading...');
 
   /**
    * Safely wrap DOM range with a <mark>, with fallback for complex selections
+   * Uses non-destructive text node wrapping for cross-boundary ranges
    */
   function wrapRangeWithMark(range, mark) {
     try {
       range.surroundContents(mark);
       return true;
     } catch (error) {
-      console.warn('[OVERLAY] surroundContents failed, attempting extract/insert fallback', error);
+      console.warn('[OVERLAY] surroundContents failed, attempting text node wrapping fallback', error);
 
+      // Non-destructive fallback: wrap each text node portion individually
+      // This avoids extractContents() which can corrupt DOM structure in lists/code blocks
       try {
-        const extracted = range.extractContents();
-        mark.appendChild(extracted);
-        range.insertNode(mark);
+        const textNodes = getTextNodesInRange(range);
+        if (textNodes.length === 0) {
+          console.error('[OVERLAY] No text nodes found in range');
+          return false;
+        }
+
+        // Create a wrapper to hold references to all mark elements
+        const marks = [];
+
+        for (let i = 0; i < textNodes.length; i++) {
+          const { node, startOffset, endOffset } = textNodes[i];
+          const textContent = node.textContent;
+
+          // Skip empty portions
+          if (startOffset >= endOffset || startOffset >= textContent.length) {
+            continue;
+          }
+
+          // Split text node and wrap the middle portion
+          const wrapMark = document.createElement('mark');
+          wrapMark.className = 'commentary-highlight';
+          wrapMark.dataset.noteId = mark.dataset.noteId;
+          wrapMark.title = mark.title;
+
+          // Split the text node: [before][highlighted][after]
+          const beforeText = textContent.substring(0, startOffset);
+          const highlightText = textContent.substring(startOffset, endOffset);
+          const afterText = textContent.substring(endOffset);
+
+          // Create new nodes
+          const parent = node.parentNode;
+          if (!parent) {
+            continue;
+          }
+
+          // Replace original node with: beforeText + mark(highlightText) + afterText
+          if (beforeText) {
+            parent.insertBefore(document.createTextNode(beforeText), node);
+          }
+
+          wrapMark.textContent = highlightText;
+          parent.insertBefore(wrapMark, node);
+          marks.push(wrapMark);
+
+          if (afterText) {
+            parent.insertBefore(document.createTextNode(afterText), node);
+          }
+
+          // Remove original node
+          parent.removeChild(node);
+        }
+
+        if (marks.length === 0) {
+          console.error('[OVERLAY] Failed to create any highlight marks');
+          return false;
+        }
+
+        // Store reference to first mark (or all marks for multi-span highlights)
+        // The passed-in mark object will be used as a proxy - copy properties from first mark
+        if (marks.length === 1) {
+          // Single mark - just return the created one, copy its parent ref
+          // Actually we need to update the passed mark reference - use the first created mark
+          // Since we can't reassign the reference, we'll store additional marks as data
+          marks[0].dataset.highlightGroup = mark.dataset.noteId;
+          mark.dataset.highlightGroup = mark.dataset.noteId;
+          // Copy the mark element reference for the highlights map
+          Object.assign(mark, { _realMark: marks[0] });
+        } else {
+          // Multiple marks - link them together
+          const groupId = mark.dataset.noteId;
+          marks.forEach((m, idx) => {
+            m.dataset.highlightGroup = groupId;
+            m.dataset.highlightIndex = idx;
+          });
+          mark.dataset.highlightGroup = groupId;
+          mark._multiMarks = marks;
+        }
+
+        // For click handling, we return true and the caller uses the original mark
+        // But we need to make the highlights map work - store first mark as reference
+        mark._realMark = marks[0];
+
+        console.log('[OVERLAY] Successfully wrapped', marks.length, 'text node portions');
         return true;
       } catch (fallbackError) {
-        console.error('[OVERLAY] highlight fallback failed', fallbackError);
+        console.error('[OVERLAY] highlight text node wrapping failed', fallbackError);
         return false;
       }
     }
+  }
+
+  /**
+   * Get all text nodes within a range, with their effective start/end offsets
+   */
+  function getTextNodesInRange(range) {
+    const textNodes = [];
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+    const startOffset = range.startOffset;
+    const endOffset = range.endOffset;
+
+    // If start and end are the same text node
+    if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) {
+      textNodes.push({
+        node: startContainer,
+        startOffset: startOffset,
+        endOffset: endOffset
+      });
+      return textNodes;
+    }
+
+    // Walk all text nodes in the range
+    const walker = document.createTreeWalker(
+      range.commonAncestorContainer,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function(node) {
+          // Check if this text node is within or overlaps the range
+          const nodeRange = document.createRange();
+          nodeRange.selectNodeContents(node);
+
+          // Check if node is before range start or after range end
+          if (range.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0) {
+            return NodeFilter.FILTER_REJECT; // Node is after range
+          }
+          if (range.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0) {
+            return NodeFilter.FILTER_REJECT; // Node is before range
+          }
+
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      let nodeStart = 0;
+      let nodeEnd = node.textContent.length;
+
+      // Adjust start offset if this is the start container
+      if (node === startContainer) {
+        nodeStart = startOffset;
+      }
+
+      // Adjust end offset if this is the end container
+      if (node === endContainer) {
+        nodeEnd = endOffset;
+      }
+
+      textNodes.push({
+        node: node,
+        startOffset: nodeStart,
+        endOffset: nodeEnd
+      });
+    }
+
+    return textNodes;
+  }
+
+  /**
+   * Helper: Unwrap a single mark element, returning its text content to the DOM
+   */
+  function unwrapMark(mark) {
+    const parent = mark.parentNode;
+    if (!parent) {
+      return;
+    }
+
+    while (mark.firstChild) {
+      parent.insertBefore(mark.firstChild, mark);
+    }
+    parent.removeChild(mark);
+
+    // Normalize text nodes after unwrapping to merge adjacent text nodes
+    parent.normalize();
   }
 
   /**
@@ -1035,19 +1218,31 @@ console.log('[OVERLAY.JS] Script is loading...');
   function clearHighlights() {
     console.log('[OVERLAY] Clearing', highlights.size, 'highlights');
 
+    // First, find and remove all marks by highlight group (handles multi-mark case)
+    const groupIds = new Set();
     for (const [noteId, mark] of highlights.entries()) {
-      // Unwrap the mark element
-      const parent = mark.parentNode;
-      if (parent) {
-        while (mark.firstChild) {
-          parent.insertBefore(mark.firstChild, mark);
-        }
-        parent.removeChild(mark);
+      if (mark.dataset && mark.dataset.highlightGroup) {
+        groupIds.add(mark.dataset.highlightGroup);
+      }
 
-        // Normalize text nodes after unwrapping to merge adjacent text nodes
-        parent.normalize();
+      // Handle multi-mark highlights
+      if (mark._multiMarks) {
+        for (const m of mark._multiMarks) {
+          unwrapMark(m);
+        }
+      } else if (mark._realMark) {
+        unwrapMark(mark._realMark);
+      } else if (mark.parentNode) {
+        unwrapMark(mark);
       }
     }
+
+    // Also find any orphaned marks by data attribute (safety cleanup)
+    for (const groupId of groupIds) {
+      const orphanedMarks = document.querySelectorAll(`mark[data-highlight-group="${groupId}"]`);
+      orphanedMarks.forEach(m => unwrapMark(m));
+    }
+
     highlights.clear();
 
     // Normalize the entire markdown content container to ensure clean text nodes
@@ -1064,21 +1259,28 @@ console.log('[OVERLAY.JS] Script is loading...');
    */
   function removeHighlight(noteId) {
     const mark = highlights.get(noteId);
-    if (mark && mark.parentNode) {
-      const parent = mark.parentNode;
-      while (mark.firstChild) {
-        parent.insertBefore(mark.firstChild, mark);
-      }
-      parent.removeChild(mark);
-
-      // Normalize parent to merge fragmented text nodes
-      // This prevents text position corruption from accumulated unwrapping
-      if (parent.normalize) {
-        parent.normalize();
-      }
-
-      highlights.delete(noteId);
+    if (!mark) {
+      return;
     }
+
+    // Handle multi-mark highlights
+    if (mark._multiMarks) {
+      for (const m of mark._multiMarks) {
+        unwrapMark(m);
+      }
+    } else if (mark._realMark) {
+      unwrapMark(mark._realMark);
+    } else if (mark.parentNode) {
+      unwrapMark(mark);
+    }
+
+    // Also clean up any marks by data attribute (handles grouped marks)
+    if (mark.dataset && mark.dataset.highlightGroup) {
+      const groupMarks = document.querySelectorAll(`mark[data-highlight-group="${mark.dataset.highlightGroup}"]`);
+      groupMarks.forEach(m => unwrapMark(m));
+    }
+
+    highlights.delete(noteId);
   }
 
   /**
@@ -1086,14 +1288,40 @@ console.log('[OVERLAY.JS] Script is loading...');
    */
   function scrollToHighlight(noteId) {
     const mark = highlights.get(noteId);
-    if (mark) {
-      mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Add temporary emphasis
-      mark.classList.add('commentary-highlight-focus');
-      setTimeout(() => {
-        mark.classList.remove('commentary-highlight-focus');
-      }, 2000);
+    if (!mark) {
+      return;
     }
+
+    // Get the actual mark element(s) for multi-mark highlights
+    let targetMark = mark;
+    let allMarks = [mark];
+
+    if (mark._multiMarks && mark._multiMarks.length > 0) {
+      targetMark = mark._multiMarks[0];
+      allMarks = mark._multiMarks;
+    } else if (mark._realMark) {
+      targetMark = mark._realMark;
+      allMarks = [mark._realMark];
+    }
+
+    // Scroll to the first mark
+    if (targetMark && targetMark.scrollIntoView) {
+      targetMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Add temporary emphasis to all marks in the highlight
+    for (const m of allMarks) {
+      if (m.classList) {
+        m.classList.add('commentary-highlight-focus');
+      }
+    }
+    setTimeout(() => {
+      for (const m of allMarks) {
+        if (m.classList) {
+          m.classList.remove('commentary-highlight-focus');
+        }
+      }
+    }, 2000);
   }
 
   /**
