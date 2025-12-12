@@ -61,14 +61,14 @@ export class CursorProvider implements ProviderStrategy {
       fileName,
       commentCount: request.contexts.length,
       prompt,
-      footerText: 'Review the comments above, consider the full document context, and make the necessary edits. Save your changes.'
+      footerText: 'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don\'t just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.'
     });
 
-    // Use --print flag for non-interactive mode (auto-applies edits)
-    // Use --approve-mcps to automatically approve MCP servers (only works with --print)
+    // Interactive mode - session stays open after processing the file
+    // File path argument provides initial prompt, then user can continue editing
     return {
       command: config.cursorCliPath,
-      args: ['--print', '--approve-mcps', tempFilePath],
+      args: [tempFilePath],
       workingDirectory: path.dirname(fileUri),
       env: {
         // Pass temp file path and prompt as env vars for cleanup
@@ -147,7 +147,7 @@ export function buildCursorTempFileContent(
     fileName: cleanFileName,
     commentCount: request.contexts.length,
     prompt,
-    footerText: 'Review the comments above and make the necessary edits. Save your changes.'
+    footerText: 'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
   });
 
   const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename

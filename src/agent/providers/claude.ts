@@ -59,7 +59,7 @@ export class ClaudeProvider implements ProviderStrategy {
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      `Review the comments, consider the full document context, and make the necessary edits directly to the file: ${fileUri}. Use the Edit tool to apply changes and save them.`
+      `Review the ENTIRE document at ${fileUri} and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements. Use the Edit tool to make all changes.`
     );
 
     // Create temp file path
@@ -68,16 +68,17 @@ export class ClaudeProvider implements ProviderStrategy {
     const tempFileName = `commentary-claude-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Claude Code CLI command with --print flag and flags to auto-apply edits
-    // --permission-mode acceptEdits: allows Claude to apply edits automatically
-    // --tools Edit Read: ensures Edit and Read tools are available (required for file modifications)
+    // Claude Code CLI command for interactive session with initial prompt piped via stdin
+    // --permission-mode bypassPermissions: bypasses all permission checks including sensitive locations
+    //   (required because initial input is piped, and user already approved by clicking "Send")
+    // --tools Edit,Read: ensures Edit and Read tools are available (required for file modifications)
     // --add-dir: explicitly allow access to the file's directory
+    // Note: Without --print, session stays open for continued interaction after processing initial prompt
     // The actual writing of the temp file happens in the adapter layer
     return {
       command: config.claudeCliPath,
       args: [
-        '--print',
-        '--permission-mode', 'acceptEdits',
+        '--permission-mode', 'bypassPermissions',
         '--tools', 'Edit,Read',
         '--add-dir', path.dirname(fileUri)
       ],
@@ -144,7 +145,7 @@ export function buildClaudeTempFileContent(
   const content = buildSimpleCliPrompt(
     cleanFileName,
     prompt,
-    'Review the comments and make the necessary edits. Save your changes.'
+    'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
   );
 
   const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename

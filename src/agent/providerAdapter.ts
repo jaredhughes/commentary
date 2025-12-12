@@ -332,14 +332,15 @@ export class ProviderAdapter {
     }
 
     // Build command string
-    // Claude CLI: --print with pipe from cat (avoids command length limits)
-    // Cursor-agent: --print --approve-mcps with file path as argument
-    const isClaude = command.command.includes('claude') && command.args.includes('--print');
+    // Claude CLI: pipe from cat (avoids command length limits), then stays interactive
+    // Cursor-agent: file path as argument, stays interactive after processing
+    const isClaude = command.command.includes('claude');
     const hasTempFile = isClaude && command.env?.commentaryTempFile;
-    
+
     if (hasTempFile && command.env) {
       // Use pipe from cat to avoid command length limits and shell escaping issues
       // This is more reliable than stdin redirection or command substitution
+      // After processing piped input, Claude stays open for continued interaction
       const tempFilePath = command.env.commentaryTempFile;
       const fullCommand = `cat "${tempFilePath}" | ${command.command} ${command.args.join(' ')}`;
       terminal.sendText(fullCommand);

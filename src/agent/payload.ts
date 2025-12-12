@@ -89,7 +89,7 @@ export class PayloadBuilder {
     const context = await this.buildContext(note);
     return {
       contexts: [context],
-      instruction: 'Edit the document to address this comment. Apply the requested changes directly to the file.',
+      instruction: 'Review the entire document and address this comment. Consider the full document context and apply any related changes throughout the document that would improve consistency or address similar issues.',
     };
   }
 
@@ -102,7 +102,7 @@ export class PayloadBuilder {
     return {
       contexts,
       instruction:
-        'Edit the document to address all these comments. Apply the requested changes directly to the file.',
+        'Review the entire document and address all these comments. Consider the full document context and apply any related changes throughout the document that would improve consistency or address similar issues across all sections.',
     };
   }
 
@@ -206,7 +206,7 @@ export class PayloadBuilder {
         lines.push('');
 
         if (ctx.contextBefore || ctx.contextAfter) {
-          lines.push('**Context:**');
+          lines.push('**Immediate Context:**');
           lines.push('');
           if (ctx.contextBefore) {
             lines.push('```markdown');
@@ -224,6 +224,15 @@ export class PayloadBuilder {
             lines.push('```');
             lines.push('');
           }
+        }
+
+        // Include full document for inline comments too, so AI can find related changes
+        if (ctx.fullDocument) {
+          lines.push('**Full Document (for broader context and finding related changes):**');
+          lines.push('```markdown');
+          lines.push(ctx.fullDocument);
+          lines.push('```');
+          lines.push('');
         }
       }
 
