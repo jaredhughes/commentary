@@ -426,6 +426,15 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     body {
       padding: 72px 32px 32px 32px;
     }
+
+    /* Pico theme support - Pico uses :where() selectors with zero specificity,
+       so we need to explicitly set body colors to ensure they apply in VS Code webviews */
+    ${isPicoTheme ? `
+    html, body {
+      background-color: var(--pico-background-color);
+      color: var(--pico-color);
+    }
+    ` : ''}
     #markdown-content {
       max-width: 1200px;
       width: 100%;

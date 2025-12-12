@@ -76,9 +76,13 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Insert new link right after the old one (to maintain CSS order)
     themeLink.parentNode.insertBefore(newLink, themeLink.nextSibling);
 
-    // Pico themes require data-theme attribute for dark/light mode
-    // They use prefers-color-scheme but webviews may not respect it
+    // Pico themes require special handling:
+    // 1. data-theme attribute for dark/light mode
+    // 2. Explicit body colors because Pico uses :where() selectors with zero specificity
     const isPicoTheme = themeName.startsWith('pico-');
+
+    // Handle Pico-specific style overrides
+    let picoStyleElement = document.getElementById('pico-theme-overrides');
     if (isPicoTheme) {
       // Use VS Code color theme if provided, otherwise fallback to system preference
       let isDark = vsCodeIsDark;
@@ -88,9 +92,28 @@ console.log('[OVERLAY.JS] Script is loading...');
       }
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
       console.log('[OVERLAY] Set data-theme for Pico theme:', isDark ? 'dark' : 'light');
+
+      // Add/update Pico style overrides (higher specificity than :where())
+      if (!picoStyleElement) {
+        picoStyleElement = document.createElement('style');
+        picoStyleElement.id = 'pico-theme-overrides';
+        document.head.appendChild(picoStyleElement);
+      }
+      picoStyleElement.textContent = `
+        html, body {
+          background-color: var(--pico-background-color) !important;
+          color: var(--pico-color) !important;
+        }
+      `;
+      console.log('[OVERLAY] Added Pico style overrides');
     } else {
       // Remove data-theme attribute for non-Pico themes
       document.documentElement.removeAttribute('data-theme');
+      // Remove Pico style overrides if they exist
+      if (picoStyleElement) {
+        picoStyleElement.remove();
+        console.log('[OVERLAY] Removed Pico style overrides');
+      }
     }
 
     // Also update syntax highlighting theme based on whether theme is dark
@@ -282,7 +305,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // Valid selection - serialize and show bubble
+    // Valid selection - serialize and prepare to show bubble
     currentSelection = serializeSelection(selection);
     console.log('[OVERLAY] currentSelection set:', currentSelection);
     if (currentSelection) {
@@ -290,9 +313,32 @@ console.log('[OVERLAY.JS] Script is loading...');
       const range = selection.getRangeAt(0);
       createActiveHighlight(range);
 
-      showBubble(selection, event.clientX, event.clientY);
-      bubbleOpenedAt = Date.now(); // Set timestamp to debounce immediate closes
-      console.log('[OVERLAY] bubbleOpenedAt timestamp set');
+      // Delay showing bubble slightly to allow Cmd+C/Ctrl+C for copying
+      // If user presses a copy shortcut, they can copy before bubble appears
+      const selectionX = event.clientX;
+      const selectionY = event.clientY;
+      const selectionObj = selection;
+
+      // Clear any pending bubble timeout
+      if (window.pendingBubbleTimeout) {
+        clearTimeout(window.pendingBubbleTimeout);
+      }
+
+      window.pendingBubbleTimeout = setTimeout(() => {
+        // Only show if selection still exists and hasn't changed
+        const currentSel = window.getSelection();
+        if (currentSel && !currentSel.isCollapsed && currentSel.toString().trim().length > 0) {
+          showBubble(selectionObj, selectionX, selectionY);
+          bubbleOpenedAt = Date.now();
+          console.log('[OVERLAY] Bubble shown after delay');
+        } else {
+          console.log('[OVERLAY] Selection cleared before bubble shown (user probably copied)');
+          clearActiveHighlight();
+        }
+        window.pendingBubbleTimeout = null;
+      }, 350); // 350ms delay allows Cmd+C
+
+      console.log('[OVERLAY] Bubble delayed - user can copy with Cmd+C');
     }
   }
 
