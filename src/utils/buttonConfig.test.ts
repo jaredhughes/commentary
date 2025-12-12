@@ -31,6 +31,14 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('terminal'));
     });
     
+    test('returns terminal icon for Codex provider', () => {
+      const config = getAgentButtonConfig('codex');
+
+      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('Codex CLI'));
+    });
+
     test('returns rocket icon for OpenAI provider', () => {
       const config = getAgentButtonConfig('openai');
 
@@ -66,7 +74,7 @@ suite('Button Configuration Utils', () => {
     });
     
     test('all configs include valid codicon class', () => {
-      const providers = ['claude', 'cursor', 'openai', 'vscode', 'custom'] as const;
+      const providers = ['claude', 'cursor', 'codex', 'openai', 'vscode', 'custom'] as const;
 
       for (const provider of providers) {
         const config = getAgentButtonConfig(provider);

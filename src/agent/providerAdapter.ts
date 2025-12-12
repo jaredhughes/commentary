@@ -15,7 +15,7 @@ import {
 } from './providers/types';
 import { ClaudeProvider } from './providers/claude';
 import { CursorProvider, getCursorChatCommands } from './providers/cursor';
-import { OpenAIProvider } from './providers/openai';
+import { CodexProvider } from './providers/codex';
 
 /**
  * Adapter that bridges pure provider logic with VS Code APIs
@@ -30,10 +30,10 @@ export class ProviderAdapter {
     this.terminals = new Map();
     this.terminalCounter = 0;
 
-    // Register all providers
+    // Register all CLI-based providers
     this.providers.set('claude', new ClaudeProvider());
     this.providers.set('cursor', new CursorProvider());
-    this.providers.set('openai', new OpenAIProvider());
+    this.providers.set('codex', new CodexProvider());
   }
 
   /**
@@ -43,7 +43,7 @@ export class ProviderAdapter {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     
     return {
-      provider: config.get<'claude' | 'cursor' | 'openai' | 'vscode' | 'custom'>('provider', 'cursor'),
+      provider: config.get<'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom'>('provider', 'cursor'),
       enabled: config.get<boolean>('enabled', true),
       model: config.get<string>('model'),
 
@@ -54,6 +54,9 @@ export class ProviderAdapter {
       // Cursor
       cursorCliPath: config.get<string>('cursorCliPath'), // No default - must be explicitly configured
       cursorInteractive: config.get<boolean>('cursorInteractive', true),
+
+      // Codex
+      codexCliPath: config.get<string>('codexCliPath'), // No default - must be explicitly configured
 
       // OpenAI
       openaiApiKey: config.get<string>('openaiApiKey'),
@@ -220,57 +223,19 @@ export class ProviderAdapter {
 
   /**
    * Send via API (future implementation)
+   * Currently not implemented - CLI tools are preferred for file editing
    */
   private async sendViaApi(
-    provider: ProviderStrategy,
-    prompt: string,
-    request: AgentRequest,
-    config: ProviderConfig,
+    _provider: ProviderStrategy,
+    _prompt: string,
+    _request: AgentRequest,
+    _config: ProviderConfig,
     providerName: string
   ): Promise<SendResult> {
-    try {
-      // Call the provider's API method if it exists
-      let response: string | undefined;
-
-      if (provider instanceof OpenAIProvider) {
-        response = await provider.callApi(prompt, config);
-      }
-      // Add Claude API support here in future
-      // else if (provider instanceof ClaudeProvider) {
-      //   response = await provider.callApi(prompt, config);
-      // }
-
-      if (response) {
-        // Show response in output channel
-        const outputChannel = vscode.window.createOutputChannel(`Commentary → ${providerName} Response (Preview)`);
-        outputChannel.clear();
-        outputChannel.appendLine(`=== ${providerName} AI Response (Manual Application Required) ===\n`);
-        outputChannel.appendLine(`📝 Review the response below and manually apply changes to your document.\n`);
-        outputChannel.appendLine(`⚠️  Unlike CLI tools (Claude Code, Cursor Agent), API responses do not auto-edit files.\n`);
-        outputChannel.appendLine(`---\n`);
-        outputChannel.appendLine(response);
-        outputChannel.show(true);
-      }
-
-      const message = provider.getSuccessMessage(request, 'api');
-      vscode.window.showInformationMessage(message, 'View Response').then((action) => {
-        if (action === 'View Response' && response) {
-          // Re-show output channel if user clicks button
-          const outputChannel = vscode.window.createOutputChannel(`Commentary → ${providerName} Response (Preview)`);
-          outputChannel.show(true);
-        }
-      });
-
-      return {
-        success: true,
-        method: 'api',
-        message
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`${providerName} API error: ${errorMessage}`);
-      throw error;
-    }
+    // API method is not currently implemented
+    // CLI tools (Claude Code, Cursor Agent, Codex) are preferred for file editing
+    // as they have direct file access and can apply changes automatically
+    throw new Error(`API method not implemented for ${providerName}. Use CLI instead.`);
   }
 
   /**
@@ -332,20 +297,20 @@ export class ProviderAdapter {
     }
 
     // Build command string
-    // Claude CLI: pipe from cat (avoids command length limits), then stays interactive
-    // Cursor-agent: file path as argument, stays interactive after processing
-    const isClaude = command.command.includes('claude');
-    const hasTempFile = isClaude && command.env?.commentaryTempFile;
+    // All CLI providers (Claude, Cursor, Codex) pipe content from temp file
+    // This avoids command length limits and shell escaping issues
+    // After processing piped input, CLI stays open for continued interaction
+    const hasTempFile = command.env?.commentaryTempFile && command.env?.commentaryPrompt;
 
-    if (hasTempFile && command.env) {
-      // Use pipe from cat to avoid command length limits and shell escaping issues
-      // This is more reliable than stdin redirection or command substitution
-      // After processing piped input, Claude stays open for continued interaction
-      const tempFilePath = command.env.commentaryTempFile;
-      const fullCommand = `cat "${tempFilePath}" | ${command.command} ${command.args.join(' ')}`;
+    if (hasTempFile) {
+      // Use pipe from cat to feed prompt content to CLI
+      // More reliable than stdin redirection or command substitution
+      const tempFilePath = command.env!.commentaryTempFile;
+      const args = command.args.length > 0 ? ' ' + command.args.join(' ') : '';
+      const fullCommand = `cat "${tempFilePath}" | ${command.command}${args}`;
       terminal.sendText(fullCommand);
     } else {
-      // Build command string normally for cursor-agent
+      // Build command string normally (fallback for providers without temp files)
       const args = command.args.map(arg => `"${arg.replace(/"/g, '\\"')}"`).join(' ');
       const fullCommand = `${command.command} ${args}`;
       terminal.sendText(fullCommand);

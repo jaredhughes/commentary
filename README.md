@@ -17,7 +17,7 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 - 📖 Documentation writers reviewing drafts
 - ✍️ Technical writers collecting feedback
 - 👥 Content reviewers annotating without commits
-- 🤖 AI-assisted workflows with Claude, Cursor, or ChatGPT
+- 🤖 AI-assisted workflows with Claude Code, Cursor Agent, or Codex
 
 ---
 
@@ -32,18 +32,17 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 
 ### AI Agent Integration
 
-**Automatic (Send) — Recommended**
-- **Claude CLI** — Terminal integration, automatically applies edits
-- **Cursor CLI** — Terminal integration, automatically applies edits
-- **OpenAI API** — Direct API calls, automatically applies edits
-- **Claude API** — Direct API calls (when configured), automatically applies edits
+**CLI Tools (Send) — Recommended**
+- **Claude Code** — Terminal integration, stays open for continued interaction
+- **Cursor Agent** — Terminal integration, stays open for continued interaction
+- **Codex CLI** — Terminal integration with full-auto mode
 
 **Manual (Copy)**
 - **Claude IDE** — Clipboard copy, paste into Claude chat
 - **Cursor IDE** — Clipboard copy, paste into Cursor chat
 - **VS Code Chat** — Clipboard copy, paste into built-in chat
 
-💡 **Automatic methods** send comments directly and apply edits automatically. **Manual methods** copy to clipboard for you to paste—useful when CLI/API isn't available.
+💡 **CLI methods** pipe comments to agentic tools that automatically apply edits and stay open for follow-up. **Manual methods** copy to clipboard for you to paste—useful when CLI isn't available.
 
 ### Beautiful Themes
 Choose from **20 professional themes**:
@@ -85,14 +84,14 @@ Comments survive document edits with 3-layer fallback:
 
 `⌘⇧P` → `Commentary: Configure AI Agent`
 
-**For Automatic Editing (Recommended):**
-- **Claude CLI** — Enter command: `claude` (installs automatically)
-- **Cursor CLI** — Enter path: `cursor-agent` (requires [installation](https://github.com/Cursor-AI/cursor-agent))
-- **OpenAI API** — Enter your API key for direct GPT-4/GPT-3.5 access
+**CLI Tools (Recommended):**
+- **Claude Code** — Enter command: `claude` (default, installs automatically)
+- **Cursor Agent** — Enter path: `cursor-agent` (requires installation)
+- **Codex CLI** — Enter path: `codex` (requires installation)
 
 **For Manual Copy-Paste:**
-- **Claude IDE** — Choose "Claude" provider (uses clipboard)
-- **Cursor IDE** — Choose "Cursor" provider (uses clipboard)
+- **Claude IDE** — Choose "Claude" provider (uses clipboard when CLI unavailable)
+- **Cursor IDE** — Choose "Cursor" provider (uses clipboard when CLI unavailable)
 - **VS Code Chat** — Built-in chat (uses clipboard)
 
 **Advanced:**
@@ -165,30 +164,29 @@ You can comment on an entire document without selecting text:
 
 ### Sending Comments to AI Agent
 
-Commentary supports two types of agent integration: **automatic** (Send) and **manual** (Copy).
+Commentary supports two types of agent integration: **CLI tools** (Send) and **manual** (Copy).
 
-#### Automatic Methods (Send) — Recommended
+#### CLI Tools (Send) — Recommended
 
-These methods send comments directly to your agent and **automatically apply edits** to your files:
+These methods pipe comments to agentic tools via terminal, **automatically apply edits** to your files, and stay open for follow-up interaction:
 
-- **Claude CLI** — Opens terminal with `claude` command, agent applies edits automatically
-- **Cursor CLI** — Opens terminal with `cursor-agent` command, agent applies edits automatically  
-- **OpenAI API** — Direct API calls to GPT-4/GPT-3.5, applies edits automatically
-- **Claude API** — Direct API calls (when API key configured), applies edits automatically
+- **Claude Code** — Opens terminal with `claude` command, session stays open after processing
+- **Cursor Agent** — Opens terminal with `cursor-agent` command, session stays open after processing
+- **Codex CLI** — Opens terminal with `codex --full-auto` command, automatic execution in sandbox
 
 **Behavior:**
-- Comments are sent immediately
-- Agent responses are applied to your files automatically
+- Comments are piped to the CLI tool via stdin
+- Agent reviews the full document context and applies edits automatically
+- Sessions stay open for continued conversation and refinement
 - Comments are **deleted from the sidebar** after successful delivery (they've been processed)
 
 #### Manual Methods (Copy)
 
 These methods copy comments to your clipboard for you to paste manually:
 
-- **Claude IDE** — Copies to clipboard, paste into Claude chat in VS Code/Cursor
-- **Cursor IDE** — Copies to clipboard, paste into Cursor Composer/Chat
+- **Claude IDE** — Copies to clipboard, paste into Claude chat (fallback when CLI unavailable)
+- **Cursor IDE** — Copies to clipboard, paste into Cursor Composer/Chat (fallback when CLI unavailable)
 - **VS Code Chat** — Copies to clipboard, paste into built-in VS Code Chat
-- **OpenAI (fallback)** — Copies to clipboard when API key not configured
 
 **Behavior:**
 - Comments are formatted and copied to clipboard
@@ -232,11 +230,11 @@ These methods copy comments to your clipboard for you to paste manually:
 ```json
 {
   "commentary.agent.enabled": true,
-  "commentary.agent.provider": "cursor",
+  "commentary.agent.provider": "claude",
   "commentary.agent.claudeCliPath": "claude",
   "commentary.agent.cursorCliPath": "cursor-agent",
   "commentary.agent.cursorInteractive": true,
-  "commentary.agent.openaiApiKey": "",
+  "commentary.agent.codexCliPath": "codex",
   "commentary.agent.contextLines": 6
 }
 ```
@@ -249,7 +247,7 @@ These methods copy comments to your clipboard for you to paste manually:
 
 | Command | Action |
 |---------|--------|
-| `Commentary: Configure AI Agent` | Set up Claude, Cursor, OpenAI, or custom |
+| `Commentary: Configure AI Agent` | Set up Claude, Cursor, Codex, or custom |
 | `Commentary: Select Theme` | Choose from 20 themes |
 | `Commentary: Add Document-Level Comment` | Comment on entire file |
 | `Commentary: Send All to Agent` | Batch send all comments |

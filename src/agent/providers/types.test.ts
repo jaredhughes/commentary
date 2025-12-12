@@ -45,6 +45,10 @@ suite('Provider Types and Utilities', () => {
       assert.strictEqual(getProviderDisplayName('cursor'), 'Cursor');
     });
 
+    test('should return Codex for codex', () => {
+      assert.strictEqual(getProviderDisplayName('codex'), 'Codex');
+    });
+
     test('should return OpenAI for openai', () => {
       assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
     });
@@ -109,6 +113,29 @@ suite('Provider Types and Utilities', () => {
     test('should invalidate Cursor without CLI path', () => {
       const config: ProviderConfig = {
         provider: 'cursor',
+        enabled: true
+      };
+
+      const result = validateConfig(config);
+      assert.strictEqual(result.valid, false);
+      assert.ok(result.errors[0].includes('CLI path'));
+    });
+
+    test('should validate Codex with CLI path', () => {
+      const config: ProviderConfig = {
+        provider: 'codex',
+        enabled: true,
+        codexCliPath: '/usr/local/bin/codex'
+      };
+
+      const result = validateConfig(config);
+      assert.strictEqual(result.valid, true);
+      assert.strictEqual(result.errors.length, 0);
+    });
+
+    test('should invalidate Codex without CLI path', () => {
+      const config: ProviderConfig = {
+        provider: 'codex',
         enabled: true
       };
 

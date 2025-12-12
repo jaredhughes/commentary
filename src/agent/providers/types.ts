@@ -8,7 +8,7 @@ import { AgentRequest } from '../../types';
 /**
  * Supported provider types
  */
-export type ProviderType = 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+export type ProviderType = 'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom';
 
 /**
  * Provider configuration (from settings)
@@ -25,6 +25,9 @@ export interface ProviderConfig {
   // Cursor-specific
   cursorCliPath?: string;
   cursorInteractive?: boolean;
+
+  // Codex-specific
+  codexCliPath?: string;
 
   // OpenAI-specific
   openaiApiKey?: string;
@@ -123,6 +126,8 @@ export function getProviderDisplayName(provider: ProviderType): string {
       return 'Claude';
     case 'cursor':
       return 'Cursor';
+    case 'codex':
+      return 'Codex';
     case 'openai':
       return 'OpenAI';
     case 'vscode':
@@ -155,6 +160,12 @@ export function validateConfig(config: ProviderConfig): { valid: boolean; errors
     case 'cursor':
       if (!config.cursorCliPath) {
         errors.push('Cursor requires CLI path configuration');
+      }
+      break;
+
+    case 'codex':
+      if (!config.codexCliPath) {
+        errors.push('Codex requires CLI path configuration');
       }
       break;
 

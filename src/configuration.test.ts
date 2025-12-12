@@ -11,11 +11,11 @@ suite('Configuration Tests', () => {
       assert.ok(inspect);
     });
 
-    test('Should have default provider as cursor', () => {
+    test('Should have default provider as claude', () => {
       const config = vscode.workspace.getConfiguration('commentary.agent');
       const inspect = config.inspect<string>('provider');
       // Check the package.json default, not the current value (which may be overridden in user settings)
-      assert.strictEqual(inspect?.defaultValue, 'cursor');
+      assert.strictEqual(inspect?.defaultValue, 'claude');
     });
   });
 

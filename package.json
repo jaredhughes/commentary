@@ -34,6 +34,7 @@
     "ai",
     "claude",
     "cursor",
+    "codex",
     "documentation",
     "preview",
     "collaboration"
@@ -428,18 +429,20 @@
         },
         "commentary.agent.provider": {
           "type": "string",
-          "default": "cursor",
+          "default": "claude",
           "enum": [
             "claude",
             "cursor",
+            "codex",
             "openai",
             "custom",
             "vscode"
           ],
           "enumDescriptions": [
-            "Claude Code CLI or API",
-            "Cursor chat interface",
-            "OpenAI ChatGPT API (GPT-4, GPT-3.5-turbo, o1)",
+            "Claude Code CLI - terminal integration, session stays open",
+            "Cursor Agent CLI - terminal integration, session stays open",
+            "Codex CLI - terminal integration with full-auto mode",
+            "OpenAI API (not currently implemented)",
             "Custom API endpoint",
             "VS Code built-in Chat/Agent"
           ],
@@ -474,6 +477,11 @@
           "type": "boolean",
           "default": true,
           "description": "Use interactive mode for Cursor CLI (only used when provider is 'cursor')"
+        },
+        "commentary.agent.codexCliPath": {
+          "type": "string",
+          "default": "codex",
+          "description": "Path to Codex CLI executable (only used when provider is 'codex')"
         },
         "commentary.agent.openaiApiKey": {
           "type": "string",

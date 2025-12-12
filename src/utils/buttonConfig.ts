@@ -3,7 +3,7 @@
  * Determines button appearance and behavior based on provider settings
  */
 
-export type AgentProvider = 'claude' | 'cursor' | 'openai' | 'vscode' | 'custom';
+export type AgentProvider = 'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom';
 
 export interface ButtonConfig {
   icon: string;
@@ -41,6 +41,13 @@ export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: bool
           tooltip: 'Copy comment to clipboard for Cursor chat'
         };
       }
+
+    case 'codex':
+      return {
+        icon: '<i class="codicon codicon-terminal"></i>',
+        text: 'Send to agent',
+        tooltip: 'Send comment to Codex CLI via terminal'
+      };
 
     case 'openai':
       return {
