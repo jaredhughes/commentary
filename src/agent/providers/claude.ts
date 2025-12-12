@@ -71,15 +71,13 @@ export class ClaudeProvider implements ProviderStrategy {
     // Claude Code CLI command for interactive session with initial prompt piped via stdin
     // --permission-mode bypassPermissions: bypasses all permission checks including sensitive locations
     //   (required because initial input is piped, and user already approved by clicking "Send")
-    // --tools Edit,Read: ensures Edit and Read tools are available (required for file modifications)
     // --add-dir: explicitly allow access to the file's directory
-    // Note: Without --print, session stays open for continued interaction after processing initial prompt
+    // Note: Interactive mode (no --print) has all tools available by default and stays open for continued interaction
     // The actual writing of the temp file happens in the adapter layer
     return {
       command: config.claudeCliPath,
       args: [
         '--permission-mode', 'bypassPermissions',
-        '--tools', 'Edit,Read',
         '--add-dir', path.dirname(fileUri)
       ],
       workingDirectory: path.dirname(fileUri),
