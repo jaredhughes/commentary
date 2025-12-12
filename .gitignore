@@ -12,3 +12,10 @@ worktrees/
 media/themes/*.css
 media/demo/*.mov
 media/demo/*.webm
+
+# Ephemeral files - never commit
+.github/ISSUE_*.md
+.github/PR_*.md
+*.tmp.md
+*_draft.md
+*_temp.md
