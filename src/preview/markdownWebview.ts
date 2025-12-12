@@ -439,13 +439,14 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       body { padding: 56px 12px 12px 12px; }
     }
 
+    /* Heading colors - use theme variable if defined, otherwise inherit from theme */
     .markdown-body h1,
     .markdown-body h2,
     .markdown-body h3,
     .markdown-body h4,
     .markdown-body h5,
     .markdown-body h6 {
-      color: var(--commentary-heading-color);
+      color: var(--commentary-heading-color, inherit);
     }
 
     .markdown-body h1 > a,
@@ -480,8 +481,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       text-decoration: none;
     }
 
+    /* Link colors - use theme variable if defined, otherwise inherit from theme */
     .markdown-body a {
-      color: var(--commentary-link-color);
+      color: var(--commentary-link-color, inherit);
       text-decoration-color: currentColor;
     }
   </style>

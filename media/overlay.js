@@ -52,10 +52,29 @@ console.log('[OVERLAY.JS] Script is loading...');
     const newHref = `${baseUrl}/${themeName}.css?v=${cacheBuster}`;
 
     console.log('[OVERLAY] New theme href:', newHref);
+    console.log('[OVERLAY] Base URL extracted:', baseUrl);
 
-    // Update the link element
-    themeLink.href = newHref;
-    themeLink.setAttribute('data-theme-name', themeName);
+    // Create a NEW link element to ensure proper loading (some browsers cache aggressively)
+    const newLink = document.createElement('link');
+    newLink.rel = 'stylesheet';
+    newLink.href = newHref;
+    newLink.setAttribute('data-theme-name', themeName);
+
+    // Add load/error handlers to detect loading issues
+    newLink.addEventListener('load', () => {
+      console.log('[OVERLAY] Theme stylesheet loaded successfully:', themeName);
+      // Remove old stylesheet after new one loads
+      if (themeLink.parentNode) {
+        themeLink.parentNode.removeChild(themeLink);
+      }
+    });
+    newLink.addEventListener('error', (e) => {
+      console.error('[OVERLAY] Theme stylesheet FAILED to load:', themeName, e);
+      // Keep old stylesheet on error
+    });
+
+    // Insert new link right after the old one (to maintain CSS order)
+    themeLink.parentNode.insertBefore(newLink, themeLink.nextSibling);
 
     // Pico themes require data-theme attribute for dark/light mode
     // They use prefers-color-scheme but webviews may not respect it
@@ -93,7 +112,20 @@ console.log('[OVERLAY.JS] Script is loading...');
       highlightLink.setAttribute('data-highlight-theme', highlightTheme);
     }
 
-    console.log('[OVERLAY] Theme stylesheet updated successfully');
+    console.log('[OVERLAY] Theme stylesheet update initiated');
+
+    // Debug: Log full state after theme change
+    setTimeout(() => {
+      const currentThemeLink = document.querySelector('link[data-theme-name]');
+      console.log('[OVERLAY] Post-update state:', {
+        htmlDataTheme: document.documentElement.getAttribute('data-theme'),
+        themeLinkHref: currentThemeLink?.href,
+        themeLinkDataName: currentThemeLink?.getAttribute('data-theme-name'),
+        sheetLoaded: currentThemeLink?.sheet !== null,
+        computedBgColor: getComputedStyle(document.documentElement).backgroundColor,
+        computedColor: getComputedStyle(document.documentElement).color,
+      });
+    }, 200); // Delay to allow stylesheet to load
   }
 
   /**
