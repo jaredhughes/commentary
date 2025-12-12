@@ -59,7 +59,7 @@ export class ClaudeProvider implements ProviderStrategy {
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      `Review the ENTIRE document at ${fileUri} and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements. Use the Edit tool to make all changes.`
+      `Use the Read tool to review the ENTIRE document at ${fileUri}, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements. Use the Edit tool to make all changes.`
     );
 
     // Create temp file path
@@ -143,7 +143,7 @@ export function buildClaudeTempFileContent(
   const content = buildSimpleCliPrompt(
     cleanFileName,
     prompt,
-    'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
+    'Use the Read tool to review the ENTIRE document, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
   );
 
   const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename

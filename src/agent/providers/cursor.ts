@@ -61,7 +61,7 @@ export class CursorProvider implements ProviderStrategy {
       fileName,
       commentCount: request.contexts.length,
       prompt,
-      footerText: 'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don\'t just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.'
+      footerText: 'Use the Read tool to review the ENTIRE document, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don\'t just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.'
     });
 
     // Interactive mode - session stays open after processing the file
@@ -147,7 +147,7 @@ export function buildCursorTempFileContent(
     fileName: cleanFileName,
     commentCount: request.contexts.length,
     prompt,
-    footerText: 'Review the ENTIRE document and address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
+    footerText: 'Use the Read tool to review the ENTIRE document, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Apply comprehensive improvements.'
   });
 
   const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename

@@ -177,14 +177,11 @@ export class PayloadBuilder {
         lines.push(`**Comment:** ${ctx.note.text}`);
         lines.push('');
 
-        // For document-level comments, include the full document
-        if (ctx.fullDocument) {
-          lines.push('**Full Document:**');
-          lines.push('```markdown');
-          lines.push(ctx.fullDocument);
-          lines.push('```');
-          lines.push('');
-        }
+        // For document-level comments, use @ reference for token efficiency
+        lines.push(`**Full Document:** @${absolutePath}`);
+        lines.push('');
+        lines.push('*(Use the Read tool to review the complete file)*');
+        lines.push('');
       } else {
         // Regular text-selection comment
         // Add line number if available
@@ -226,14 +223,12 @@ export class PayloadBuilder {
           }
         }
 
-        // Include full document for inline comments too, so AI can find related changes
-        if (ctx.fullDocument) {
-          lines.push('**Full Document (for broader context and finding related changes):**');
-          lines.push('```markdown');
-          lines.push(ctx.fullDocument);
-          lines.push('```');
-          lines.push('');
-        }
+        // Include @ reference for full document, so AI can read it to find related changes
+        lines.push('**Full Document (for broader context and finding related changes):**');
+        lines.push(`@${absolutePath}`);
+        lines.push('');
+        lines.push('*(Use the Read tool to review the complete file and find related changes)*');
+        lines.push('');
       }
 
       lines.push('');
