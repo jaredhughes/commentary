@@ -1394,20 +1394,40 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // Only scroll if requested (e.g., when clicking from sidebar)
-    if (shouldScroll) {
-      mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Get the actual DOM element(s) for multi-mark highlights
+    let targetMark = mark;
+    let allMarks = [mark];
+
+    if (mark._multiMarks && mark._multiMarks.length > 0) {
+      targetMark = mark._multiMarks[0];
+      allMarks = mark._multiMarks;
+    } else if (mark._realMark) {
+      targetMark = mark._realMark;
+      allMarks = [mark._realMark];
     }
 
-    // Always add visual emphasis
-    mark.classList.add('commentary-highlight-focus');
+    // Only scroll if requested (e.g., when clicking from sidebar)
+    if (shouldScroll && targetMark && targetMark.scrollIntoView) {
+      targetMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Always add visual emphasis to all marks
+    for (const m of allMarks) {
+      if (m.classList) {
+        m.classList.add('commentary-highlight-focus');
+      }
+    }
     setTimeout(() => {
-      mark.classList.remove('commentary-highlight-focus');
+      for (const m of allMarks) {
+        if (m.classList) {
+          m.classList.remove('commentary-highlight-focus');
+        }
+      }
     }, 2000);
 
-    // Get the range for positioning
+    // Get the range for positioning (use first actual mark)
     const range = document.createRange();
-    range.selectNode(mark);
+    range.selectNode(targetMark);
 
     // Use unified modal function
     showCommentModal({
