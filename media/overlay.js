@@ -214,6 +214,13 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
+    // If modifier key is held (Cmd on Mac, Ctrl on Windows/Linux), user likely wants to copy
+    // Don't intercept - let them use native copy functionality
+    if (event.metaKey || event.ctrlKey) {
+      console.log('[OVERLAY] Modifier key held, not showing bubble (allowing copy)');
+      return;
+    }
+
     // Check for selection first
     const selection = window.getSelection();
     const hasSelection = selection && !selection.isCollapsed;
@@ -603,6 +610,30 @@ console.log('[OVERLAY.JS] Script is loading...');
         // This way bubble stays open if user cancels deletion
       };
       buttonContainer.appendChild(deleteBtn);
+    }
+
+    // Copy button (only for selection-based bubbles with selected text)
+    if (positionType === 'selection' && currentSelection && currentSelection.quote && currentSelection.quote.exact) {
+      const copyBtn = document.createElement('button');
+      copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
+      copyBtn.title = 'Copy selected text';
+      copyBtn.className = 'commentary-btn commentary-btn-icon commentary-btn-right';
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(currentSelection.quote.exact);
+          // Show success feedback
+          copyBtn.innerHTML = '<i class="codicon codicon-check"></i>';
+          copyBtn.title = 'Copied!';
+          setTimeout(() => {
+            copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
+            copyBtn.title = 'Copy selected text';
+          }, 1500);
+        } catch (err) {
+          console.error('[OVERLAY] Failed to copy text:', err);
+          copyBtn.title = 'Copy failed';
+        }
+      };
+      buttonContainer.appendChild(copyBtn);
     }
 
     commentBubble.appendChild(textarea);
