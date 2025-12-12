@@ -367,9 +367,18 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 
     console.log('[MarkdownWebview] Theme URI:', themeUriWithCache);
 
+    // Pico themes require data-theme attribute for dark/light mode
+    // They use prefers-color-scheme but webviews may not respect it
+    const isPicoTheme = themeName.startsWith('pico-');
+    const colorTheme = vscode.window.activeColorTheme;
+    const vsCodeIsDark = colorTheme.kind === vscode.ColorThemeKind.Dark;
+
     // Determine if theme is dark for syntax highlighting
+    // For Pico themes, use vsCodeIsDark since theme names like 'pico-amber' don't indicate dark/light
     // Simple theme looks better with dark syntax highlighting
-    const isDarkTheme = themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple';
+    const isDarkTheme = isPicoTheme
+      ? vsCodeIsDark
+      : (themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple');
     const highlightTheme = isDarkTheme ? 'highlight-dark.css' : 'highlight-light.css';
     const highlightUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', highlightTheme)
@@ -381,12 +390,6 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       highlightTheme,
       highlightUri: highlightUriWithCache,
     });
-
-    // Pico themes require data-theme attribute for dark/light mode
-    // They use prefers-color-scheme but webviews may not respect it
-    const isPicoTheme = themeName.startsWith('pico-');
-    const colorTheme = vscode.window.activeColorTheme;
-    const vsCodeIsDark = colorTheme.kind === vscode.ColorThemeKind.Dark;
     const dataThemeAttr = isPicoTheme 
       ? `data-theme="${vsCodeIsDark ? 'dark' : 'light'}"`
       : '';

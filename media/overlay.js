@@ -75,7 +75,10 @@ console.log('[OVERLAY.JS] Script is loading...');
     }
 
     // Also update syntax highlighting theme based on whether theme is dark
-    const isDarkTheme = themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple';
+    // For Pico themes, use vsCodeIsDark since theme names like 'pico-amber' don't indicate dark/light
+    const isDarkTheme = isPicoTheme
+      ? vsCodeIsDark
+      : (themeName.includes('dark') || themeName === 'sakura-vader' || themeName === 'simple');
     const highlightTheme = isDarkTheme ? 'highlight-dark.css' : 'highlight-light.css';
 
     const highlightLink = document.querySelector('link[data-highlight-theme]');
