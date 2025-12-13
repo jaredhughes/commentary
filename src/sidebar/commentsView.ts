@@ -65,11 +65,16 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === 'markdown') {
       this.activeFileUri = editor.document.uri.toString();
-      // Expand parent folders to make active file visible
-      // Use setTimeout to ensure tree is built before expanding
-      setTimeout(() => {
-        void this.expandParentsOfActiveFile();
-      }, 100);
+      console.log('[CommentsView] Active file updated to:', this.activeFileUri);
+      // Only expand if sidebar is visible - don't steal focus from Explorer
+      if (this.treeView?.visible) {
+        console.log('[CommentsView] Sidebar is visible, expanding parent folders');
+        // Expand parent folders to make active file visible
+        // Use setTimeout to ensure tree is built before expanding
+        setTimeout(() => {
+          void this.expandParentsOfActiveFile();
+        }, 100);
+      }
     } else {
       this.activeFileUri = undefined;
     }
@@ -149,12 +154,17 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Reveal the active file
     const fileItem = this.fileItemsByUri.get(this.activeFileUri);
+    console.log('[CommentsView] Looking for fileItem for:', this.activeFileUri, 'Found:', !!fileItem);
+    console.log('[CommentsView] Available file URIs in map:', Array.from(this.fileItemsByUri.keys()));
     if (fileItem) {
       try {
-        await this.treeView.reveal(fileItem, { expand: false, select: false, focus: false });
+        await this.treeView.reveal(fileItem, { expand: false, select: true, focus: false });
+        console.log('[CommentsView] Successfully revealed and selected active file');
       } catch (error) {
         console.log('[CommentsView] Could not reveal active file:', error);
       }
+    } else {
+      console.log('[CommentsView] Active file not found in fileItemsByUri map');
     }
   }
 
