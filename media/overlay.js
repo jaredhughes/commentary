@@ -208,6 +208,18 @@ console.log('[OVERLAY.JS] Script is loading...');
     document.addEventListener('mouseup', handleMouseUp);
     console.log('[OVERLAY.JS] mouseup listener added');
 
+    // Listen for selection changes to hide the action button when selection is cleared
+    document.addEventListener('selectionchange', () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.toString().trim().length === 0) {
+        // Selection was cleared - hide the action button
+        if (selectionActionButton) {
+          hideSelectionActionButton();
+        }
+      }
+    });
+    console.log('[OVERLAY.JS] selectionchange listener added');
+
     // Intercept clicks on markdown links to open in Commentary
     document.addEventListener('click', handleLinkClick);
     console.log('[OVERLAY.JS] link click listener added');
@@ -249,6 +261,76 @@ console.log('[OVERLAY.JS] Script is loading...');
     console.log('[OVERLAY] Document comment button created');
   }
 
+  // Selection action button (Google Docs style - small icon that appears on selection)
+  let selectionActionButton = null;
+  let pendingSelection = null; // Store selection for when user clicks the action button
+
+  /**
+   * Show a small action button near the selection (Google Docs style)
+   * User can still copy text freely - clicking this button opens the comment bubble
+   */
+  function showSelectionActionButton(selection, x, y) {
+    hideSelectionActionButton();
+
+    // Store the selection for when user clicks
+    pendingSelection = {
+      selection: serializeSelection(selection),
+      range: selection.getRangeAt(0).cloneRange()
+    };
+
+    if (!pendingSelection.selection) {
+      console.log('[OVERLAY] Could not serialize selection');
+      return;
+    }
+
+    // Create small floating button
+    const button = document.createElement('button');
+    button.className = 'commentary-selection-action';
+    button.innerHTML = '<i class="codicon codicon-comment"></i>';
+    button.title = 'Add comment';
+
+    // Position near the end of selection (right side, slightly above)
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    button.style.position = 'fixed';
+    button.style.left = `${rect.right + 8}px`;
+    button.style.top = `${rect.top - 4}px`;
+    button.style.zIndex = '10001';
+
+    // Handle click - open full comment bubble
+    button.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (pendingSelection) {
+        currentSelection = pendingSelection.selection;
+        createActiveHighlight(pendingSelection.range);
+
+        // Position bubble near the button click
+        const buttonRect = button.getBoundingClientRect();
+        showBubble(null, buttonRect.left, buttonRect.bottom + 8);
+        bubbleOpenedAt = Date.now();
+      }
+
+      hideSelectionActionButton();
+    };
+
+    document.body.appendChild(button);
+    selectionActionButton = button;
+    console.log('[OVERLAY] Selection action button shown');
+  }
+
+  /**
+   * Hide the selection action button
+   */
+  function hideSelectionActionButton() {
+    if (selectionActionButton) {
+      selectionActionButton.remove();
+      selectionActionButton = null;
+      console.log('[OVERLAY] Selection action button hidden');
+    }
+    pendingSelection = null;
+  }
+
   /**
    * Handle mouse up event (potential selection)
    */
@@ -269,10 +351,9 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // If modifier key is held (Cmd on Mac, Ctrl on Windows/Linux), user likely wants to copy
-    // Don't intercept - let them use native copy functionality
-    if (event.metaKey || event.ctrlKey) {
-      console.log('[OVERLAY] Modifier key held, not showing bubble (allowing copy)');
+    // Don't process if clicking on the selection action button
+    if (selectionActionButton && selectionActionButton.contains(event.target)) {
+      console.log('[OVERLAY] Click on selection action button, ignoring mouseup');
       return;
     }
 
@@ -295,51 +376,23 @@ console.log('[OVERLAY.JS] Script is loading...');
         return;
       }
 
-      // Fall through to create new selection with bubble
-      console.log('[OVERLAY] New selection detected, will create new bubble');
+      // Fall through to show selection action button
+      console.log('[OVERLAY] New selection detected');
     }
 
-    // Only show new bubble if there's a valid text selection
+    // Hide any existing selection action button
+    hideSelectionActionButton();
+
+    // Only show selection action button if there's a valid text selection
     if (!hasValidSelection) {
-      console.log('[OVERLAY] No selection and no bubble to show');
+      console.log('[OVERLAY] No selection, nothing to show');
       return;
     }
 
-    // Valid selection - serialize and prepare to show bubble
-    currentSelection = serializeSelection(selection);
-    console.log('[OVERLAY] currentSelection set:', currentSelection);
-    if (currentSelection) {
-      // Create visual highlight before browser selection is cleared
-      const range = selection.getRangeAt(0);
-      createActiveHighlight(range);
-
-      // Delay showing bubble slightly to allow Cmd+C/Ctrl+C for copying
-      // If user presses a copy shortcut, they can copy before bubble appears
-      const selectionX = event.clientX;
-      const selectionY = event.clientY;
-      const selectionObj = selection;
-
-      // Clear any pending bubble timeout
-      if (window.pendingBubbleTimeout) {
-        clearTimeout(window.pendingBubbleTimeout);
-      }
-
-      window.pendingBubbleTimeout = setTimeout(() => {
-        // Only show if selection still exists and hasn't changed
-        const currentSel = window.getSelection();
-        if (currentSel && !currentSel.isCollapsed && currentSel.toString().trim().length > 0) {
-          showBubble(selectionObj, selectionX, selectionY);
-          bubbleOpenedAt = Date.now();
-          console.log('[OVERLAY] Bubble shown after delay');
-        } else {
-          console.log('[OVERLAY] Selection cleared before bubble shown (user probably copied)');
-          clearActiveHighlight();
-        }
-        window.pendingBubbleTimeout = null;
-      }, 350); // 350ms delay allows Cmd+C
-
-      console.log('[OVERLAY] Bubble delayed - user can copy with Cmd+C');
-    }
+    // Valid selection - show small action button (Google Docs style)
+    // User can still copy freely, button only appears after selection
+    // Clicking button opens the full comment bubble
+    showSelectionActionButton(selection, event.clientX, event.clientY);
   }
 
   /**

@@ -270,6 +270,49 @@ code, pre, kbd, samp, tt {
   opacity: 0.9;
 }
 
+/* Selection action button (Google Docs style - appears on text selection) */
+.commentary-selection-action {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  outline: none;
+  animation: selectionButtonFadeIn 0.15s ease-out;
+}
+
+@keyframes selectionButtonFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.commentary-selection-action:hover {
+  background: var(--vscode-button-hoverBackground, #1177bb);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+}
+
+.commentary-selection-action:active {
+  transform: scale(0.95);
+}
+
+.commentary-selection-action .codicon {
+  font-size: 14px;
+}
 
 /* Contenteditable elements - remove all browser default styling */
 [contenteditable="true"],
