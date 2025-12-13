@@ -69,7 +69,7 @@ suite('CommentsView.getParent() Tests', () => {
     storage = new StorageManager(mockContext, workspaceRoot);
 
     const webviewProvider = {} as MarkdownWebviewProvider;
-    commentsView = new CommentsViewProvider(storage, webviewProvider);
+    commentsView = new CommentsViewProvider(storage, webviewProvider, mockContext);
 
     mockTreeView = new MockTreeView();
     commentsView.setTreeView(mockTreeView);

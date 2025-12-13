@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { Note } from '../types';
+import { GitStatus } from './gitStatusProvider';
 
 /**
  * Represents a folder in the tree
@@ -14,9 +15,10 @@ export class FolderTreeItem extends vscode.TreeItem {
     public readonly folderPath: string,
     public readonly label: string,
     public readonly fileCount: number,
-    public readonly commentCount: number
+    public readonly commentCount: number,
+    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
   ) {
-    super(label, vscode.TreeItemCollapsibleState.Collapsed);
+    super(label, collapsibleState);
     
     // Set ID for state tracking
     this.id = `folder:${folderPath}`;
@@ -41,30 +43,53 @@ export class FolderTreeItem extends vscode.TreeItem {
  */
 export class FileTreeItem extends vscode.TreeItem {
   public collapsibleState: vscode.TreeItemCollapsibleState;
-  
+
   constructor(
     public readonly fileUri: string,
     public readonly fileName: string,
     public readonly noteCount: number, // Expose as public for toggle functionality
-    collapsibleState: vscode.TreeItemCollapsibleState
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly isActive: boolean = false,
+    public readonly gitStatus?: GitStatus
   ) {
     super(fileName, collapsibleState);
     this.collapsibleState = collapsibleState;
-    
+
     // Set ID to the file URI so VS Code can track this item's state
     this.id = `file:${fileUri}`;
 
+    // Set resource URI for proper active file highlighting
+    this.resourceUri = vscode.Uri.parse(fileUri);
+
     // Update tooltip and description based on comment count
+    const descriptionParts: string[] = [];
+
     if (noteCount === 0) {
       this.tooltip = 'No comments yet';
-      this.description = '';
       this.iconPath = new vscode.ThemeIcon('file', new vscode.ThemeColor('disabledForeground'));
     } else {
       this.tooltip = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
-      this.description = `${noteCount} comment${noteCount === 1 ? '' : 's'}`;
+      descriptionParts.push(`${noteCount} comment${noteCount === 1 ? '' : 's'}`);
       // Use comment-discussion icon to clearly indicate there are comments
       this.iconPath = new vscode.ThemeIcon('comment-discussion', new vscode.ThemeColor('charts.yellow'));
     }
+
+    // Add Git status indicator
+    if (gitStatus === GitStatus.Both) {
+      descriptionParts.push('M+S');
+      this.tooltip += ' • Modified & Staged';
+    } else if (gitStatus === GitStatus.Staged) {
+      descriptionParts.push('S');
+      this.tooltip += ' • Staged';
+    } else if (gitStatus === GitStatus.Modified) {
+      descriptionParts.push('M');
+      this.tooltip += ' • Modified';
+    } else if (gitStatus === GitStatus.Untracked) {
+      descriptionParts.push('U');
+      this.tooltip += ' • Untracked';
+    }
+
+    this.description = descriptionParts.join(' • ');
 
     this.contextValue = 'file';
 

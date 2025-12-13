@@ -3,11 +3,14 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { StorageManager } from '../storage';
 import { MarkdownWebviewProvider } from '../preview/markdownWebview';
 import { FolderTreeItem, FileTreeItem, CommentTreeItem } from './treeItems';
 import { buildFolderTree, getWorkspaceRelativePath, getDisplayPath, FileNode, FolderNode, isFileInWorkspace } from '../utils/fileTree';
 import { NotesChangedEvent } from '../types';
+import { GitStatusProvider, GitStatus } from './gitStatusProvider';
+import { ExpansionStateManager } from './expansionStateManager';
 
 export { CommentTreeItem, FileTreeItem, FolderTreeItem };
 
@@ -25,15 +28,147 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
   private commentIdsByFileUri = new Map<string, Set<string>>();
   private pendingReveal: { fileUri: string; noteId?: string } | null = null;
   private pendingRevealAttempts = 0;
+  private activeFileUri: string | undefined;
+  private gitStatusProvider: GitStatusProvider;
+  private expansionStateManager: ExpansionStateManager;
+  private disposables: vscode.Disposable[] = [];
 
   constructor(
     private storage: StorageManager,
-    private webviewProvider: MarkdownWebviewProvider
-  ) {}
+    private webviewProvider: MarkdownWebviewProvider,
+    private context: vscode.ExtensionContext
+  ) {
+    // Initialize providers
+    this.gitStatusProvider = new GitStatusProvider();
+    this.expansionStateManager = new ExpansionStateManager(context);
+
+    // Watch for Git status changes
+    this.disposables.push(
+      this.gitStatusProvider.onDidChangeStatus(() => {
+        // Refresh to update Git status indicators
+        this.folderTree = null; // Clear cache to rebuild with new Git status
+        this._onDidChangeTreeData.fire();
+      })
+    );
+
+    // Track active editor for file highlighting
+    this.updateActiveFile();
+    this.disposables.push(
+      vscode.window.onDidChangeActiveTextEditor(() => {
+        this.updateActiveFile();
+        this._onDidChangeTreeData.fire(); // Refresh to update active file highlighting
+      })
+    );
+  }
+
+  private updateActiveFile(): void {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.languageId === 'markdown') {
+      this.activeFileUri = editor.document.uri.toString();
+    } else {
+      this.activeFileUri = undefined;
+    }
+  }
 
   setTreeView(treeView: vscode.TreeView<vscode.TreeItem>): void {
     this.treeView = treeView;
     this.updateEmptyMessage(); // Set initial message
+
+    // Track folder expansion/collapse for state persistence
+    this.disposables.push(
+      treeView.onDidExpandElement((e) => {
+        if (e.element instanceof FolderTreeItem) {
+          this.expansionStateManager.setExpanded(e.element.folderPath, true);
+        }
+      })
+    );
+
+    this.disposables.push(
+      treeView.onDidCollapseElement((e) => {
+        if (e.element instanceof FolderTreeItem) {
+          this.expansionStateManager.setExpanded(e.element.folderPath, false);
+        }
+      })
+    );
+
+    // Auto-expand parent folders when sidebar becomes visible
+    this.disposables.push(
+      treeView.onDidChangeVisibility(async (e) => {
+        if (e.visible) {
+          await this.expandParentsOfActiveFile();
+        }
+      })
+    );
+
+    // Expand on initial load if active file exists
+    if (this.activeFileUri) {
+      setTimeout(() => {
+        void this.expandParentsOfActiveFile();
+      }, 100);
+    }
+  }
+
+  private async expandParentsOfActiveFile(): Promise<void> {
+    if (!this.activeFileUri || !this.treeView) {
+      return;
+    }
+
+    // Build folder tree if not already built
+    if (!this.folderTree) {
+      this.folderTree = await this.buildFolderTree();
+    }
+
+    const relativePath = getWorkspaceRelativePath(this.activeFileUri);
+    if (!relativePath) {
+      return;
+    }
+
+    // Expand all parent folders
+    const parts = relativePath.split(path.sep);
+    let currentPath = '';
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? path.join(currentPath, parts[i]) : parts[i];
+      const folderItem = this.findFolderItemByPath(currentPath);
+
+      if (folderItem) {
+        try {
+          await this.treeView.reveal(folderItem, { expand: true, select: false, focus: false });
+          this.expansionStateManager.setExpanded(currentPath, true);
+        } catch (error) {
+          // Ignore reveal errors (folder might not exist in tree yet)
+          console.log('[CommentsView] Could not reveal folder:', currentPath, error);
+        }
+      }
+    }
+
+    // Reveal the active file
+    const fileItem = this.fileItemsByUri.get(this.activeFileUri);
+    if (fileItem) {
+      try {
+        await this.treeView.reveal(fileItem, { expand: false, select: false, focus: false });
+      } catch (error) {
+        console.log('[CommentsView] Could not reveal active file:', error);
+      }
+    }
+  }
+
+  private findFolderItemByPath(folderPath: string): FolderTreeItem | undefined {
+    if (!this.folderTree) {
+      return undefined;
+    }
+
+    const folderNode = this.findFolderNode(this.folderTree, folderPath);
+    if (!folderNode) {
+      return undefined;
+    }
+
+    return new FolderTreeItem(
+      folderNode.path,
+      folderNode.path.split(path.sep).pop() || folderNode.path,
+      folderNode.files.length + this.countSubfolderFiles(folderNode),
+      folderNode.commentCount
+    );
   }
 
   refresh(event?: NotesChangedEvent): void {
@@ -166,11 +301,18 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Add subfolders
     for (const [folderName, folder] of this.folderTree.subfolders) {
+      // Use saved expansion state
+      const wasExpanded = this.expansionStateManager.isExpanded(folder.path);
+      const collapsibleState = wasExpanded
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.Collapsed;
+
       items.push(new FolderTreeItem(
         folder.path,
         folderName,
         folder.files.length + this.countSubfolderFiles(folder),
-        folder.commentCount
+        folder.commentCount,
+        collapsibleState
       ));
     }
 
@@ -181,11 +323,19 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
+      // Get Git status for this file
+      const gitStatus = file.gitStatus || GitStatus.Unmodified;
+
+      // Check if this is the active file
+      const isActive = this.activeFileUri === file.uri;
+
       const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
-        collapsibleState
+        collapsibleState,
+        isActive,
+        gitStatus
       );
       this.fileItemsByUri.set(file.uri, fileItem);
       items.push(fileItem);
@@ -223,11 +373,18 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Add subfolders
     for (const [folderName, folder] of folderNode.subfolders) {
+      // Use saved expansion state
+      const wasExpanded = this.expansionStateManager.isExpanded(folder.path);
+      const collapsibleState = wasExpanded
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.Collapsed;
+
       items.push(new FolderTreeItem(
         folder.path,
         folderName,
         folder.files.length + this.countSubfolderFiles(folder),
-        folder.commentCount
+        folder.commentCount,
+        collapsibleState
       ));
     }
 
@@ -238,11 +395,19 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
 
+      // Get Git status for this file
+      const gitStatus = file.gitStatus || GitStatus.Unmodified;
+
+      // Check if this is the active file
+      const isActive = this.activeFileUri === file.uri;
+
       const fileItem = new FileTreeItem(
         file.uri,
         file.fileName,
         file.commentCount,
-        collapsibleState
+        collapsibleState,
+        isActive,
+        gitStatus
       );
       this.fileItemsByUri.set(file.uri, fileItem);
       items.push(fileItem);
@@ -312,11 +477,15 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       const notes = allNotes.get(uriString) || [];
       const relativePath = getWorkspaceRelativePath(uriString);
 
+      // Get Git status for this file
+      const gitStatus = await this.gitStatusProvider.getStatus(fileUri);
+
       const fileNode: FileNode = {
         uri: uriString,
         relativePath: relativePath || getDisplayPath(uriString),
         fileName: fileUri.fsPath.split('/').pop() || '',
-        commentCount: notes.length
+        commentCount: notes.length,
+        gitStatus
       };
 
       if (relativePath && isFileInWorkspace(uriString)) {
@@ -495,5 +664,8 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
   dispose(): void {
     this._onDidChangeTreeData.dispose();
+    this.gitStatusProvider.dispose();
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
   }
 }

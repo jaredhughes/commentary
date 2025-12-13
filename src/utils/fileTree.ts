@@ -6,12 +6,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
+import { GitStatus } from '../sidebar/gitStatusProvider';
 
 export interface FileNode {
   uri: string;
   relativePath: string;
   fileName: string;
   commentCount: number;
+  gitStatus?: GitStatus;
 }
 
 export interface FolderNode {
