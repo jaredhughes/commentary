@@ -339,15 +339,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
 
-    // Check if Cursor CLI is explicitly configured (not just default)
-    // Only show "Send to agent" if user has explicitly set a CLI path
-    const cursorCliConfig = config.inspect<string>('agent.cursorCliPath');
-    const cursorInteractive = config.get<boolean>('agent.cursorInteractive', true);
-    const hasExplicitCursorCli = provider === 'cursor' &&
-                                  cursorInteractive &&
-                                  !!(cursorCliConfig?.workspaceValue || cursorCliConfig?.globalValue);
-
-    const agentBtnConfig = getAgentButtonConfig(provider, hasExplicitCursorCli);
+    const agentBtnConfig = getAgentButtonConfig(provider);
     const saveBtnConfig = getSaveButtonConfig(isMac);
     const deleteBtnConfig = getDeleteButtonConfig();
 

@@ -137,11 +137,12 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
 
     // Expand all parent folders
     // Note: vscode.workspace.asRelativePath() returns forward slashes on all platforms
+    // Use forward slashes consistently for cross-platform compatibility
     const parts = relativePath.split('/');
     let currentPath = '';
 
     for (let i = 0; i < parts.length - 1; i++) {
-      currentPath = currentPath ? path.join(currentPath, parts[i]) : parts[i];
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
       const folderItem = this.findFolderItemByPath(currentPath);
 
       if (folderItem) {
@@ -551,7 +552,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       const fileNode: FileNode = {
         uri: uriString,
         relativePath: relativePath || getDisplayPath(uriString),
-        fileName: fileUri.fsPath.split('/').pop() || '',
+        fileName: path.basename(fileUri.fsPath),
         commentCount: notes.length,
         gitStatus
       };

@@ -16,10 +16,9 @@ export interface ButtonConfig {
  * All providers use terminal icon to emphasize CLI/terminal integration
  *
  * @param provider - The configured AI agent provider
- * @param hasCursorCli - Whether Cursor CLI is configured (kept for backward compatibility)
  * @returns Button configuration with icon HTML, text, and tooltip
  */
-export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: boolean = false): ButtonConfig {
+export function getAgentButtonConfig(provider: AgentProvider): ButtonConfig {
   // Use terminal icon for all providers (all-in on CLI/terminal integration)
   const terminalIcon = '<i class="codicon codicon-terminal"></i>';
 
