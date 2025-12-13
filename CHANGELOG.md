@@ -5,11 +5,12 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2025-12-12
 
 ### Added
 - **Gemini CLI provider**: New AI agent option using Google's Gemini CLI (`gemini -p` for prompts)
 - **Codex CLI provider**: New AI agent option using OpenAI's Codex CLI (`codex exec` for automation mode)
+- **Security Considerations** section in README documenting permission models for all CLI tools
 - Pico themes now have a gentle font size bump (106.25%) for better readability in VS Code
 
 ### Changed

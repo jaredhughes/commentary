@@ -247,6 +247,27 @@ These methods copy comments to your clipboard for you to paste manually:
 
 ---
 
+## 🔒 Security Considerations
+
+When you send comments to AI CLI tools, those tools need permission to modify files in your workspace. Each tool handles this differently:
+
+| CLI Tool | Permission Model |
+|----------|------------------|
+| **Claude Code** | Uses `--permission-mode bypassPermissions` flag to skip interactive prompts |
+| **Cursor Agent** | Inherits app-level settings (Auto-run, Auto-apply edits) from Cursor |
+| **Codex CLI** | Uses `exec` subcommand for automation mode |
+| **Gemini CLI** | Uses `-p` flag for non-interactive prompts |
+
+**Best practices:**
+- Review all changes in git before committing (`git diff`)
+- Use workspace-level git to track and revert unwanted changes
+- Consider running in a separate branch for large refactoring tasks
+- Keep your AI CLI tools updated for latest security patches
+
+**Why this is necessary:** CLI tools require non-interactive mode to process comments programmatically. Interactive permission prompts would cause the terminal to hang waiting for input that never comes.
+
+---
+
 ## 📋 Commands
 
 | Command | Action |
