@@ -288,6 +288,16 @@ export class CommandManager {
             description: '🔧 CLI (cursor-agent, auto-edit) → clipboard (fallback)',
           },
           {
+            label: '$(symbol-keyword) Codex',
+            value: 'codex',
+            description: '🤖 CLI (terminal with full-auto mode) → clipboard (fallback)',
+          },
+          {
+            label: '$(telescope) Gemini',
+            value: 'gemini',
+            description: '🔮 CLI (terminal) → clipboard (fallback)',
+          },
+          {
             label: '$(code) VS Code Chat',
             value: 'vscode',
             description: '📋 Clipboard only (requires manual paste)',
