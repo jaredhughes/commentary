@@ -636,11 +636,16 @@ export class CommandManager {
               vscode.window.showInformationMessage(
                 `✓ Cursor configured! CLI: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
               );
+            } else {
+              // User cancelled mode selection - provider is set but CLI path not configured
+              vscode.window.showInformationMessage(
+                'Cursor provider selected. Configure CLI path in settings to enable terminal integration.'
+              );
             }
           } else {
-            // User cancelled, keep current command
+            // User cancelled CLI path input - provider is set but will fall back to clipboard
             vscode.window.showInformationMessage(
-              `✓ Cursor configured! Using command: "${currentCliPath}"`
+              'Cursor provider selected. CLI path not configured - will use clipboard mode.'
             );
           }
 

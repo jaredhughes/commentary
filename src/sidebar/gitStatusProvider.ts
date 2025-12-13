@@ -49,7 +49,7 @@ export class GitStatusProvider {
 	private disposables: vscode.Disposable[] = [];
 
 	constructor() {
-		this.initializeGitExtension();
+		void this.initializeGitExtension();
 	}
 
 	private async initializeGitExtension(): Promise<void> {
@@ -137,23 +137,24 @@ export class GitStatusProvider {
 			const uriString = uri.toString();
 
 			// Check if file is in working tree changes (unstaged)
-			const isUnstaged = repo.state.workingTreeChanges.some(
+			const workingTreeChange = repo.state.workingTreeChanges.find(
 				(change) => change.uri.toString() === uriString
 			);
 
 			// Check if file is in index changes (staged)
-			const isStaged = repo.state.indexChanges.some(
+			const indexChange = repo.state.indexChanges.find(
 				(change) => change.uri.toString() === uriString
 			);
 
-			if (isUnstaged && isStaged) {
+			// Determine untracked status (Status enum value 7 = UNTRACKED)
+			const isUntracked = workingTreeChange?.status === 7;
+
+			if (workingTreeChange && indexChange) {
 				return GitStatus.Both;
-			} else if (isStaged) {
+			} else if (indexChange) {
 				return GitStatus.Staged;
-			} else if (isUnstaged) {
-				// Check if it's untracked or modified
-				// For simplicity, treat all unstaged as modified
-				return GitStatus.Modified;
+			} else if (workingTreeChange) {
+				return isUntracked ? GitStatus.Untracked : GitStatus.Modified;
 			}
 
 			return GitStatus.Unmodified;

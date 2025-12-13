@@ -4,23 +4,29 @@ export class ExpansionStateManager {
 	private expansionState: Set<string> = new Set();
 
 	constructor(private context: vscode.ExtensionContext) {
-		this.loadState();
+		void this.loadState();
+	}
+
+	private normalize(folderPath: string): string {
+		// Normalize to POSIX-style paths for cross-platform consistency
+		return folderPath.replace(/\\/g, '/');
 	}
 
 	isExpanded(folderPath: string): boolean {
-		return this.expansionState.has(folderPath);
+		return this.expansionState.has(this.normalize(folderPath));
 	}
 
 	setExpanded(folderPath: string, expanded: boolean): void {
+		const key = this.normalize(folderPath);
 		if (expanded) {
-			this.expansionState.add(folderPath);
+			this.expansionState.add(key);
 		} else {
-			this.expansionState.delete(folderPath);
+			this.expansionState.delete(key);
 		}
-		this.saveState();
+		void this.saveState();
 	}
 
-	private loadState(): void {
+	private async loadState(): Promise<void> {
 		try {
 			// Load from workspace state
 			const saved = this.context.workspaceState.get<string[]>('commentary.expansionState', []);
@@ -32,11 +38,11 @@ export class ExpansionStateManager {
 		}
 	}
 
-	private saveState(): void {
+	private async saveState(): Promise<void> {
 		try {
 			// Save to workspace state
 			const stateArray = Array.from(this.expansionState);
-			this.context.workspaceState.update('commentary.expansionState', stateArray);
+			await this.context.workspaceState.update('commentary.expansionState', stateArray);
 		} catch (error) {
 			console.error('[Commentary] Failed to save expansion state:', error);
 		}
@@ -44,6 +50,6 @@ export class ExpansionStateManager {
 
 	clear(): void {
 		this.expansionState.clear();
-		this.saveState();
+		void this.saveState();
 	}
 }
