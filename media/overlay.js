@@ -289,12 +289,22 @@ console.log('[OVERLAY.JS] Script is loading...');
     button.innerHTML = '<i class="codicon codicon-comment"></i>';
     button.title = 'Add comment';
 
-    // Position near where the user ended their selection (mouse position)
-    // This works better for multi-line selections than using rect.right
-    // which would be at the far right edge of the entire selection box
+    // Position the button to the right of the cursor, below the line
+    // to avoid overlapping the selected text
+    const range = selection.getRangeAt(0);
+    const rects = range.getClientRects();
+    const lastRect = rects[rects.length - 1]; // Get the last line of selection
+
     button.style.position = 'fixed';
-    button.style.left = `${x + 12}px`;
-    button.style.top = `${y - 14}px`;
+    if (lastRect) {
+      // Position at the end of the last line, slightly below
+      button.style.left = `${lastRect.right + 8}px`;
+      button.style.top = `${lastRect.top + (lastRect.height / 2) - 14}px`;
+    } else {
+      // Fallback to mouse position
+      button.style.left = `${x + 16}px`;
+      button.style.top = `${y + 4}px`;
+    }
     button.style.zIndex = '10001';
 
     // Handle click - open full comment bubble
