@@ -137,6 +137,9 @@
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
   outline: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .commentary-btn-icon {
@@ -148,15 +151,8 @@
 /* Ensure codicons display properly in buttons */
 .commentary-btn .codicon {
   display: inline-block;
-  vertical-align: middle;
   font-size: 16px;
   line-height: 1;
-  margin-right: 4px;
-}
-
-/* Icon-only buttons (like delete) should not have margin */
-.commentary-btn-icon .codicon {
-  margin-right: 0;
 }
 
 .commentary-btn:hover {
