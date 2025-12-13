@@ -436,6 +436,142 @@ export class CommandManager {
             }
           }
 
+        } else if (newProvider === 'codex') {
+          // Set provider to Codex (global, but workspace can override)
+          await config.update('provider', 'codex', vscode.ConfigurationTarget.Global);
+
+          // Show configuration menu
+          let configuring = true;
+          while (configuring) {
+            const currentCommand = config.get<string>('codexCommand', 'codex');
+
+            const codexOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Configure CLI Command',
+                value: 'cli',
+                description: 'Terminal integration',
+                detail: `Current: "${currentCommand}"`
+              },
+              {
+                label: '$(copy) Use Clipboard Method',
+                value: 'clipboard',
+                description: 'Fallback method (no setup required)',
+                detail: 'Copy comments to clipboard for manual paste'
+              },
+              {
+                label: '$(check) Done',
+                value: 'done',
+                description: 'Finish configuration',
+                detail: ''
+              }
+            ], {
+              placeHolder: 'Configure Codex integration',
+              title: 'Commentary: Configure Codex',
+            });
+
+            if (!codexOption || codexOption.value === 'done') {
+              configuring = false;
+              vscode.window.showInformationMessage(
+                `✓ Codex configured! CLI command: "${currentCommand}"`
+              );
+              break;
+            }
+
+            if (codexOption.value === 'cli') {
+              const command = await vscode.window.showInputBox({
+                prompt: 'Enter the command to invoke Codex CLI',
+                placeHolder: 'codex',
+                value: currentCommand,
+                ignoreFocusOut: true,
+                validateInput: (value) => {
+                  if (!value || value.trim().length === 0) {
+                    return 'Command cannot be empty';
+                  }
+                  return null;
+                }
+              });
+
+              if (command) {
+                await config.update('codexCommand', command, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(
+                  `✓ Codex CLI command updated: "${command}"`
+                );
+              }
+            } else if (codexOption.value === 'clipboard') {
+              vscode.window.showInformationMessage(
+                '✓ Clipboard method selected. Comments will be copied for manual paste.'
+              );
+            }
+          }
+
+        } else if (newProvider === 'gemini') {
+          // Set provider to Gemini (global, but workspace can override)
+          await config.update('provider', 'gemini', vscode.ConfigurationTarget.Global);
+
+          // Show configuration menu
+          let configuring = true;
+          while (configuring) {
+            const currentCommand = config.get<string>('geminiCommand', 'gemini');
+
+            const geminiOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Configure CLI Command',
+                value: 'cli',
+                description: 'Terminal integration',
+                detail: `Current: "${currentCommand}"`
+              },
+              {
+                label: '$(copy) Use Clipboard Method',
+                value: 'clipboard',
+                description: 'Fallback method (no setup required)',
+                detail: 'Copy comments to clipboard for manual paste'
+              },
+              {
+                label: '$(check) Done',
+                value: 'done',
+                description: 'Finish configuration',
+                detail: ''
+              }
+            ], {
+              placeHolder: 'Configure Gemini integration',
+              title: 'Commentary: Configure Gemini',
+            });
+
+            if (!geminiOption || geminiOption.value === 'done') {
+              configuring = false;
+              vscode.window.showInformationMessage(
+                `✓ Gemini configured! CLI command: "${currentCommand}"`
+              );
+              break;
+            }
+
+            if (geminiOption.value === 'cli') {
+              const command = await vscode.window.showInputBox({
+                prompt: 'Enter the command to invoke Gemini CLI',
+                placeHolder: 'gemini',
+                value: currentCommand,
+                ignoreFocusOut: true,
+                validateInput: (value) => {
+                  if (!value || value.trim().length === 0) {
+                    return 'Command cannot be empty';
+                  }
+                  return null;
+                }
+              });
+
+              if (command) {
+                await config.update('geminiCommand', command, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(
+                  `✓ Gemini CLI command updated: "${command}"`
+                );
+              }
+            } else if (geminiOption.value === 'clipboard') {
+              vscode.window.showInformationMessage(
+                '✓ Clipboard method selected. Comments will be copied for manual paste.'
+              );
+            }
+          }
+
         } else if (newProvider === 'cursor') {
           // Set provider to Cursor (global, but workspace can override)
           await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
