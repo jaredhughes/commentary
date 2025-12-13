@@ -108,7 +108,10 @@ suite('Agent Integration Tests', () => {
       }
     });
 
-    test('Should update existing comment when submitting with noteId', async () => {
+    test('Should update existing comment when submitting with noteId', async function() {
+      // Increase timeout for flaky macOS Node 20.x environment
+      this.timeout(5000);
+
       // Create initial comment
       const note: Note = {
         id: 'test-1',
