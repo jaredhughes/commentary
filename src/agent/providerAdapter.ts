@@ -43,7 +43,7 @@ export class ProviderAdapter {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     
     return {
-      provider: config.get<'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom'>('provider', 'cursor'),
+      provider: config.get<'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom'>('provider', 'claude'),
       enabled: config.get<boolean>('enabled', true),
       model: config.get<string>('model'),
 
