@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Active file highlighting**: Current file is highlighted in sidebar with native VS Code selection style
 - **Folder expansion state persistence**: Sidebar remembers which folders were expanded/collapsed across sessions
 - **Auto-expand to active file**: Opening a file automatically expands its parent folders in sidebar (only when sidebar is visible)
+- **Instant preview on sidebar open**: Opening Commentary sidebar with active markdown file now automatically opens preview
 - **Automatic sidebar refresh**: Sidebar refreshes when Markdown files are created, deleted, or renamed (Issue #15)
 - **Interactive/Batch CLI modes**: Configure each provider (Claude, Codex, Gemini) to keep sessions open or execute-and-close
 - Configuration options for `claudeMode`, `codexMode`, and `geminiMode` with "interactive" (default) or "batch" values
@@ -27,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cursor configuration simplified: removed redundant clipboard menu loop
 
 ### Fixed
+- **Folder reveal object identity**: Implemented folder item caching for reliable `TreeView.reveal()` operations (PR #22)
+  - Added `folderItemsByPath` cache to maintain consistent object references
+  - Updated `getRootItems()` and `getFolderChildren()` to populate cache during tree building
+  - Cache is properly cleared on `refresh()` to prevent stale references
 - **Codex sessions no longer close immediately**: Removed `exec` subcommand in favor of interactive mode by default
 - **Send All button missing for Codex/Gemini**: Added missing command registrations and menu entries
 - **Configuration save errors**: Fixed key mismatch (`codexCommand`/`geminiCommand` → `codexCliPath`/`geminiCliPath`)
