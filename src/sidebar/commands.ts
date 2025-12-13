@@ -280,27 +280,27 @@ export class CommandManager {
           {
             label: '$(sparkle) Claude',
             value: 'claude',
-            description: '✨ API (auto-edit) → CLI (terminal) → clipboard (fallback)',
+            description: '✨ API (auto-edit) → CLI (terminal)',
           },
           {
             label: '$(comment-discussion) Cursor',
             value: 'cursor',
-            description: '🔧 CLI (cursor-agent, auto-edit) → clipboard (fallback)',
+            description: '🔧 CLI (cursor-agent, auto-edit)',
           },
           {
             label: '$(symbol-keyword) Codex',
             value: 'codex',
-            description: '🤖 CLI (terminal with full-auto mode) → clipboard (fallback)',
+            description: '🤖 CLI (terminal with full-auto mode)',
           },
           {
             label: '$(telescope) Gemini',
             value: 'gemini',
-            description: '🔮 CLI (terminal) → clipboard (fallback)',
+            description: '🔮 CLI (terminal)',
           },
           {
             label: '$(code) VS Code Chat',
             value: 'vscode',
-            description: '📋 Clipboard only (requires manual paste)',
+            description: '💬 VS Code built-in chat',
           },
           {
             label: '$(tools) Custom',
@@ -440,231 +440,113 @@ export class CommandManager {
           // Set provider to Codex (global, but workspace can override)
           await config.update('provider', 'codex', vscode.ConfigurationTarget.Global);
 
-          // Show configuration menu
-          let configuring = true;
-          while (configuring) {
-            const currentCommand = config.get<string>('codexCommand', 'codex');
-
-            const codexOption = await vscode.window.showQuickPick([
-              {
-                label: '$(terminal) Configure CLI Command',
-                value: 'cli',
-                description: 'Terminal integration',
-                detail: `Current: "${currentCommand}"`
-              },
-              {
-                label: '$(copy) Use Clipboard Method',
-                value: 'clipboard',
-                description: 'Fallback method (no setup required)',
-                detail: 'Copy comments to clipboard for manual paste'
-              },
-              {
-                label: '$(check) Done',
-                value: 'done',
-                description: 'Finish configuration',
-                detail: ''
+          // Configure Codex CLI command
+          const currentCommand = config.get<string>('codexCommand', 'codex');
+          const command = await vscode.window.showInputBox({
+            prompt: 'Enter the command to invoke Codex CLI',
+            placeHolder: 'codex',
+            value: currentCommand,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'Command cannot be empty';
               }
-            ], {
-              placeHolder: 'Configure Codex integration',
-              title: 'Commentary: Configure Codex',
-            });
-
-            if (!codexOption || codexOption.value === 'done') {
-              configuring = false;
-              vscode.window.showInformationMessage(
-                `✓ Codex configured! CLI command: "${currentCommand}"`
-              );
-              break;
+              return null;
             }
+          });
 
-            if (codexOption.value === 'cli') {
-              const command = await vscode.window.showInputBox({
-                prompt: 'Enter the command to invoke Codex CLI',
-                placeHolder: 'codex',
-                value: currentCommand,
-                ignoreFocusOut: true,
-                validateInput: (value) => {
-                  if (!value || value.trim().length === 0) {
-                    return 'Command cannot be empty';
-                  }
-                  return null;
-                }
-              });
-
-              if (command) {
-                await config.update('codexCommand', command, vscode.ConfigurationTarget.Global);
-                vscode.window.showInformationMessage(
-                  `✓ Codex CLI command updated: "${command}"`
-                );
-              }
-            } else if (codexOption.value === 'clipboard') {
-              vscode.window.showInformationMessage(
-                '✓ Clipboard method selected. Comments will be copied for manual paste.'
-              );
-            }
+          if (command) {
+            await config.update('codexCommand', command, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(
+              `✓ Codex configured! CLI command: "${command}"`
+            );
+          } else {
+            // User cancelled, keep current command
+            vscode.window.showInformationMessage(
+              `✓ Codex configured! Using command: "${currentCommand}"`
+            );
           }
 
         } else if (newProvider === 'gemini') {
           // Set provider to Gemini (global, but workspace can override)
           await config.update('provider', 'gemini', vscode.ConfigurationTarget.Global);
 
-          // Show configuration menu
-          let configuring = true;
-          while (configuring) {
-            const currentCommand = config.get<string>('geminiCommand', 'gemini');
-
-            const geminiOption = await vscode.window.showQuickPick([
-              {
-                label: '$(terminal) Configure CLI Command',
-                value: 'cli',
-                description: 'Terminal integration',
-                detail: `Current: "${currentCommand}"`
-              },
-              {
-                label: '$(copy) Use Clipboard Method',
-                value: 'clipboard',
-                description: 'Fallback method (no setup required)',
-                detail: 'Copy comments to clipboard for manual paste'
-              },
-              {
-                label: '$(check) Done',
-                value: 'done',
-                description: 'Finish configuration',
-                detail: ''
+          // Configure Gemini CLI command
+          const currentCommand = config.get<string>('geminiCommand', 'gemini');
+          const command = await vscode.window.showInputBox({
+            prompt: 'Enter the command to invoke Gemini CLI',
+            placeHolder: 'gemini',
+            value: currentCommand,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'Command cannot be empty';
               }
-            ], {
-              placeHolder: 'Configure Gemini integration',
-              title: 'Commentary: Configure Gemini',
-            });
-
-            if (!geminiOption || geminiOption.value === 'done') {
-              configuring = false;
-              vscode.window.showInformationMessage(
-                `✓ Gemini configured! CLI command: "${currentCommand}"`
-              );
-              break;
+              return null;
             }
+          });
 
-            if (geminiOption.value === 'cli') {
-              const command = await vscode.window.showInputBox({
-                prompt: 'Enter the command to invoke Gemini CLI',
-                placeHolder: 'gemini',
-                value: currentCommand,
-                ignoreFocusOut: true,
-                validateInput: (value) => {
-                  if (!value || value.trim().length === 0) {
-                    return 'Command cannot be empty';
-                  }
-                  return null;
-                }
-              });
-
-              if (command) {
-                await config.update('geminiCommand', command, vscode.ConfigurationTarget.Global);
-                vscode.window.showInformationMessage(
-                  `✓ Gemini CLI command updated: "${command}"`
-                );
-              }
-            } else if (geminiOption.value === 'clipboard') {
-              vscode.window.showInformationMessage(
-                '✓ Clipboard method selected. Comments will be copied for manual paste.'
-              );
-            }
+          if (command) {
+            await config.update('geminiCommand', command, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(
+              `✓ Gemini configured! CLI command: "${command}"`
+            );
+          } else {
+            // User cancelled, keep current command
+            vscode.window.showInformationMessage(
+              `✓ Gemini configured! Using command: "${currentCommand}"`
+            );
           }
 
         } else if (newProvider === 'cursor') {
           // Set provider to Cursor (global, but workspace can override)
           await config.update('provider', 'cursor', vscode.ConfigurationTarget.Global);
 
-          // Show configuration menu (allows configuring both clipboard and CLI methods)
-          let configuring = true;
-          while (configuring) {
-            const currentCliPath = config.get<string>('cursorCliPath', '');
-            const hasCliPath = !!currentCliPath;
-            const isInteractive = config.get<boolean>('cursorInteractive', true);
+          // Configure Cursor Agent CLI path
+          const currentCliPath = config.get<string>('cursorCliPath', 'cursor-agent');
+          const cliPath = await vscode.window.showInputBox({
+            prompt: 'Enter the path to cursor-agent command',
+            placeHolder: 'cursor-agent (or full path like /usr/local/bin/cursor-agent)',
+            value: currentCliPath,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              if (!value || value.trim().length === 0) {
+                return 'Path cannot be empty';
+              }
+              return null;
+            }
+          });
 
-            const cursorOption = await vscode.window.showQuickPick([
+          if (cliPath) {
+            // Ask about interactive mode
+            const interactive = await vscode.window.showQuickPick([
               {
-                label: '$(terminal) Configure Cursor Agent CLI',
-                value: 'cli',
-                description: hasCliPath ? 'Currently configured' : 'Optional - for direct terminal integration',
-                detail: hasCliPath ? `Current: "${currentCliPath}" (interactive: ${isInteractive})` : 'Requires cursor-agent to be installed'
+                label: 'Interactive Mode (Recommended)',
+                value: true,
+                description: 'Opens Cursor agent in terminal for conversational sessions'
               },
               {
-                label: '$(copy) Use Clipboard Method',
-                value: 'clipboard',
-                description: hasCliPath ? 'Fallback method' : 'Default method (no setup required)',
-                detail: 'Copy comments to clipboard, paste into Cursor chat manually'
-              },
-              {
-                label: '$(check) Done',
-                value: 'done',
-                description: 'Finish configuration',
-                detail: ''
+                label: 'Non-Interactive Mode',
+                value: false,
+                description: 'Single-shot execution, returns response immediately'
               }
             ], {
-              placeHolder: 'Configure Cursor integration method',
-              title: 'Commentary: Configure Cursor',
+              placeHolder: 'Select cursor-agent mode',
+              title: 'Cursor Agent Interaction Mode'
             });
 
-            if (!cursorOption || cursorOption.value === 'done') {
-              configuring = false;
-              const status = hasCliPath
-                ? `Cursor Agent CLI configured: "${currentCliPath}" (clipboard as fallback)`
-                : 'Clipboard method (manual paste)';
-              vscode.window.showInformationMessage(`✓ Cursor configured! ${status}`);
-              break;
-            }
-
-            if (cursorOption.value === 'cli') {
-              // Configure Cursor Agent CLI path
-              const cliPath = await vscode.window.showInputBox({
-                prompt: 'Enter the path to cursor-agent command',
-                placeHolder: 'cursor-agent (or full path like /usr/local/bin/cursor-agent)',
-                value: currentCliPath || 'cursor-agent',
-                ignoreFocusOut: true,
-                validateInput: (value) => {
-                  if (!value || value.trim().length === 0) {
-                    return 'Path cannot be empty';
-                  }
-                  return null;
-                }
-              });
-
-              if (cliPath) {
-                // Ask about interactive mode
-                const interactive = await vscode.window.showQuickPick([
-                  {
-                    label: 'Interactive Mode (Recommended)',
-                    value: true,
-                    description: 'Opens Cursor agent in terminal for conversational sessions'
-                  },
-                  {
-                    label: 'Non-Interactive Mode',
-                    value: false,
-                    description: 'Single-shot execution, returns response immediately'
-                  }
-                ], {
-                  placeHolder: 'Select cursor-agent mode',
-                  title: 'Cursor Agent Interaction Mode'
-                });
-
-                if (interactive !== undefined) {
-                  await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
-                  await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
-                  vscode.window.showInformationMessage(
-                    `✓ Cursor Agent CLI configured: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
-                  );
-                }
-              }
-
-            } else if (cursorOption.value === 'clipboard') {
-              // Clear CLI path to force clipboard method
-              await config.update('cursorCliPath', '', vscode.ConfigurationTarget.Global);
+            if (interactive !== undefined) {
+              await config.update('cursorCliPath', cliPath, vscode.ConfigurationTarget.Global);
+              await config.update('cursorInteractive', interactive.value, vscode.ConfigurationTarget.Global);
               vscode.window.showInformationMessage(
-                '✓ Clipboard method selected. Comments will be copied for manual paste into Cursor chat.'
+                `✓ Cursor configured! CLI: "${cliPath}" (${interactive.value ? 'interactive' : 'non-interactive'})`
               );
             }
+          } else {
+            // User cancelled, keep current command
+            vscode.window.showInformationMessage(
+              `✓ Cursor configured! Using command: "${currentCliPath}"`
+            );
           }
 
         } else if (newProvider === 'custom') {
