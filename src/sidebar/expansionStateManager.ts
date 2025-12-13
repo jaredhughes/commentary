@@ -16,14 +16,14 @@ export class ExpansionStateManager {
 		return this.expansionState.has(this.normalize(folderPath));
 	}
 
-	setExpanded(folderPath: string, expanded: boolean): void {
+	async setExpanded(folderPath: string, expanded: boolean): Promise<void> {
 		const key = this.normalize(folderPath);
 		if (expanded) {
 			this.expansionState.add(key);
 		} else {
 			this.expansionState.delete(key);
 		}
-		void this.saveState();
+		await this.saveState();
 	}
 
 	private async loadState(): Promise<void> {

@@ -89,7 +89,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.disposables.push(
       treeView.onDidExpandElement((e) => {
         if (e.element instanceof FolderTreeItem) {
-          this.expansionStateManager.setExpanded(e.element.folderPath, true);
+          void this.expansionStateManager.setExpanded(e.element.folderPath, true);
         }
       })
     );
@@ -97,7 +97,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     this.disposables.push(
       treeView.onDidCollapseElement((e) => {
         if (e.element instanceof FolderTreeItem) {
-          this.expansionStateManager.setExpanded(e.element.folderPath, false);
+          void this.expansionStateManager.setExpanded(e.element.folderPath, false);
         }
       })
     );
@@ -148,7 +148,7 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
       if (folderItem) {
         try {
           await this.treeView.reveal(folderItem, { expand: true, select: false, focus: false });
-          this.expansionStateManager.setExpanded(currentPath, true);
+          await this.expansionStateManager.setExpanded(currentPath, true);
         } catch (error) {
           // Ignore reveal errors (folder might not exist in tree yet)
           console.log('[CommentsView] Could not reveal folder:', currentPath, error);

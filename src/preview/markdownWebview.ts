@@ -336,7 +336,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const themeName = this.getThemeName();
 
     // Get button configurations from our pure utility
-    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'vscode' | 'custom';
+    const provider = config.get<string>('agent.provider', 'cursor') as 'claude' | 'cursor' | 'codex' | 'gemini' | 'vscode' | 'custom';
     const isMac = process.platform === 'darwin';
 
     const agentBtnConfig = getAgentButtonConfig(provider);
