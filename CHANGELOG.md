@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Optimized comment processing performance**: Selection comments no longer send full document upfront
   - Document-level comments still include full document for comprehensive review
-  - Selection comments let LLM use Read tool only when broader context is needed
-  - Expected 20x speed improvement for typical "fix typo" comments (10-30s vs 2-5 minutes)
+  - Selection comments let LLM use Read tool when broader context is needed
+  - Expected ~20x speed improvement for typical "fix typo" comments (10-30s vs 2-5 minutes)
 - **Simplified AI instructions**: Removed "review ENTIRE document" prompts from providers, delegated to payload builder
 - **Interactive mode is now default**: All CLI providers default to interactive mode (sessions stay open)
 - Button icons now properly aligned with text using flexbox layout
