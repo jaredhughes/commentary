@@ -21,6 +21,7 @@ export interface ProviderConfig {
   // Claude-specific
   claudeApiKey?: string;
   claudeCliPath?: string;
+  claudeMode?: 'interactive' | 'batch';
 
   // Cursor-specific
   cursorCliPath?: string;
@@ -28,9 +29,11 @@ export interface ProviderConfig {
 
   // Codex-specific
   codexCliPath?: string;
+  codexMode?: 'interactive' | 'batch';
 
   // Gemini-specific
   geminiCliPath?: string;
+  geminiMode?: 'interactive' | 'batch';
 
   // Custom provider
   customEndpoint?: string;

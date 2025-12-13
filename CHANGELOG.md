@@ -5,6 +5,33 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Sidebar Git status indicators**: Files now show modification status (M, S, M+S, U) from VS Code Git extension
+- **Active file highlighting**: Current file is highlighted in sidebar with native VS Code selection style
+- **Folder expansion state persistence**: Sidebar remembers which folders were expanded/collapsed across sessions
+- **Auto-expand to active file**: Opening a file automatically expands its parent folders in sidebar (only when sidebar is visible)
+- **Automatic sidebar refresh**: Sidebar refreshes when Markdown files are created, deleted, or renamed (Issue #15)
+- **Interactive/Batch CLI modes**: Configure each provider (Claude, Codex, Gemini) to keep sessions open or execute-and-close
+- Configuration options for `claudeMode`, `codexMode`, and `geminiMode` with "interactive" (default) or "batch" values
+
+### Changed
+- **Optimized comment processing performance**: Selection comments no longer send full document upfront
+  - Document-level comments still include full document for comprehensive review
+  - Selection comments let LLM use Read tool only when broader context is needed
+  - Expected 20x speed improvement for typical "fix typo" comments (10-30s vs 2-5 minutes)
+- **Simplified AI instructions**: Removed "review ENTIRE document" prompts from providers, delegated to payload builder
+- **Interactive mode is now default**: All CLI providers default to interactive mode (sessions stay open)
+- Button icons now properly aligned with text using flexbox layout
+- Cursor configuration simplified: removed redundant clipboard menu loop
+
+### Fixed
+- **Codex sessions no longer close immediately**: Removed `exec` subcommand in favor of interactive mode by default
+- **Send All button missing for Codex/Gemini**: Added missing command registrations and menu entries
+- **Configuration save errors**: Fixed key mismatch (`codexCommand`/`geminiCommand` → `codexCliPath`/`geminiCliPath`)
+- Auto-expand no longer steals focus from Explorer sidebar
+
 ## [1.2.0] - 2025-12-12
 
 ### Added

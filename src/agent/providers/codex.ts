@@ -49,11 +49,11 @@ export class CodexProvider implements ProviderStrategy {
     const fileUri = firstNote.file.replace('file://', '');
     const fileName = extractFileName(firstNote.file);
 
-    // Build prompt with explicit file path for Codex to edit
+    // Build prompt for Codex
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      `Review the ENTIRE document at ${fileUri}, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.`
+      `File location: ${fileUri}`
     );
 
     // Create temp file path
@@ -62,18 +62,21 @@ export class CodexProvider implements ProviderStrategy {
     const tempFileName = `commentary-codex-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Codex CLI: use 'exec' subcommand for non-interactive automation mode
+    // Check mode setting (defaults to 'interactive')
+    const mode = config.codexMode || 'interactive';
+    const isBatch = mode === 'batch';
+
+    // Codex CLI: interactive mode (stays open) or batch mode (executes and closes)
     // The actual writing of the temp file happens in the adapter layer
-    // We pass the prompt as argument via command substitution: codex exec "$(cat tempfile)"
     return {
       command: config.codexCliPath,
-      args: ['exec'],
+      args: isBatch ? ['exec'] : [],  // Use 'exec' subcommand for batch mode
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,
         commentaryPrompt: promptWithFile,
-        // Flag to indicate codex needs argument-style invocation for exec mode
-        commentaryUseArgument: 'true'
+        // Use argument-style invocation for batch mode, piping for interactive
+        ...(isBatch ? { commentaryUseArgument: 'true' } : {})
       }
     };
   }

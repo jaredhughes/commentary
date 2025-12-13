@@ -52,6 +52,7 @@ export class ProviderAdapter {
       // Claude
       claudeApiKey: config.get<string>('claudeApiKey'),
       claudeCliPath: config.get<string>('claudeCliPath', 'claude'),
+      claudeMode: config.get<'interactive' | 'batch'>('claudeMode', 'interactive'),
 
       // Cursor
       cursorCliPath: config.get<string>('cursorCliPath'), // No default - must be explicitly configured
@@ -59,9 +60,11 @@ export class ProviderAdapter {
 
       // Codex
       codexCliPath: config.get<string>('codexCliPath'), // No default - must be explicitly configured
+      codexMode: config.get<'interactive' | 'batch'>('codexMode', 'interactive'),
 
       // Gemini
       geminiCliPath: config.get<string>('geminiCliPath'), // No default - must be explicitly configured
+      geminiMode: config.get<'interactive' | 'batch'>('geminiMode', 'interactive'),
 
       // Custom
       customEndpoint: config.get<string>('customEndpoint'),

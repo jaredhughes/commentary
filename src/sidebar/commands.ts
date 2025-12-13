@@ -181,6 +181,16 @@ export class CommandManager {
       vscode.commands.registerCommand('commentary.sendToAgentVSCode', sendToAgentHandler)
     );
 
+    // Send to agent (Codex-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentCodex', sendToAgentHandler)
+    );
+
+    // Send to agent (Gemini-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendToAgentGemini', sendToAgentHandler)
+    );
+
     // Send all comments to agent (across all documents) - shared handler
     const sendAllToAgentHandler = async () => {
       // Get all comments across all documents
@@ -260,6 +270,16 @@ export class CommandManager {
     // Send all comments to agent (VS Code-specific)
     this.context.subscriptions.push(
       vscode.commands.registerCommand('commentary.sendAllToAgentVSCode', sendAllToAgentHandler)
+    );
+
+    // Send all comments to agent (Codex-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentCodex', sendAllToAgentHandler)
+    );
+
+    // Send all comments to agent (Gemini-specific)
+    this.context.subscriptions.push(
+      vscode.commands.registerCommand('commentary.sendAllToAgentGemini', sendAllToAgentHandler)
     );
 
 
@@ -384,8 +404,33 @@ export class CommandManager {
 
               if (command) {
                 await config.update('claudeCommand', command, vscode.ConfigurationTarget.Global);
+
+                // Ask about CLI mode
+                const modeOption = await vscode.window.showQuickPick([
+                  {
+                    label: '$(terminal) Interactive',
+                    value: 'interactive',
+                    description: 'Recommended',
+                    detail: 'Keep Claude Code session open in terminal after each comment'
+                  },
+                  {
+                    label: '$(run) Batch',
+                    value: 'batch',
+                    description: 'Advanced',
+                    detail: 'Execute and close terminal after each comment'
+                  }
+                ], {
+                  placeHolder: 'How should Claude Code CLI behave after processing each comment?',
+                  title: 'Claude CLI Mode',
+                  ignoreFocusOut: true
+                });
+
+                if (modeOption) {
+                  await config.update('claudeMode', modeOption.value, vscode.ConfigurationTarget.Global);
+                }
+
                 vscode.window.showInformationMessage(
-                  `✓ Claude CLI command updated: "${command}"`
+                  `✓ Claude CLI configured: "${command}" (${modeOption?.value || 'interactive'} mode)`
                 );
               }
 
@@ -441,7 +486,7 @@ export class CommandManager {
           await config.update('provider', 'codex', vscode.ConfigurationTarget.Global);
 
           // Configure Codex CLI command
-          const currentCommand = config.get<string>('codexCommand', 'codex');
+          const currentCommand = config.get<string>('codexCliPath', 'codex');
           const command = await vscode.window.showInputBox({
             prompt: 'Enter the command to invoke Codex CLI',
             placeHolder: 'codex',
@@ -456,9 +501,34 @@ export class CommandManager {
           });
 
           if (command) {
-            await config.update('codexCommand', command, vscode.ConfigurationTarget.Global);
+            await config.update('codexCliPath', command, vscode.ConfigurationTarget.Global);
+
+            // Ask about CLI mode
+            const modeOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Interactive',
+                value: 'interactive',
+                description: 'Recommended',
+                detail: 'Keep Codex session open in terminal after each comment'
+              },
+              {
+                label: '$(run) Batch',
+                value: 'batch',
+                description: 'Advanced',
+                detail: 'Execute and close terminal after each comment'
+              }
+            ], {
+              placeHolder: 'How should Codex CLI behave after processing each comment?',
+              title: 'Codex CLI Mode',
+              ignoreFocusOut: true
+            });
+
+            if (modeOption) {
+              await config.update('codexMode', modeOption.value, vscode.ConfigurationTarget.Global);
+            }
+
             vscode.window.showInformationMessage(
-              `✓ Codex configured! CLI command: "${command}"`
+              `✓ Codex configured! CLI command: "${command}" (${modeOption?.value || 'interactive'} mode)`
             );
           } else {
             // User cancelled, keep current command
@@ -472,7 +542,7 @@ export class CommandManager {
           await config.update('provider', 'gemini', vscode.ConfigurationTarget.Global);
 
           // Configure Gemini CLI command
-          const currentCommand = config.get<string>('geminiCommand', 'gemini');
+          const currentCommand = config.get<string>('geminiCliPath', 'gemini');
           const command = await vscode.window.showInputBox({
             prompt: 'Enter the command to invoke Gemini CLI',
             placeHolder: 'gemini',
@@ -487,9 +557,34 @@ export class CommandManager {
           });
 
           if (command) {
-            await config.update('geminiCommand', command, vscode.ConfigurationTarget.Global);
+            await config.update('geminiCliPath', command, vscode.ConfigurationTarget.Global);
+
+            // Ask about CLI mode
+            const modeOption = await vscode.window.showQuickPick([
+              {
+                label: '$(terminal) Interactive',
+                value: 'interactive',
+                description: 'Recommended',
+                detail: 'Keep Gemini session open in terminal after each comment'
+              },
+              {
+                label: '$(run) Batch',
+                value: 'batch',
+                description: 'Advanced',
+                detail: 'Execute and close terminal after each comment'
+              }
+            ], {
+              placeHolder: 'How should Gemini CLI behave after processing each comment?',
+              title: 'Gemini CLI Mode',
+              ignoreFocusOut: true
+            });
+
+            if (modeOption) {
+              await config.update('geminiMode', modeOption.value, vscode.ConfigurationTarget.Global);
+            }
+
             vscode.window.showInformationMessage(
-              `✓ Gemini configured! CLI command: "${command}"`
+              `✓ Gemini configured! CLI command: "${command}" (${modeOption?.value || 'interactive'} mode)`
             );
           } else {
             // User cancelled, keep current command

@@ -106,6 +106,12 @@
         "icon": "$(send)"
       },
       {
+        "command": "commentary.sendToAgentCodex",
+        "title": "Send to Codex",
+        "category": "Commentary",
+        "icon": "$(send)"
+      },
+      {
         "command": "commentary.sendAllToAgent",
         "title": "Send All to Agent",
         "category": "Commentary",
@@ -138,6 +144,12 @@
       {
         "command": "commentary.sendAllToAgentGemini",
         "title": "Send All to Gemini",
+        "category": "Commentary",
+        "icon": "$(send)"
+      },
+      {
+        "command": "commentary.sendAllToAgentCodex",
+        "title": "Send All to Codex",
         "category": "Commentary",
         "icon": "$(send)"
       },
@@ -332,6 +344,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "commentary.sendAllToAgentCodex",
+          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == codex",
+          "group": "navigation@1"
+        },
+        {
           "command": "commentary.deleteAllComments",
           "when": "view == commentary.commentsView && commentary.hasComments",
           "group": "navigation@2"
@@ -361,6 +378,11 @@
         {
           "command": "commentary.sendToAgentGemini",
           "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == gemini",
+          "group": "inline@1"
+        },
+        {
+          "command": "commentary.sendToAgentCodex",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == codex",
           "group": "inline@1"
         },
         {
@@ -484,6 +506,12 @@
           "default": "codex",
           "description": "Path to Codex CLI executable (only used when provider is 'codex')"
         },
+        "commentary.agent.codexMode": {
+          "type": "string",
+          "enum": ["interactive", "batch"],
+          "default": "interactive",
+          "description": "CLI mode for Codex: 'interactive' keeps session open, 'batch' executes and closes"
+        },
         "commentary.agent.geminiCliPath": {
           "type": "string",
           "default": "gemini",
@@ -493,6 +521,18 @@
           "type": "string",
           "default": "claude",
           "description": "Command to invoke Claude Code in terminal (e.g. 'claude', 'claude-code', or full path)"
+        },
+        "commentary.agent.claudeMode": {
+          "type": "string",
+          "enum": ["interactive", "batch"],
+          "default": "interactive",
+          "description": "CLI mode for Claude Code: 'interactive' keeps session open, 'batch' executes and closes"
+        },
+        "commentary.agent.geminiMode": {
+          "type": "string",
+          "enum": ["interactive", "batch"],
+          "default": "interactive",
+          "description": "CLI mode for Gemini: 'interactive' keeps session open, 'batch' executes and closes"
         }
       }
     }

@@ -54,12 +54,12 @@ export class ClaudeProvider implements ProviderStrategy {
     const fileUri = firstNote.file.replace('file://', '');
     const fileName = extractFileName(firstNote.file);
 
-    // Build prompt with explicit file path for Claude to edit
+    // Build prompt for Claude
     // Include absolute path so Claude's Edit tool can find the file
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      `Use the Read tool to review the ENTIRE document at ${fileUri}, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements. Use the Edit tool to make all changes.`
+      `File location: ${fileUri}`
     );
 
     // Create temp file path
@@ -68,18 +68,28 @@ export class ClaudeProvider implements ProviderStrategy {
     const tempFileName = `commentary-claude-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Claude Code CLI command for interactive session with initial prompt piped via stdin
+    // Check mode setting (defaults to 'interactive')
+    const mode = config.claudeMode || 'interactive';
+    const isBatch = mode === 'batch';
+
+    // Claude Code CLI command
     // --permission-mode bypassPermissions: bypasses all permission checks including sensitive locations
     //   (required because initial input is piped, and user already approved by clicking "Send")
     // --add-dir: explicitly allow access to the file's directory
-    // Note: Interactive mode (no --print) has all tools available by default and stays open for continued interaction
+    // --print: For batch mode, print response and exit. For interactive mode, stay open for continued interaction.
     // The actual writing of the temp file happens in the adapter layer
+    const args = [
+      '--permission-mode', 'bypassPermissions',
+      '--add-dir', path.dirname(fileUri)
+    ];
+
+    if (isBatch) {
+      args.push('--print');  // Print and exit for batch mode
+    }
+
     return {
       command: config.claudeCliPath,
-      args: [
-        '--permission-mode', 'bypassPermissions',
-        '--add-dir', path.dirname(fileUri)
-      ],
+      args,
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,
