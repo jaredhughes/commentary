@@ -65,6 +65,11 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === 'markdown') {
       this.activeFileUri = editor.document.uri.toString();
+      // Expand parent folders to make active file visible
+      // Use setTimeout to ensure tree is built before expanding
+      setTimeout(() => {
+        void this.expandParentsOfActiveFile();
+      }, 100);
     } else {
       this.activeFileUri = undefined;
     }
