@@ -5,15 +5,16 @@ suite('Button Configuration Utils', () => {
   
   suite('getAgentButtonConfig', () => {
     
-    test('returns sparkle icon for Claude provider', () => {
+    // Icons are now consistent based on MODE (send vs copy), not provider
+    test('returns send icon for Claude provider (send mode)', () => {
       const config = getAgentButtonConfig('claude');
-      
-      assert.ok(config.icon.includes('codicon-sparkle'));
+
+      assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('Claude'));
     });
-    
-    test('returns copy icon for Cursor provider without CLI', () => {
+
+    test('returns copy icon for Cursor provider without CLI (copy mode)', () => {
       const config = getAgentButtonConfig('cursor', false);
 
       assert.ok(config.icon.includes('codicon-copy'));
@@ -22,40 +23,40 @@ suite('Button Configuration Utils', () => {
       assert.ok(config.tooltip.includes('clipboard'));
     });
 
-    test('returns terminal icon for Cursor provider with CLI', () => {
+    test('returns send icon for Cursor provider with CLI (send mode)', () => {
       const config = getAgentButtonConfig('cursor', true);
 
-      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('Cursor Agent'));
       assert.ok(config.tooltip.includes('terminal'));
     });
-    
-    test('returns terminal icon for Codex provider', () => {
+
+    test('returns send icon for Codex provider (send mode)', () => {
       const config = getAgentButtonConfig('codex');
 
-      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('Codex CLI'));
     });
 
-    test('returns rocket icon for OpenAI provider', () => {
-      const config = getAgentButtonConfig('openai');
+    test('returns send icon for Gemini provider (send mode)', () => {
+      const config = getAgentButtonConfig('gemini');
 
-      assert.ok(config.icon.includes('codicon-rocket'));
+      assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to agent');
-      assert.ok(config.tooltip.includes('OpenAI API'));
+      assert.ok(config.tooltip.includes('Gemini CLI'));
     });
 
-    test('returns chat icon for VS Code provider', () => {
+    test('returns send icon for VS Code provider (send mode)', () => {
       const config = getAgentButtonConfig('vscode');
 
-      assert.ok(config.icon.includes('codicon-comment-discussion'));
+      assert.ok(config.icon.includes('codicon-send'));
       assert.strictEqual(config.text, 'Send to chat');
       assert.ok(config.tooltip.includes('VS Code Chat'));
     });
 
-    test('returns send icon for custom provider', () => {
+    test('returns send icon for custom provider (send mode)', () => {
       const config = getAgentButtonConfig('custom');
 
       assert.ok(config.icon.includes('codicon-send'));
@@ -74,7 +75,7 @@ suite('Button Configuration Utils', () => {
     });
     
     test('all configs include valid codicon class', () => {
-      const providers = ['claude', 'cursor', 'codex', 'openai', 'vscode', 'custom'] as const;
+      const providers = ['claude', 'cursor', 'codex', 'gemini', 'vscode', 'custom'] as const;
 
       for (const provider of providers) {
         const config = getAgentButtonConfig(provider);

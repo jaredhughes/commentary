@@ -64,16 +64,19 @@ export class CursorProvider implements ProviderStrategy {
       footerText: 'Use the Read tool to review the ENTIRE document, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don\'t just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.'
     });
 
-    // Interactive mode - session stays open after processing piped content
-    // Content piped via stdin (handled by adapter), then user can continue editing
+    // For cursor-agent, piping via stdin causes it to exit after processing
+    // Instead, we pass the temp file path and let the adapter read it as an argument
+    // This keeps the session open for continued interaction
     return {
       command: config.cursorCliPath,
-      args: [],  // No args - content piped via stdin like Claude
+      args: [],  // Args will be built by adapter from temp file content
       workingDirectory: path.dirname(fileUri),
       env: {
-        // Pass temp file path and prompt as env vars for piping and cleanup
+        // Pass temp file path and prompt - adapter will use these appropriately
         commentaryTempFile: tempFilePath,
-        commentaryPrompt: promptWithContext
+        commentaryPrompt: promptWithContext,
+        // Flag to indicate cursor-agent needs argument-style invocation for interactive mode
+        commentaryUseArgument: 'true'
       }
     };
   }

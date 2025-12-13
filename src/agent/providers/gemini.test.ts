@@ -1,18 +1,18 @@
 /**
- * Tests for Codex provider
+ * Tests for Gemini provider
  */
 
 import * as assert from 'assert';
-import { CodexProvider, getDefaultCodexCliPath } from './codex';
+import { GeminiProvider, getDefaultGeminiCliPath } from './gemini';
 import { ProviderConfig } from './types';
 import { AgentRequest, Note } from '../../types';
 
-suite('Codex Provider', () => {
-  let provider: CodexProvider;
+suite('Gemini Provider', () => {
+  let provider: GeminiProvider;
   let mockRequest: AgentRequest;
 
   setup(() => {
-    provider = new CodexProvider();
+    provider = new GeminiProvider();
 
     const mockNote: Note = {
       id: 'test-1',
@@ -33,21 +33,21 @@ suite('Codex Provider', () => {
   });
 
   suite('canUse', () => {
-    test('should return true when Codex CLI path is configured', () => {
+    test('should return true when Gemini CLI path is configured', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true,
-        codexCliPath: '/usr/local/bin/codex'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       assert.strictEqual(provider.canUse(config), true);
     });
 
-    test('should return false when provider is not codex', () => {
+    test('should return false when provider is not gemini', () => {
       const config: ProviderConfig = {
         provider: 'claude',
         enabled: true,
-        codexCliPath: '/usr/local/bin/codex'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       assert.strictEqual(provider.canUse(config), false);
@@ -55,7 +55,7 @@ suite('Codex Provider', () => {
 
     test('should return false when CLI path is not configured', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -66,9 +66,9 @@ suite('Codex Provider', () => {
   suite('getPreferredMethod', () => {
     test('should prefer CLI when CLI path is configured', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true,
-        codexCliPath: '/usr/local/bin/codex'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       assert.strictEqual(provider.getPreferredMethod(config), 'cli');
@@ -76,7 +76,7 @@ suite('Codex Provider', () => {
 
     test('should fallback to clipboard when CLI path is missing', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -85,30 +85,30 @@ suite('Codex Provider', () => {
   });
 
   suite('buildTerminalCommand', () => {
-    test('should build command with exec subcommand and temp file env vars', () => {
+    test('should build command with -p flag and temp file env vars', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true,
-        codexCliPath: '/usr/local/bin/codex'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       const command = provider.buildTerminalCommand('test prompt', mockRequest, config);
 
       assert.ok(command);
-      assert.strictEqual(command!.command, '/usr/local/bin/codex');
-      // args include 'exec' for non-interactive automation mode
-      assert.deepStrictEqual(command!.args, ['exec']);
+      assert.strictEqual(command!.command, '/usr/local/bin/gemini');
+      // args include '-p' for non-interactive prompt mode
+      assert.deepStrictEqual(command!.args, ['-p']);
       // Temp file info in env for adapter to use
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
       assert.ok(command!.env.commentaryPrompt);
-      assert.ok(command!.env.commentaryTempFile.includes('commentary-codex'));
+      assert.ok(command!.env.commentaryTempFile.includes('commentary-gemini'));
       assert.strictEqual(command!.env.commentaryUseArgument, 'true');
     });
 
     test('should return null when CLI path is missing', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -118,9 +118,9 @@ suite('Codex Provider', () => {
 
     test('should return null when request has no contexts', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true,
-        codexCliPath: '/usr/local/bin/codex'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       const emptyRequest: AgentRequest = { contexts: [] };
@@ -132,7 +132,7 @@ suite('Codex Provider', () => {
   suite('getClipboardText', () => {
     test('should format clipboard text with comment count', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -141,12 +141,12 @@ suite('Codex Provider', () => {
       assert.ok(text.includes('1 comment'));
       assert.ok(text.includes('test prompt'));
       assert.ok(text.includes('file.md')); // Just filename, not full URI
-      assert.ok(text.includes('Codex'));
+      assert.ok(text.includes('Gemini'));
     });
 
     test('should pluralize comments correctly', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -163,7 +163,7 @@ suite('Codex Provider', () => {
     test('should return CLI message for cli method', () => {
       const msg = provider.getSuccessMessage(mockRequest, 'cli');
       assert.ok(msg.includes('🚀'));
-      assert.ok(msg.includes('Opening Codex CLI'));
+      assert.ok(msg.includes('Opening Gemini CLI'));
       assert.ok(msg.includes('1 comment'));
     });
 
@@ -176,9 +176,9 @@ suite('Codex Provider', () => {
   });
 
   suite('getChatCommand', () => {
-    test('should return null (Codex has no VS Code chat)', () => {
+    test('should return null (Gemini has no VS Code chat)', () => {
       const config: ProviderConfig = {
-        provider: 'codex',
+        provider: 'gemini',
         enabled: true
       };
 
@@ -187,13 +187,13 @@ suite('Codex Provider', () => {
     });
   });
 
-  suite('getDefaultCodexCliPath helper', () => {
+  suite('getDefaultGeminiCliPath helper', () => {
     test('should return a path for known platforms', () => {
-      const path = getDefaultCodexCliPath();
+      const path = getDefaultGeminiCliPath();
       // Path depends on platform, but should be a string or null
       assert.ok(path === null || typeof path === 'string');
       if (path) {
-        assert.ok(path.includes('codex'));
+        assert.ok(path.includes('gemini'));
       }
     });
   });

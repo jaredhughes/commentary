@@ -76,44 +76,21 @@ console.log('[OVERLAY.JS] Script is loading...');
     // Insert new link right after the old one (to maintain CSS order)
     themeLink.parentNode.insertBefore(newLink, themeLink.nextSibling);
 
-    // Pico themes require special handling:
-    // 1. data-theme attribute for dark/light mode
-    // 2. Explicit body colors because Pico uses :where() selectors with zero specificity
+    // Pico themes require data-theme attribute for dark/light mode
+    // Body colors are now handled directly in the Pico CSS files
     const isPicoTheme = themeName.startsWith('pico-');
 
-    // Handle Pico-specific style overrides
-    let picoStyleElement = document.getElementById('pico-theme-overrides');
     if (isPicoTheme) {
       // Use VS Code color theme if provided, otherwise fallback to system preference
       let isDark = vsCodeIsDark;
       if (isDark === undefined) {
-        // Fallback to system preference (may not work in webviews)
         isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
       console.log('[OVERLAY] Set data-theme for Pico theme:', isDark ? 'dark' : 'light');
-
-      // Add/update Pico style overrides (higher specificity than :where())
-      if (!picoStyleElement) {
-        picoStyleElement = document.createElement('style');
-        picoStyleElement.id = 'pico-theme-overrides';
-        document.head.appendChild(picoStyleElement);
-      }
-      picoStyleElement.textContent = `
-        html, body {
-          background-color: var(--pico-background-color) !important;
-          color: var(--pico-color) !important;
-        }
-      `;
-      console.log('[OVERLAY] Added Pico style overrides');
     } else {
       // Remove data-theme attribute for non-Pico themes
       document.documentElement.removeAttribute('data-theme');
-      // Remove Pico style overrides if they exist
-      if (picoStyleElement) {
-        picoStyleElement.remove();
-        console.log('[OVERLAY] Removed Pico style overrides');
-      }
     }
 
     // Also update syntax highlighting theme based on whether theme is dark
@@ -316,9 +293,12 @@ console.log('[OVERLAY.JS] Script is loading...');
         currentSelection = pendingSelection.selection;
         createActiveHighlight(pendingSelection.range);
 
-        // Position bubble near the button click
-        const buttonRect = button.getBoundingClientRect();
-        showBubble(null, buttonRect.left, buttonRect.bottom + 8);
+        // Position bubble near the selected text using the stored range
+        showCommentModal({
+          placeholder: 'Add comment...',
+          positionType: 'selection',
+          range: pendingSelection.range
+        });
         bubbleOpenedAt = Date.now();
       }
 
@@ -452,12 +432,20 @@ console.log('[OVERLAY.JS] Script is loading...');
   }
 
   /**
+   * Get the markdown content container (excludes overlay elements)
+   */
+  function getContentContainer() {
+    return document.getElementById('markdown-content') || document.body;
+  }
+
+  /**
    * Get text before a position
    */
   function getTextBefore(node, offset) {
-    // Create a range from start of document to the position
+    // Create a range from start of content to the position
+    const container = getContentContainer();
     const range = document.createRange();
-    range.setStart(document.body, 0);
+    range.setStart(container, 0);
     range.setEnd(node, offset);
     return range.toString();
   }
@@ -466,20 +454,22 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Get text after a position
    */
   function getTextAfter(node, offset) {
-    // Create a range from the position to end of document
+    // Create a range from the position to end of content
+    const container = getContentContainer();
     const range = document.createRange();
     range.setStart(node, offset);
-    range.setEnd(document.body, document.body.childNodes.length);
+    range.setEnd(container, container.childNodes.length);
     return range.toString();
   }
 
   /**
-   * Get text position (character offsets from document start)
+   * Get text position (character offsets from content container start)
    */
   function getTextPosition(range) {
+    const container = getContentContainer();
     try {
       const preRange = range.cloneRange();
-      preRange.selectNodeContents(document.body);
+      preRange.selectNodeContents(container);
       preRange.setEnd(range.startContainer, range.startOffset);
 
       const start = preRange.toString().length;
@@ -494,9 +484,9 @@ console.log('[OVERLAY.JS] Script is loading...');
     } catch (error) {
       console.error('[OVERLAY] Failed to calculate precise text position, falling back to indexOf', error);
 
-      const bodyText = document.body.textContent || '';
+      const contentText = container.textContent || '';
       const selectedText = range.toString();
-      const start = bodyText.indexOf(selectedText);
+      const start = contentText.indexOf(selectedText);
       const end = start === -1 ? -1 : start + selectedText.length;
 
       return { start, end };
@@ -508,18 +498,31 @@ console.log('[OVERLAY.JS] Script is loading...');
    */
   function updatePositions() {
     if (!trackedRange || !commentBubble) {
+      console.log('[OVERLAY] updatePositions: missing trackedRange or bubble');
       return;
     }
 
     try {
       // Get current position of the range
-      const rects = trackedRange.getClientRects();
-      if (rects.length === 0) {
-        return;
-      }
+      let rects = trackedRange.getClientRects();
+      let rect;
 
-      // Use the first rect for bubble positioning (works for single and multi-line)
-      const rect = rects[0];
+      if (rects.length === 0) {
+        // Fallback: try getBoundingClientRect
+        const boundingRect = trackedRange.getBoundingClientRect();
+        if (boundingRect.width === 0 && boundingRect.height === 0) {
+          console.log('[OVERLAY] updatePositions: no rects available, using fallback position');
+          // Position in center of viewport as fallback
+          const bubbleRect = commentBubble.getBoundingClientRect();
+          commentBubble.style.left = Math.max(10, (window.innerWidth - bubbleRect.width) / 2) + 'px';
+          commentBubble.style.top = Math.max(10, (window.innerHeight - bubbleRect.height) / 3) + 'px';
+          return;
+        }
+        rect = boundingRect;
+      } else {
+        // Use the first rect for bubble positioning (works for single and multi-line)
+        rect = rects[0];
+      }
       const bubbleRect = commentBubble.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
@@ -754,29 +757,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       buttonContainer.appendChild(deleteBtn);
     }
 
-    // Copy button (only for selection-based bubbles with selected text)
-    if (positionType === 'selection' && currentSelection && currentSelection.quote && currentSelection.quote.exact) {
-      const copyBtn = document.createElement('button');
-      copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
-      copyBtn.title = 'Copy selected text';
-      copyBtn.className = 'commentary-btn commentary-btn-icon commentary-btn-right';
-      copyBtn.onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(currentSelection.quote.exact);
-          // Show success feedback
-          copyBtn.innerHTML = '<i class="codicon codicon-check"></i>';
-          copyBtn.title = 'Copied!';
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="codicon codicon-copy"></i>';
-            copyBtn.title = 'Copy selected text';
-          }, 1500);
-        } catch (err) {
-          console.error('[OVERLAY] Failed to copy text:', err);
-          copyBtn.title = 'Copy failed';
-        }
-      };
-      buttonContainer.appendChild(copyBtn);
-    }
+    // Note: Copy button removed - users can use standard Cmd+C to copy selected text
 
     commentBubble.appendChild(textarea);
     commentBubble.appendChild(buttonContainer);
@@ -1082,7 +1063,8 @@ console.log('[OVERLAY.JS] Script is loading...');
    * Find a text range using TextQuoteSelector with prefix/suffix disambiguation
    */
   function findTextRange(quote) {
-    const bodyText = document.body.textContent || '';
+    const container = getContentContainer();
+    const contentText = container.textContent || '';
 
     // Use prefix and suffix to find the correct occurrence
     // Build the search pattern: prefix + exact + suffix
@@ -1091,7 +1073,7 @@ console.log('[OVERLAY.JS] Script is loading...');
     const searchText = prefixToUse + quote.exact + suffixToUse;
 
     // Find the full pattern
-    const patternIndex = bodyText.indexOf(searchText);
+    const patternIndex = contentText.indexOf(searchText);
 
     if (patternIndex === -1) {
       console.warn('[OVERLAY] Could not find text pattern:', {
@@ -1101,7 +1083,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       });
 
       // Fallback: try without prefix/suffix
-      const exactIndex = bodyText.indexOf(quote.exact);
+      const exactIndex = contentText.indexOf(quote.exact);
       if (exactIndex === -1) {
         console.error('[OVERLAY] Could not find exact text either');
         return null;
@@ -1115,16 +1097,33 @@ console.log('[OVERLAY.JS] Script is loading...');
     const exactStart = patternIndex + prefixToUse.length;
     console.log('[OVERLAY] Found text range at position:', exactStart);
 
-    return findRangeAtIndex(exactStart, quote.exact.length);
+    const range = findRangeAtIndex(exactStart, quote.exact.length);
+
+    // Validate that the found range actually contains the expected text
+    if (range) {
+      const foundText = range.toString();
+      if (foundText !== quote.exact) {
+        console.warn('[OVERLAY] Found text does not match expected:', {
+          expected: quote.exact,
+          found: foundText,
+          position: exactStart
+        });
+        // Don't return null - the text might have minor whitespace differences
+        // But log for debugging
+      }
+    }
+
+    return range;
   }
 
   /**
    * Helper: Find DOM range at a specific character index
    */
   function findRangeAtIndex(index, length) {
+    const container = getContentContainer();
     const range = document.createRange();
     const walker = document.createTreeWalker(
-      document.body,
+      container,
       NodeFilter.SHOW_TEXT,
       null,
       false
@@ -1236,6 +1235,11 @@ console.log('[OVERLAY.JS] Script is loading...');
           const beforeText = textContent.substring(0, startOffset);
           const highlightText = textContent.substring(startOffset, endOffset);
           const afterText = textContent.substring(endOffset);
+
+          // Skip whitespace-only text (prevents empty mark boxes on newlines)
+          if (!highlightText.trim()) {
+            continue;
+          }
 
           // Create new nodes
           const parent = node.parentNode;

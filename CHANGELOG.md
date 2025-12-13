@@ -7,9 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Gemini CLI provider**: New AI agent option using Google's Gemini CLI (`gemini -p` for prompts)
+- **Codex CLI provider**: New AI agent option using OpenAI's Codex CLI (`codex exec` for automation mode)
+- Pico themes now have a gentle font size bump (106.25%) for better readability in VS Code
+
+### Changed
+- **Replaced OpenAI API provider with Gemini CLI**: Removed API-based OpenAI integration in favor of CLI-based Gemini
+- **Button icons now consistent by mode**: All "send" providers use send icon, only "copy" mode uses copy icon
+- **Cursor CLI interactive mode**: Fixed to use argument-style invocation (`cursor-agent "prompt"`) instead of piped stdin to keep sessions open
+- **Codex CLI command**: Updated to use `codex exec` subcommand for non-interactive automation mode
+- Improved document-level comment prompts: Removed Claude-specific `@path` syntax for cross-provider compatibility
+
 ### Fixed
 - Pico themes now load and display correctly by adding `data-theme` attribute to HTML element based on VS Code color theme
 - Pico theme switching now properly updates `data-theme` attribute when changing themes dynamically
+- Highlight duplication bug: Comments on list items no longer create highlights on multiple items
+- Comment bubble positioning: Overlay no longer stuck in top-left corner
+- Cursor CLI sessions now stay open after processing (argument-style vs piped stdin)
 
 ## [1.1.1] - 2025-11-10
 

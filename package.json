@@ -99,10 +99,10 @@
         "icon": "$(send)"
       },
       {
-        "command": "commentary.sendToAgentOpenAI",
-        "title": "Send to OpenAI",
+        "command": "commentary.sendToAgentGemini",
+        "title": "Send to Gemini",
         "category": "Commentary",
-        "icon": "$(rocket)"
+        "icon": "$(send)"
       },
       {
         "command": "commentary.sendAllToAgent",
@@ -135,10 +135,10 @@
         "icon": "$(send)"
       },
       {
-        "command": "commentary.sendAllToAgentOpenAI",
-        "title": "Send All to OpenAI",
+        "command": "commentary.sendAllToAgentGemini",
+        "title": "Send All to Gemini",
         "category": "Commentary",
-        "icon": "$(rocket)"
+        "icon": "$(send)"
       },
       {
         "command": "commentary.showCommentsSidebar",
@@ -326,8 +326,8 @@
           "group": "navigation@1"
         },
         {
-          "command": "commentary.sendAllToAgentOpenAI",
-          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == openai",
+          "command": "commentary.sendAllToAgentGemini",
+          "when": "view == commentary.commentsView && commentary.hasComments && commentary.agentProvider == gemini",
           "group": "navigation@1"
         },
         {
@@ -358,8 +358,8 @@
           "group": "inline@1"
         },
         {
-          "command": "commentary.sendToAgentOpenAI",
-          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == openai",
+          "command": "commentary.sendToAgentGemini",
+          "when": "view == commentary.commentsView && (viewItem == comment || viewItem == documentComment) && commentary.agentProvider == gemini",
           "group": "inline@1"
         },
         {
@@ -434,7 +434,7 @@
             "claude",
             "cursor",
             "codex",
-            "openai",
+            "gemini",
             "custom",
             "vscode"
           ],
@@ -442,7 +442,7 @@
             "Claude Code CLI - terminal integration, session stays open",
             "Cursor Agent CLI - terminal integration, session stays open",
             "Codex CLI - terminal integration with full-auto mode",
-            "OpenAI API (not currently implemented)",
+            "Gemini CLI - terminal integration with Google's AI",
             "Custom API endpoint",
             "VS Code built-in Chat/Agent"
           ],
@@ -483,29 +483,10 @@
           "default": "codex",
           "description": "Path to Codex CLI executable (only used when provider is 'codex')"
         },
-        "commentary.agent.openaiApiKey": {
+        "commentary.agent.geminiCliPath": {
           "type": "string",
-          "default": "",
-          "description": "OpenAI API key (required when provider is 'openai'). Get one at https://platform.openai.com/api-keys"
-        },
-        "commentary.agent.openaiModel": {
-          "type": "string",
-          "default": "gpt-4",
-          "enum": [
-            "gpt-4",
-            "gpt-4-turbo",
-            "gpt-3.5-turbo",
-            "o1-preview",
-            "o1-mini"
-          ],
-          "enumDescriptions": [
-            "GPT-4 - Most capable, best for complex tasks",
-            "GPT-4 Turbo - Faster and cheaper than GPT-4",
-            "GPT-3.5 Turbo - Fast and economical",
-            "o1 Preview - Advanced reasoning model",
-            "o1 Mini - Faster reasoning model"
-          ],
-          "description": "OpenAI model to use (only used when provider is 'openai')"
+          "default": "gemini",
+          "description": "Path to Gemini CLI executable (only used when provider is 'gemini')"
         },
         "commentary.agent.claudeCommand": {
           "type": "string",
@@ -523,6 +504,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts --max-warnings 100",
     "test": "node ./out/test/runTest.js",
+    "test:build": "node scripts/copy-themes.test.js",
     "validate": "npm run lint && tsc --noEmit",
     "package": "npm run compile && npm run vscode:prepublish && vsce package --no-git-tag-version --out vsix/",
     "prepare": "husky"

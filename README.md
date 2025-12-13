@@ -17,7 +17,7 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 - 📖 Documentation writers reviewing drafts
 - ✍️ Technical writers collecting feedback
 - 👥 Content reviewers annotating without commits
-- 🤖 AI-assisted workflows with Claude Code, Cursor Agent, or Codex
+- 🤖 AI-assisted workflows with Claude Code, Cursor Agent, Codex, or Gemini
 
 ---
 
@@ -35,7 +35,8 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 **CLI Tools (Send) — Recommended**
 - **Claude Code** — Terminal integration, stays open for continued interaction
 - **Cursor Agent** — Terminal integration, stays open for continued interaction
-- **Codex CLI** — Terminal integration with full-auto mode
+- **Codex CLI** — Terminal integration with automation mode
+- **Gemini CLI** — Terminal integration with Google's AI
 
 **Manual (Copy)**
 - **Claude IDE** — Clipboard copy, paste into Claude chat
@@ -88,6 +89,7 @@ Comments survive document edits with 3-layer fallback:
 - **Claude Code** — Enter command: `claude` (default, installs automatically)
 - **Cursor Agent** — Enter path: `cursor-agent` (requires installation)
 - **Codex CLI** — Enter path: `codex` (requires installation)
+- **Gemini CLI** — Enter path: `gemini` (requires installation)
 
 **For Manual Copy-Paste:**
 - **Claude IDE** — Choose "Claude" provider (uses clipboard when CLI unavailable)
@@ -172,7 +174,8 @@ These methods pipe comments to agentic tools via terminal, **automatically apply
 
 - **Claude Code** — Opens terminal with `claude` command, session stays open after processing
 - **Cursor Agent** — Opens terminal with `cursor-agent` command, session stays open after processing
-- **Codex CLI** — Opens terminal with `codex --full-auto` command, automatic execution in sandbox
+- **Codex CLI** — Opens terminal with `codex exec` command for automation mode
+- **Gemini CLI** — Opens terminal with `gemini -p` command for non-interactive prompts
 
 **Behavior:**
 - Comments are piped to the CLI tool via stdin
@@ -197,7 +200,7 @@ These methods copy comments to your clipboard for you to paste manually:
 
 **Send a Single Comment:**
 - In the sidebar, click the send/copy icon next to any comment
-- Icon varies by method: sparkle (Claude), terminal (Cursor CLI), rocket (OpenAI), etc.
+- Icon varies by method: send (CLI providers), copy (clipboard mode)
 
 **Send All Comments:**
 - Click the send/copy icon in the sidebar toolbar
@@ -235,6 +238,7 @@ These methods copy comments to your clipboard for you to paste manually:
   "commentary.agent.cursorCliPath": "cursor-agent",
   "commentary.agent.cursorInteractive": true,
   "commentary.agent.codexCliPath": "codex",
+  "commentary.agent.geminiCliPath": "gemini",
   "commentary.agent.contextLines": 6
 }
 ```
@@ -247,7 +251,7 @@ These methods copy comments to your clipboard for you to paste manually:
 
 | Command | Action |
 |---------|--------|
-| `Commentary: Configure AI Agent` | Set up Claude, Cursor, Codex, or custom |
+| `Commentary: Configure AI Agent` | Set up Claude, Cursor, Codex, Gemini, or custom |
 | `Commentary: Select Theme` | Choose from 20 themes |
 | `Commentary: Add Document-Level Comment` | Comment on entire file |
 | `Commentary: Send All to Agent` | Batch send all comments |

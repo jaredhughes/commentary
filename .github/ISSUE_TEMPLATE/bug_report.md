@@ -27,7 +27,7 @@ What actually happened.
 - **OS**: [e.g. macOS 14.0, Windows 11, Ubuntu 22.04]
 - **Storage Mode**: [workspace/sidecar]
 - **Theme**: [e.g. water-dark]
-- **Agent Provider**: [e.g. cursor/claude/openai/none]
+- **Agent Provider**: [e.g. cursor/claude/codex/gemini/none]
 
 ## Configuration
 ```json

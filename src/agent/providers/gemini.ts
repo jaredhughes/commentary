@@ -1,5 +1,5 @@
 /**
- * Pure Codex CLI provider logic
+ * Pure Gemini CLI provider logic
  * No VS Code dependencies - fully testable
  */
 
@@ -16,14 +16,14 @@ import {
   buildSimpleCliPrompt
 } from './types';
 
-export class CodexProvider implements ProviderStrategy {
+export class GeminiProvider implements ProviderStrategy {
   canUse(config: ProviderConfig): boolean {
-    return config.provider === 'codex' && !!config.codexCliPath;
+    return config.provider === 'gemini' && !!config.geminiCliPath;
   }
 
   getPreferredMethod(config: ProviderConfig): 'api' | 'cli' | 'clipboard' | 'chat' {
     // Prefer CLI if available
-    if (config.codexCliPath) {
+    if (config.geminiCliPath) {
       return 'cli';
     }
 
@@ -36,7 +36,7 @@ export class CodexProvider implements ProviderStrategy {
     request: AgentRequest,
     config: ProviderConfig
   ): TerminalCommand | null {
-    if (!config.codexCliPath) {
+    if (!config.geminiCliPath) {
       return null;
     }
 
@@ -49,7 +49,7 @@ export class CodexProvider implements ProviderStrategy {
     const fileUri = firstNote.file.replace('file://', '');
     const fileName = extractFileName(firstNote.file);
 
-    // Build prompt with explicit file path for Codex to edit
+    // Build prompt with explicit file path for Gemini to edit
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
@@ -59,20 +59,20 @@ export class CodexProvider implements ProviderStrategy {
     // Create temp file path
     const tempDir = os.tmpdir();
     const uuid = randomUUID().split('-')[0]; // Use first segment for shorter filename
-    const tempFileName = `commentary-codex-${uuid}.md`;
+    const tempFileName = `commentary-gemini-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Codex CLI: use 'exec' subcommand for non-interactive automation mode
+    // Gemini CLI: use '-p' flag for non-interactive prompt mode
     // The actual writing of the temp file happens in the adapter layer
-    // We pass the prompt as argument via command substitution: codex exec "$(cat tempfile)"
+    // We pass the prompt as argument via command substitution: gemini -p "$(cat tempfile)"
     return {
-      command: config.codexCliPath,
-      args: ['exec'],
+      command: config.geminiCliPath,
+      args: ['-p'],
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,
         commentaryPrompt: promptWithFile,
-        // Flag to indicate codex needs argument-style invocation for exec mode
+        // Flag to indicate gemini needs argument-style invocation for -p mode
         commentaryUseArgument: 'true'
       }
     };
@@ -87,11 +87,11 @@ export class CodexProvider implements ProviderStrategy {
     const fileName = extractFileName(fileUri);
 
     return buildClipboardPrompt({
-      providerName: 'Codex',
+      providerName: 'Gemini',
       fileName,
       commentCount: request.contexts.length,
       prompt,
-      footerText: '[Copied to clipboard - paste into Codex]'
+      footerText: '[Copied to clipboard - paste into Gemini]'
     });
   }
 
@@ -104,33 +104,33 @@ export class CodexProvider implements ProviderStrategy {
 
     switch (method) {
       case 'cli':
-        return `🚀 Opening Codex CLI with ${commentText}`;
+        return `🚀 Opening Gemini CLI with ${commentText}`;
       case 'clipboard':
-        return `📋 Copied ${commentText} to clipboard for Codex`;
+        return `📋 Copied ${commentText} to clipboard for Gemini`;
       default:
-        return `✅ Sent ${commentText} to Codex`;
+        return `✅ Sent ${commentText} to Gemini`;
     }
   }
 
   getChatCommand(_config: ProviderConfig): string | null {
-    // Codex doesn't have a built-in VS Code chat command
+    // Gemini doesn't have a built-in VS Code chat command
     return null;
   }
 }
 
 /**
- * Pure helper: Get default Codex CLI paths by platform
+ * Pure helper: Get default Gemini CLI paths by platform
  */
-export function getDefaultCodexCliPath(): string | null {
+export function getDefaultGeminiCliPath(): string | null {
   const platform = process.platform;
 
   switch (platform) {
     case 'darwin': // macOS
-      return '/usr/local/bin/codex';
+      return '/usr/local/bin/gemini';
     case 'linux':
-      return '/usr/bin/codex';
+      return '/usr/bin/gemini';
     case 'win32': // Windows
-      return 'C:\\Program Files\\Codex\\codex.exe';
+      return 'C:\\Program Files\\Gemini\\gemini.exe';
     default:
       return null;
   }

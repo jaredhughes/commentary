@@ -49,8 +49,8 @@ suite('Provider Types and Utilities', () => {
       assert.strictEqual(getProviderDisplayName('codex'), 'Codex');
     });
 
-    test('should return OpenAI for openai', () => {
-      assert.strictEqual(getProviderDisplayName('openai'), 'OpenAI');
+    test('should return Gemini for gemini', () => {
+      assert.strictEqual(getProviderDisplayName('gemini'), 'Gemini');
     });
 
     test('should return VS Code Chat for vscode', () => {
@@ -144,11 +144,11 @@ suite('Provider Types and Utilities', () => {
       assert.ok(result.errors[0].includes('CLI path'));
     });
 
-    test('should validate OpenAI with API key', () => {
+    test('should validate Gemini with CLI path', () => {
       const config: ProviderConfig = {
-        provider: 'openai',
+        provider: 'gemini',
         enabled: true,
-        openaiApiKey: 'sk-test123'
+        geminiCliPath: '/usr/local/bin/gemini'
       };
 
       const result = validateConfig(config);
@@ -156,15 +156,15 @@ suite('Provider Types and Utilities', () => {
       assert.strictEqual(result.errors.length, 0);
     });
 
-    test('should invalidate OpenAI without API key', () => {
+    test('should invalidate Gemini without CLI path', () => {
       const config: ProviderConfig = {
-        provider: 'openai',
+        provider: 'gemini',
         enabled: true
       };
 
       const result = validateConfig(config);
       assert.strictEqual(result.valid, false);
-      assert.ok(result.errors[0].includes('API key'));
+      assert.ok(result.errors[0].includes('CLI path'));
     });
 
     test('should validate custom with endpoint', () => {

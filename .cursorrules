@@ -93,7 +93,7 @@ Commentary is a VS Code extension that adds Google Docs-style commenting to rend
   - Detects available methods (CLI, API, clipboard)
   - Routes requests to appropriate provider implementation
 - `src/agent/providers/` - Provider-specific implementations
-  - `claude.ts`, `cursor.ts`, `openai.ts` - Provider-specific logic
+  - `claude.ts`, `cursor.ts`, `codex.ts`, `gemini.ts` - Provider-specific logic
   - `types.ts` - Provider type definitions
 - `src/agent/payload.ts` - Request payload builder
   - Formats comments with context lines
@@ -301,7 +301,7 @@ const mockContext = {
 **Step 1:** Update `package.json` configuration:
 ```json
 "commentary.agent.provider": {
-  "enum": ["claude", "cursor", "openai", "custom", "vscode", "NEW_PROVIDER"]
+  "enum": ["claude", "cursor", "codex", "gemini", "custom", "vscode", "NEW_PROVIDER"]
 }
 ```
 

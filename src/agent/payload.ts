@@ -177,10 +177,8 @@ export class PayloadBuilder {
         lines.push(`**Comment:** ${ctx.note.text}`);
         lines.push('');
 
-        // For document-level comments, use @ reference for token efficiency
-        lines.push(`**Full Document:** @${absolutePath}`);
-        lines.push('');
-        lines.push('*(Use the Read tool to review the complete file)*');
+        // For document-level comments, instruct the AI to read the full file
+        lines.push('*(Use the Read tool to review the complete file at the path above)*');
         lines.push('');
       } else {
         // Regular text-selection comment

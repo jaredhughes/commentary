@@ -328,7 +328,7 @@ Closes #123
 5. `src/agent/providers/newprovider.test.ts` - Write tests
 6. `README.md` - Add setup instructions
 
-**Pattern to follow:** `src/agent/providers/openai.ts`
+**Pattern to follow:** `src/agent/providers/codex.ts` (for CLI-based providers)
 
 ### Scenario 2: Adding a New Theme
 

@@ -16,6 +16,7 @@ import {
 import { ClaudeProvider } from './providers/claude';
 import { CursorProvider, getCursorChatCommands } from './providers/cursor';
 import { CodexProvider } from './providers/codex';
+import { GeminiProvider } from './providers/gemini';
 
 /**
  * Adapter that bridges pure provider logic with VS Code APIs
@@ -34,6 +35,7 @@ export class ProviderAdapter {
     this.providers.set('claude', new ClaudeProvider());
     this.providers.set('cursor', new CursorProvider());
     this.providers.set('codex', new CodexProvider());
+    this.providers.set('gemini', new GeminiProvider());
   }
 
   /**
@@ -43,7 +45,7 @@ export class ProviderAdapter {
     const config = vscode.workspace.getConfiguration('commentary.agent');
     
     return {
-      provider: config.get<'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom'>('provider', 'claude'),
+      provider: config.get<'claude' | 'cursor' | 'codex' | 'gemini' | 'vscode' | 'custom'>('provider', 'claude'),
       enabled: config.get<boolean>('enabled', true),
       model: config.get<string>('model'),
 
@@ -58,9 +60,8 @@ export class ProviderAdapter {
       // Codex
       codexCliPath: config.get<string>('codexCliPath'), // No default - must be explicitly configured
 
-      // OpenAI
-      openaiApiKey: config.get<string>('openaiApiKey'),
-      openaiModel: config.get<string>('openaiModel', 'gpt-4'),
+      // Gemini
+      geminiCliPath: config.get<string>('geminiCliPath'), // No default - must be explicitly configured
 
       // Custom
       customEndpoint: config.get<string>('customEndpoint'),
@@ -297,18 +298,26 @@ export class ProviderAdapter {
     }
 
     // Build command string
-    // All CLI providers (Claude, Cursor, Codex) pipe content from temp file
-    // This avoids command length limits and shell escaping issues
-    // After processing piped input, CLI stays open for continued interaction
+    // Different CLIs handle input differently:
+    // - Claude Code: stays open after piped input, so we use cat | claude
+    // - cursor-agent: exits after piped input, so we pass prompt as argument for interactive mode
     const hasTempFile = command.env?.commentaryTempFile && command.env?.commentaryPrompt;
+    const useArgument = command.env?.commentaryUseArgument === 'true';
 
     if (hasTempFile) {
-      // Use pipe from cat to feed prompt content to CLI
-      // More reliable than stdin redirection or command substitution
       const tempFilePath = command.env!.commentaryTempFile;
       const args = command.args.length > 0 ? ' ' + command.args.join(' ') : '';
-      const fullCommand = `cat "${tempFilePath}" | ${command.command}${args}`;
-      terminal.sendText(fullCommand);
+
+      if (useArgument) {
+        // cursor-agent: pass prompt content as argument to keep session interactive
+        // Use command substitution to read file content as argument
+        const fullCommand = `${command.command}${args} "$(cat "${tempFilePath}")"`;
+        terminal.sendText(fullCommand);
+      } else {
+        // Claude Code: pipe content via stdin - CLI stays open after processing
+        const fullCommand = `cat "${tempFilePath}" | ${command.command}${args}`;
+        terminal.sendText(fullCommand);
+      }
     } else {
       // Build command string normally (fallback for providers without temp files)
       const args = command.args.map(arg => `"${arg.replace(/"/g, '\\"')}"`).join(' ');

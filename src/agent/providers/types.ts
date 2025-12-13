@@ -8,7 +8,7 @@ import { AgentRequest } from '../../types';
 /**
  * Supported provider types
  */
-export type ProviderType = 'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom';
+export type ProviderType = 'claude' | 'cursor' | 'codex' | 'gemini' | 'vscode' | 'custom';
 
 /**
  * Provider configuration (from settings)
@@ -29,9 +29,8 @@ export interface ProviderConfig {
   // Codex-specific
   codexCliPath?: string;
 
-  // OpenAI-specific
-  openaiApiKey?: string;
-  openaiModel?: string;
+  // Gemini-specific
+  geminiCliPath?: string;
 
   // Custom provider
   customEndpoint?: string;
@@ -128,8 +127,8 @@ export function getProviderDisplayName(provider: ProviderType): string {
       return 'Cursor';
     case 'codex':
       return 'Codex';
-    case 'openai':
-      return 'OpenAI';
+    case 'gemini':
+      return 'Gemini';
     case 'vscode':
       return 'VS Code Chat';
     case 'custom':
@@ -169,9 +168,9 @@ export function validateConfig(config: ProviderConfig): { valid: boolean; errors
       }
       break;
 
-    case 'openai':
-      if (!config.openaiApiKey) {
-        errors.push('OpenAI requires API key');
+    case 'gemini':
+      if (!config.geminiCliPath) {
+        errors.push('Gemini requires CLI path configuration');
       }
       break;
 

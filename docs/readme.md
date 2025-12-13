@@ -237,7 +237,7 @@ commentary/
       commentsView.ts            // TreeDataProvider for comments
       commands.ts                // reveal/edit/delete, send-to-agent
     agent/
-      client.ts                  // provider-agnostic client (Claude/OpenAI/HTTP)
+      client.ts                  // provider-agnostic client (Claude/Gemini/Cursor/HTTP)
       payload.ts                 // payload builders (context windows, excerpts)
   media/
     overlay.js                   // injected into Markdown preview frame

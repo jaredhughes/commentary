@@ -426,15 +426,6 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     body {
       padding: 72px 32px 32px 32px;
     }
-
-    /* Pico theme support - Pico uses :where() selectors with zero specificity,
-       so we need to explicitly set body colors to ensure they apply in VS Code webviews */
-    ${isPicoTheme ? `
-    html, body {
-      background-color: var(--pico-background-color);
-      color: var(--pico-color);
-    }
-    ` : ''}
     #markdown-content {
       max-width: 1200px;
       width: 100%;
@@ -448,53 +439,21 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       body { padding: 56px 12px 12px 12px; }
     }
 
-    /* Heading colors - use theme variable if defined, otherwise inherit from theme */
-    .markdown-body h1,
-    .markdown-body h2,
-    .markdown-body h3,
-    .markdown-body h4,
-    .markdown-body h5,
-    .markdown-body h6 {
-      color: var(--commentary-heading-color, inherit);
-    }
-
-    .markdown-body h1 > a,
-    .markdown-body h2 > a,
-    .markdown-body h3 > a,
-    .markdown-body h4 > a,
-    .markdown-body h5 > a,
-    .markdown-body h6 > a {
+    /* Heading anchor links - structural styling only.
+       These are auto-generated anchors in headings that should inherit heading style.
+       Use :where() for zero specificity so themes can override if desired. */
+    :where(.markdown-body h1 > a),
+    :where(.markdown-body h2 > a),
+    :where(.markdown-body h3 > a),
+    :where(.markdown-body h4 > a),
+    :where(.markdown-body h5 > a),
+    :where(.markdown-body h6 > a) {
       color: inherit;
       text-decoration: none;
     }
 
-    .markdown-body h1 > a:hover,
-    .markdown-body h2 > a:hover,
-    .markdown-body h3 > a:hover,
-    .markdown-body h4 > a:hover,
-    .markdown-body h5 > a:hover,
-    .markdown-body h6 > a:hover,
-    .markdown-body h1 > a:focus,
-    .markdown-body h2 > a:focus,
-    .markdown-body h3 > a:focus,
-    .markdown-body h4 > a:focus,
-    .markdown-body h5 > a:focus,
-    .markdown-body h6 > a:focus,
-    .markdown-body h1 > a:active,
-    .markdown-body h2 > a:active,
-    .markdown-body h3 > a:active,
-    .markdown-body h4 > a:active,
-    .markdown-body h5 > a:active,
-    .markdown-body h6 > a:active {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    /* Link colors - use theme variable if defined, otherwise inherit from theme */
-    .markdown-body a {
-      color: var(--commentary-link-color, inherit);
-      text-decoration-color: currentColor;
-    }
+    /* All other typography (text colors, link colors, heading colors) is handled
+       entirely by the theme CSS. We do not set defaults here. */
   </style>
 
   <!-- Theme CSS (loads after base styles to take priority) -->

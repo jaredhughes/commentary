@@ -152,6 +152,30 @@ const themes = [
   }
 ];
 
+// Pico CSS compatibility - VS Code webviews inject link styles that override
+// Pico's :where() selectors. This CSS is appended to all Pico theme files.
+const PICO_COMPAT_CSS = `
+/* Commentary VS Code webview compatibility
+   Pico uses :where() selectors with zero specificity, which cannot compete with
+   VS Code webview styling. These rules provide the necessary specificity. */
+a {
+  color: var(--pico-color);
+  text-decoration-color: var(--pico-underline);
+}
+
+a:hover, a:active, a:focus {
+  color: var(--pico-color);
+  text-decoration-color: var(--pico-underline);
+}
+
+html, body {
+  background-color: var(--pico-background-color);
+  color: var(--pico-color);
+  /* Gently bump font size - VS Code's default is too small for Pico's typography */
+  font-size: 106.25%; /* 17px base if VS Code uses 16px */
+}
+`;
+
 let copied = 0;
 let failed = 0;
 
@@ -171,7 +195,13 @@ for (const { src, dest } of themes) {
       continue;
     }
 
-    const content = fs.readFileSync(fullSrc, 'utf8');
+    let content = fs.readFileSync(fullSrc, 'utf8');
+
+    // Append compatibility CSS to Pico themes
+    if (path.basename(dest).startsWith('pico-')) {
+      content += PICO_COMPAT_CSS;
+    }
+
     fs.writeFileSync(fullDest, content, 'utf8');
     console.log(`✓ ${path.basename(dest)}`);
     copied++;

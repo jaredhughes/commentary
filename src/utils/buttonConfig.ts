@@ -3,7 +3,7 @@
  * Determines button appearance and behavior based on provider settings
  */
 
-export type AgentProvider = 'claude' | 'cursor' | 'codex' | 'openai' | 'vscode' | 'custom';
+export type AgentProvider = 'claude' | 'cursor' | 'codex' | 'gemini' | 'vscode' | 'custom';
 
 export interface ButtonConfig {
   icon: string;
@@ -13,30 +13,37 @@ export interface ButtonConfig {
 
 /**
  * Get button configuration for the AI agent based on provider
+ * Icons are consistent based on MODE (send vs copy), not provider:
+ * - CLI/API mode (sends directly): codicon-send
+ * - Copy mode (clipboard): codicon-copy
+ *
  * @param provider - The configured AI agent provider
  * @param hasCursorCli - Whether Cursor CLI is configured (only relevant for cursor provider)
  * @returns Button configuration with icon HTML, text, and tooltip
  */
 export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: boolean = false): ButtonConfig {
+  // Use consistent icons based on mode, not provider
+  const sendIcon = '<i class="codicon codicon-send"></i>';
+  const copyIcon = '<i class="codicon codicon-copy"></i>';
+
   switch (provider) {
     case 'claude':
       return {
-        icon: '<i class="codicon codicon-sparkle"></i>',
+        icon: sendIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to Claude Code via terminal'
       };
 
     case 'cursor':
-      // Different icon/text based on whether CLI is configured
       if (hasCursorCli) {
         return {
-          icon: '<i class="codicon codicon-terminal"></i>',
+          icon: sendIcon,
           text: 'Send to agent',
           tooltip: 'Send comment to Cursor Agent via terminal'
         };
       } else {
         return {
-          icon: '<i class="codicon codicon-copy"></i>',
+          icon: copyIcon,
           text: 'Copy for agent',
           tooltip: 'Copy comment to clipboard for Cursor chat'
         };
@@ -44,28 +51,28 @@ export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: bool
 
     case 'codex':
       return {
-        icon: '<i class="codicon codicon-terminal"></i>',
+        icon: sendIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to Codex CLI via terminal'
       };
 
-    case 'openai':
+    case 'gemini':
       return {
-        icon: '<i class="codicon codicon-rocket"></i>',
+        icon: sendIcon,
         text: 'Send to agent',
-        tooltip: 'Send comment to OpenAI API (GPT-4)'
+        tooltip: 'Send comment to Gemini CLI via terminal'
       };
 
     case 'vscode':
       return {
-        icon: '<i class="codicon codicon-comment-discussion"></i>',
+        icon: sendIcon,
         text: 'Send to chat',
         tooltip: 'Send comment to VS Code Chat'
       };
 
     case 'custom':
       return {
-        icon: '<i class="codicon codicon-send"></i>',
+        icon: sendIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to custom agent'
       };
@@ -73,7 +80,7 @@ export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: bool
     default:
       // Fallback for unknown providers
       return {
-        icon: '<i class="codicon codicon-copy"></i>',
+        icon: copyIcon,
         text: 'Copy for agent',
         tooltip: 'Copy comment to clipboard'
       };

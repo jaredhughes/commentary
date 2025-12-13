@@ -1,15 +1,15 @@
 /**
  * Commentary overlay styles
  * Theme-aware highlight and bubble styles for the Markdown preview
+ *
+ * IMPORTANT: All styles in this file should be scoped to .commentary-* classes
+ * to avoid interfering with theme CSS. Document styling (text, links, code, etc.)
+ * is handled entirely by the theme CSS, not here.
  */
-
-/* Global: Ensure inline code uses monospace font across all themes */
-code, pre, kbd, samp, tt {
-  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Consolas, "Courier New", monospace;
-}
 
 /* Comment highlights - yellow/gold based */
 .commentary-highlight {
+  display: inline; /* Ensure marks don't break onto new lines */
   background-color: var(--commentary-highlight-bg, rgba(255, 220, 0, 0.25));
   border-bottom: 1px solid var(--commentary-highlight-border, rgba(255, 220, 0, 0.5));
   color: inherit;
@@ -92,22 +92,26 @@ code, pre, kbd, samp, tt {
   min-height: 100px;
   padding: 8px;
   margin: 0;
-  border: 1px solid var(--commentary-control-border, #30363d);
+  border: 1px solid #30363d !important;
   border-radius: 6px;
-  background: var(--commentary-control-bg, #0d1117);
-  color: var(--commentary-foreground, #c9d1d9);
-  font-family: inherit;
+  background: #0d1117 !important;
+  color: #c9d1d9 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   resize: vertical;
-  outline: none;
+  outline: none !important;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
+  /* Reset any theme styles */
+  box-shadow: none !important;
+  -webkit-appearance: none;
 }
 
 .commentary-textarea:focus {
-  border-color: var(--commentary-link-color, #58a6ff);
-  outline: none;
+  border-color: #58a6ff !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .commentary-textarea::placeholder {
@@ -223,13 +227,16 @@ code, pre, kbd, samp, tt {
   color: var(--commentary-primary-disabled-foreground, rgba(255, 255, 255, 0.3));
 }
 
-/* User selection styling */
-::selection {
+/* Selection styling - scoped to Commentary UI elements only.
+   Document selection styling is handled by the theme CSS. */
+.commentary-bubble ::selection,
+.commentary-textarea::selection {
   background-color: var(--commentary-selection-bg, rgba(173, 214, 255, 0.4));
   color: var(--commentary-selection-color, inherit);
 }
 
-::-moz-selection {
+.commentary-bubble ::-moz-selection,
+.commentary-textarea::-moz-selection {
   background-color: var(--commentary-selection-bg, rgba(173, 214, 255, 0.4));
 }
 
@@ -314,9 +321,9 @@ code, pre, kbd, samp, tt {
   font-size: 14px;
 }
 
-/* Contenteditable elements - remove all browser default styling */
-[contenteditable="true"],
-[contenteditable="plaintext-only"] {
+/* Contenteditable elements within Commentary UI - remove browser default styling */
+.commentary-bubble [contenteditable="true"],
+.commentary-bubble [contenteditable="plaintext-only"] {
   outline: none !important;
   box-shadow: none !important;
   -webkit-box-shadow: none !important;
@@ -324,8 +331,8 @@ code, pre, kbd, samp, tt {
   -webkit-tap-highlight-color: transparent !important;
 }
 
-[contenteditable="true"]:focus,
-[contenteditable="plaintext-only"]:focus {
+.commentary-bubble [contenteditable="true"]:focus,
+.commentary-bubble [contenteditable="plaintext-only"]:focus {
   outline: none !important;
   box-shadow: none !important;
   -webkit-box-shadow: none !important;
