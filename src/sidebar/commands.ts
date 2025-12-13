@@ -427,11 +427,15 @@ export class CommandManager {
 
                 if (modeOption) {
                   await config.update('claudeMode', modeOption.value, vscode.ConfigurationTarget.Global);
+                  vscode.window.showInformationMessage(
+                    `✓ Claude CLI configured: "${command}" (${modeOption.value} mode)`
+                  );
+                } else {
+                  // User cancelled mode selection, but command is saved
+                  vscode.window.showInformationMessage(
+                    `✓ Claude CLI command saved: "${command}" (mode selection cancelled - using default: interactive)`
+                  );
                 }
-
-                vscode.window.showInformationMessage(
-                  `✓ Claude CLI configured: "${command}" (${modeOption?.value || 'interactive'} mode)`
-                );
               }
 
             } else if (claudeOption.value === 'api') {
@@ -525,15 +529,19 @@ export class CommandManager {
 
             if (modeOption) {
               await config.update('codexMode', modeOption.value, vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage(
+                `✓ Codex configured! CLI command: "${command}" (${modeOption.value} mode)`
+              );
+            } else {
+              // User cancelled mode selection, but command is saved
+              vscode.window.showInformationMessage(
+                `✓ Codex CLI command saved: "${command}" (mode selection cancelled - using default: interactive)`
+              );
             }
-
-            vscode.window.showInformationMessage(
-              `✓ Codex configured! CLI command: "${command}" (${modeOption?.value || 'interactive'} mode)`
-            );
           } else {
-            // User cancelled, keep current command
+            // User cancelled command input - provider is set but will fall back to clipboard
             vscode.window.showInformationMessage(
-              `✓ Codex configured! Using command: "${currentCommand}"`
+              'Codex provider selected. CLI path not configured - will use clipboard mode.'
             );
           }
 
@@ -581,15 +589,19 @@ export class CommandManager {
 
             if (modeOption) {
               await config.update('geminiMode', modeOption.value, vscode.ConfigurationTarget.Global);
+              vscode.window.showInformationMessage(
+                `✓ Gemini configured! CLI command: "${command}" (${modeOption.value} mode)`
+              );
+            } else {
+              // User cancelled mode selection, but command is saved
+              vscode.window.showInformationMessage(
+                `✓ Gemini CLI command saved: "${command}" (mode selection cancelled - using default: interactive)`
+              );
             }
-
-            vscode.window.showInformationMessage(
-              `✓ Gemini configured! CLI command: "${command}" (${modeOption?.value || 'interactive'} mode)`
-            );
           } else {
-            // User cancelled, keep current command
+            // User cancelled command input - provider is set but will fall back to clipboard
             vscode.window.showInformationMessage(
-              `✓ Gemini configured! Using command: "${currentCommand}"`
+              'Gemini provider selected. CLI path not configured - will use clipboard mode.'
             );
           }
 

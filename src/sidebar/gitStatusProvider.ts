@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 export enum GitStatus {
 	Unmodified = 'unmodified',
@@ -38,6 +39,12 @@ interface Change {
 	uri: vscode.Uri;
 	status: number;
 }
+
+/**
+ * Git status constants from VS Code Git extension
+ * @see https://github.com/microsoft/vscode/blob/main/extensions/git/src/api/git.d.ts
+ */
+const GIT_STATUS_UNTRACKED = 7;
 
 export class GitStatusProvider {
 	private _onDidChangeStatus = new vscode.EventEmitter<vscode.Uri | vscode.Uri[]>();
@@ -127,7 +134,9 @@ export class GitStatusProvider {
 			const repo = this.gitAPI.repositories.find((r) => {
 				const repoPath = r.rootUri.fsPath;
 				const filePath = uri.fsPath;
-				return filePath.startsWith(repoPath);
+				// Ensure path separator follows repoPath to avoid false matches
+				// (e.g., /project-backup should not match /project)
+				return filePath === repoPath || filePath.startsWith(repoPath + path.sep);
 			});
 
 			if (!repo) {
@@ -146,8 +155,8 @@ export class GitStatusProvider {
 				(change) => change.uri.toString() === uriString
 			);
 
-			// Determine untracked status (Status enum value 7 = UNTRACKED)
-			const isUntracked = workingTreeChange?.status === 7;
+			// Determine untracked status
+			const isUntracked = workingTreeChange?.status === GIT_STATUS_UNTRACKED;
 
 			if (workingTreeChange && indexChange) {
 				return GitStatus.Both;

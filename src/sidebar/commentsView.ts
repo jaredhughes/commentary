@@ -134,7 +134,8 @@ export class CommentsViewProvider implements vscode.TreeDataProvider<vscode.Tree
     }
 
     // Expand all parent folders
-    const parts = relativePath.split(path.sep);
+    // Note: vscode.workspace.asRelativePath() returns forward slashes on all platforms
+    const parts = relativePath.split('/');
     let currentPath = '';
 
     for (let i = 0; i < parts.length - 1; i++) {
