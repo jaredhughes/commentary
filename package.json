@@ -508,7 +508,10 @@
         },
         "commentary.agent.codexMode": {
           "type": "string",
-          "enum": ["interactive", "batch"],
+          "enum": [
+            "interactive",
+            "batch"
+          ],
           "default": "interactive",
           "description": "CLI mode for Codex: 'interactive' keeps session open, 'batch' executes and closes"
         },
@@ -524,13 +527,19 @@
         },
         "commentary.agent.claudeMode": {
           "type": "string",
-          "enum": ["interactive", "batch"],
+          "enum": [
+            "interactive",
+            "batch"
+          ],
           "default": "interactive",
           "description": "CLI mode for Claude Code: 'interactive' keeps session open, 'batch' executes and closes"
         },
         "commentary.agent.geminiMode": {
           "type": "string",
-          "enum": ["interactive", "batch"],
+          "enum": [
+            "interactive",
+            "batch"
+          ],
           "default": "interactive",
           "description": "CLI mode for Gemini: 'interactive' keeps session open, 'batch' executes and closes"
         }
@@ -581,6 +590,7 @@
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
     "markdown-it-github-headings": "^2.0.1",
-    "markdown-it-task-lists": "^2.1.1"
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.12.2"
   }
 }

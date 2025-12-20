@@ -29,6 +29,10 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       typographer: true,
       breaks: true,
       highlight: (str, lang) => {
+        // Handle Mermaid diagrams - render as div for client-side processing
+        if (lang === 'mermaid') {
+          return `<div class="mermaid">${this.md.utils.escapeHtml(str)}</div>`;
+        }
         // If language is specified and supported, use highlight.js
         if (lang && hljs.getLanguage(lang)) {
           try {
@@ -81,6 +85,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       enableScripts: true,
       localResourceRoots: [
         vscode.Uri.joinPath(this.context.extensionUri, 'media'),
+        vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'mermaid', 'dist'),
       ],
     };
 
@@ -170,6 +175,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         enableScripts: true,
         localResourceRoots: [
           vscode.Uri.joinPath(this.context.extensionUri, 'media'),
+          vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'mermaid', 'dist'),
         ],
       }
     );
@@ -330,6 +336,9 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
     const overlayStyleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'overlay.css')
     );
+    const mermaidScriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js')
+    );
 
     // Get theme CSS and button configurations
     const config = vscode.workspace.getConfiguration('commentary');
@@ -394,7 +403,7 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} data:; img-src ${webview.cspSource} data: blob:;">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -565,6 +574,24 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
         save: ${JSON.stringify(saveBtnConfig)},
         delete: ${JSON.stringify(deleteBtnConfig)}
       };
+
+      // Store theme info for Mermaid initialization
+      window.commentaryIsDarkTheme = ${isDarkTheme};
+    })();
+  </script>
+
+  <!-- Mermaid Diagram Rendering -->
+  <script nonce="${nonce}" src="${mermaidScriptUri}"></script>
+  <script nonce="${nonce}">
+    (function() {
+      // Initialize Mermaid with theme matching the preview theme
+      const isDark = window.commentaryIsDarkTheme;
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: isDark ? 'dark' : 'default',
+        securityLevel: 'strict',
+        fontFamily: 'inherit'
+      });
     })();
   </script>
 </body>

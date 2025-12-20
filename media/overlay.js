@@ -125,6 +125,20 @@ console.log('[OVERLAY.JS] Script is loading...');
         computedBgColor: getComputedStyle(document.documentElement).backgroundColor,
         computedColor: getComputedStyle(document.documentElement).color,
       });
+
+      // Re-render Mermaid diagrams with updated theme
+      if (typeof mermaid !== 'undefined') {
+        const mermaidTheme = isDarkTheme ? 'dark' : 'default';
+        console.log('[OVERLAY] Re-initializing Mermaid with theme:', mermaidTheme);
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: mermaidTheme,
+          securityLevel: 'strict',
+          fontFamily: 'inherit'
+        });
+        // Re-render all mermaid diagrams
+        mermaid.run({ querySelector: '.mermaid' });
+      }
     }, 200); // Delay to allow stylesheet to load
   }
 
