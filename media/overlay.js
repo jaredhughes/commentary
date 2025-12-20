@@ -136,6 +136,19 @@ console.log('[OVERLAY.JS] Script is loading...');
           securityLevel: 'strict',
           fontFamily: 'inherit'
         });
+        // Restore original source from data attribute before re-rendering
+        // (Mermaid replaces content with SVG, so we need the original source)
+        document.querySelectorAll('.mermaid[data-mermaid-source]').forEach(el => {
+          const source = el.getAttribute('data-mermaid-source');
+          if (source) {
+            // Decode HTML entities back to original source
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = source;
+            el.textContent = textarea.value;
+            // Remove processed flag so mermaid will re-render
+            el.removeAttribute('data-processed');
+          }
+        });
         // Re-render all mermaid diagrams
         mermaid.run({ querySelector: '.mermaid' });
       }

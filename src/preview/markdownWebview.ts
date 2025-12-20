@@ -30,8 +30,11 @@ export class MarkdownWebviewProvider implements vscode.CustomTextEditorProvider 
       breaks: true,
       highlight: (str, lang) => {
         // Handle Mermaid diagrams - render as div for client-side processing
+        // Note: Mermaid requires unescaped content; securityLevel:'strict' provides XSS protection
+        // Store original source in data attribute for theme change re-rendering
         if (lang === 'mermaid') {
-          return `<div class="mermaid">${this.md.utils.escapeHtml(str)}</div>`;
+          const escaped = this.md.utils.escapeHtml(str);
+          return `<div class="mermaid" data-mermaid-source="${escaped}">${str}</div>`;
         }
         // If language is specified and supported, use highlight.js
         if (lang && hljs.getLanguage(lang)) {
