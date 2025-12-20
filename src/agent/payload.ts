@@ -87,9 +87,23 @@ export class PayloadBuilder {
    */
   static async buildSingleRequest(note: Note): Promise<AgentRequest> {
     const context = await this.buildContext(note);
+
+    // For document-level comments, include full document and broad instruction
+    if (note.isDocumentLevel) {
+      return {
+        contexts: [context],
+        instruction: 'Review this document-level comment and apply changes throughout the document as needed.',
+      };
+    }
+
+    // For selection comments, don't send full document upfront
+    // Let the LLM use Read tool if broader context is needed
     return {
-      contexts: [context],
-      instruction: 'Review the entire document and address this comment. Consider the full document context and apply any related changes throughout the document that would improve consistency or address similar issues.',
+      contexts: [{
+        ...context,
+        fullDocument: undefined  // Don't include full doc for selection comments
+      }],
+      instruction: 'Address this comment at the location shown. Use the Read tool on the file path if you need broader context to implement the change correctly.',
     };
   }
 
@@ -99,10 +113,16 @@ export class PayloadBuilder {
   static async buildMultipleRequest(notes: Note[]): Promise<AgentRequest> {
     const contexts = await Promise.all(notes.map((note) => this.buildContext(note)));
 
+    // Check if any are document-level comments
+    const hasDocLevel = notes.some(n => n.isDocumentLevel);
+
+    // For multiple comments, keep full document context since it's likely comprehensive changes
+    // But tone down the instruction if no document-level comments
     return {
       contexts,
-      instruction:
-        'Review the entire document and address all these comments. Consider the full document context and apply any related changes throughout the document that would improve consistency or address similar issues across all sections.',
+      instruction: hasDocLevel
+        ? 'Review these document-level comments and address all of them, applying changes throughout the document as needed.'
+        : 'Address all these comments. Use the Read tool on the file path if you need broader context to ensure changes are consistent across the document.',
     };
   }
 

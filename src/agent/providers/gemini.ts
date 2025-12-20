@@ -49,11 +49,11 @@ export class GeminiProvider implements ProviderStrategy {
     const fileUri = firstNote.file.replace('file://', '');
     const fileName = extractFileName(firstNote.file);
 
-    // Build prompt with explicit file path for Gemini to edit
+    // Build prompt for Gemini
     const promptWithFile = buildSimpleCliPrompt(
       fileName,
       prompt,
-      `Review the ENTIRE document at ${fileUri}, then address the comments. Look for related changes throughout the document that would improve consistency or address similar issues. Don't just fix the specific commented sections—consider the broader document context and apply comprehensive improvements.`
+      `File location: ${fileUri}`
     );
 
     // Create temp file path
@@ -62,18 +62,21 @@ export class GeminiProvider implements ProviderStrategy {
     const tempFileName = `commentary-gemini-${uuid}.md`;
     const tempFilePath = path.join(tempDir, tempFileName);
 
-    // Gemini CLI: use '-p' flag for non-interactive prompt mode
+    // Check mode setting (defaults to 'interactive')
+    const mode = config.geminiMode || 'interactive';
+    const isBatch = mode === 'batch';
+
+    // Gemini CLI: interactive mode (stays open) or batch mode (executes and closes)
     // The actual writing of the temp file happens in the adapter layer
-    // We pass the prompt as argument via command substitution: gemini -p "$(cat tempfile)"
     return {
       command: config.geminiCliPath,
-      args: ['-p'],
+      args: isBatch ? ['-p'] : [],  // Use '-p' flag for batch/prompt mode
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,
         commentaryPrompt: promptWithFile,
-        // Flag to indicate gemini needs argument-style invocation for -p mode
-        commentaryUseArgument: 'true'
+        // Use argument-style invocation for batch mode, piping for interactive
+        ...(isBatch ? { commentaryUseArgument: 'true' } : {})
       }
     };
   }

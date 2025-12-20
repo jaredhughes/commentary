@@ -5,73 +5,68 @@ suite('Button Configuration Utils', () => {
   
   suite('getAgentButtonConfig', () => {
     
-    // Icons are now consistent based on MODE (send vs copy), not provider
-    test('returns send icon for Claude provider (send mode)', () => {
+    // All providers now use terminal icon (all-in on CLI/terminal integration)
+    test('returns terminal icon for Claude provider', () => {
       const config = getAgentButtonConfig('claude');
 
-      assert.ok(config.icon.includes('codicon-send'));
+      assert.ok(config.icon.includes('codicon-terminal'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('Claude'));
-    });
-
-    test('returns copy icon for Cursor provider without CLI (copy mode)', () => {
-      const config = getAgentButtonConfig('cursor', false);
-
-      assert.ok(config.icon.includes('codicon-copy'));
-      assert.strictEqual(config.text, 'Copy for agent');
-      assert.ok(config.tooltip.includes('Cursor'));
-      assert.ok(config.tooltip.includes('clipboard'));
-    });
-
-    test('returns send icon for Cursor provider with CLI (send mode)', () => {
-      const config = getAgentButtonConfig('cursor', true);
-
-      assert.ok(config.icon.includes('codicon-send'));
-      assert.strictEqual(config.text, 'Send to agent');
-      assert.ok(config.tooltip.includes('Cursor Agent'));
       assert.ok(config.tooltip.includes('terminal'));
     });
 
-    test('returns send icon for Codex provider (send mode)', () => {
+    test('returns terminal icon for Cursor provider', () => {
+      const config = getAgentButtonConfig('cursor');
+
+      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('Cursor'));
+      // Tooltip should mention terminal/agent
+      assert.ok(config.tooltip.toLowerCase().includes('terminal') || config.tooltip.toLowerCase().includes('agent'));
+    });
+
+    test('returns terminal icon for Codex provider', () => {
       const config = getAgentButtonConfig('codex');
 
-      assert.ok(config.icon.includes('codicon-send'));
+      assert.ok(config.icon.includes('codicon-terminal'));
       assert.strictEqual(config.text, 'Send to agent');
-      assert.ok(config.tooltip.includes('Codex CLI'));
+      assert.ok(config.tooltip.includes('Codex'));
+      assert.ok(config.tooltip.includes('terminal'));
     });
 
-    test('returns send icon for Gemini provider (send mode)', () => {
+    test('returns terminal icon for Gemini provider', () => {
       const config = getAgentButtonConfig('gemini');
 
-      assert.ok(config.icon.includes('codicon-send'));
+      assert.ok(config.icon.includes('codicon-terminal'));
       assert.strictEqual(config.text, 'Send to agent');
-      assert.ok(config.tooltip.includes('Gemini CLI'));
+      assert.ok(config.tooltip.includes('Gemini'));
+      assert.ok(config.tooltip.includes('terminal'));
     });
 
-    test('returns send icon for VS Code provider (send mode)', () => {
+    test('returns terminal icon for VS Code provider', () => {
       const config = getAgentButtonConfig('vscode');
 
-      assert.ok(config.icon.includes('codicon-send'));
+      assert.ok(config.icon.includes('codicon-terminal'));
       assert.strictEqual(config.text, 'Send to chat');
       assert.ok(config.tooltip.includes('VS Code Chat'));
     });
 
-    test('returns send icon for custom provider (send mode)', () => {
+    test('returns terminal icon for custom provider', () => {
       const config = getAgentButtonConfig('custom');
 
-      assert.ok(config.icon.includes('codicon-send'));
+      assert.ok(config.icon.includes('codicon-terminal'));
       assert.strictEqual(config.text, 'Send to agent');
       assert.ok(config.tooltip.includes('custom'));
     });
-    
-    test('returns fallback config for unknown provider', () => {
+
+    test('returns fallback terminal config for unknown provider', () => {
       // Test with a value that's not in the AgentProvider union
       const unknownProvider = 'unknown' as 'claude';
       const config = getAgentButtonConfig(unknownProvider);
-      
-      assert.ok(config.icon.includes('codicon-copy'));
-      assert.strictEqual(config.text, 'Copy for agent');
-      assert.ok(config.tooltip.includes('clipboard'));
+
+      assert.ok(config.icon.includes('codicon-terminal'));
+      assert.strictEqual(config.text, 'Send to agent');
+      assert.ok(config.tooltip.includes('terminal'));
     });
     
     test('all configs include valid codicon class', () => {

@@ -199,7 +199,7 @@ function activateInternal(context: vscode.ExtensionContext) {
   const agentClient = new AgentClient(context);
 
   // Initialize comments view provider early (needed for commands below)
-  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider);
+  commentsViewProvider = new CommentsViewProvider(storageManager, markdownWebviewProvider, context);
   commentsTreeView = vscode.window.createTreeView('commentary.commentsView', {
     treeDataProvider: commentsViewProvider,
   });
@@ -357,6 +357,59 @@ function activateInternal(context: vscode.ExtensionContext) {
         }
       } catch (error) {
         console.error('[Commentary] Error in onDidChangeTextDocument:', error);
+      }
+    })
+  );
+
+  // Watch for new Markdown files (Issue #15)
+  context.subscriptions.push(
+    vscode.workspace.onDidCreateFiles(async (event) => {
+      try {
+        const markdownFiles = event.files.filter(f => f.path.endsWith('.md'));
+        if (markdownFiles.length > 0) {
+          console.log('[Commentary] Markdown files created:', markdownFiles.map(f => f.fsPath));
+          // Refresh sidebar to show new files
+          commentsViewProvider?.refresh();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidCreateFiles:', error);
+      }
+    })
+  );
+
+  // Watch for deleted Markdown files (Issue #15)
+  context.subscriptions.push(
+    vscode.workspace.onDidDeleteFiles(async (event) => {
+      try {
+        const markdownFiles = event.files.filter(f => f.path.endsWith('.md'));
+        if (markdownFiles.length > 0) {
+          console.log('[Commentary] Markdown files deleted:', markdownFiles.map(f => f.fsPath));
+          // Refresh sidebar to remove deleted files
+          commentsViewProvider?.refresh();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidDeleteFiles:', error);
+      }
+    })
+  );
+
+  // Watch for renamed Markdown files (Issue #15)
+  context.subscriptions.push(
+    vscode.workspace.onDidRenameFiles(async (event) => {
+      try {
+        const markdownFiles = event.files.filter(f =>
+          f.newUri.path.endsWith('.md') || f.oldUri.path.endsWith('.md')
+        );
+        if (markdownFiles.length > 0) {
+          console.log('[Commentary] Markdown files renamed:', markdownFiles.map(f => ({
+            old: f.oldUri.fsPath,
+            new: f.newUri.fsPath
+          })));
+          // Refresh sidebar to update file paths
+          commentsViewProvider?.refresh();
+        }
+      } catch (error) {
+        console.error('[Commentary] Error in onDidRenameFiles:', error);
       }
     })
   );

@@ -85,24 +85,49 @@ suite('Codex Provider', () => {
   });
 
   suite('buildTerminalCommand', () => {
-    test('should build command with exec subcommand and temp file env vars', () => {
+    test('should build interactive command with no args by default', () => {
       const config: ProviderConfig = {
         provider: 'codex',
         enabled: true,
         codexCliPath: '/usr/local/bin/codex'
+        // codexMode defaults to 'interactive'
       };
 
       const command = provider.buildTerminalCommand('test prompt', mockRequest, config);
 
       assert.ok(command);
       assert.strictEqual(command!.command, '/usr/local/bin/codex');
-      // args include 'exec' for non-interactive automation mode
+      // Interactive mode: no args, prompt piped via stdin
+      assert.deepStrictEqual(command!.args, []);
+      // Temp file info in env for adapter to use
+      assert.ok(command!.env);
+      assert.ok(command!.env.commentaryTempFile);
+      assert.ok(command!.env.commentaryPrompt);
+      assert.ok(command!.env.commentaryTempFile.includes('commentary-codex'));
+      // Interactive mode doesn't use argument-style invocation
+      assert.strictEqual(command!.env.commentaryUseArgument, undefined);
+    });
+
+    test('should build batch command with exec subcommand when codexMode is batch', () => {
+      const config: ProviderConfig = {
+        provider: 'codex',
+        enabled: true,
+        codexCliPath: '/usr/local/bin/codex',
+        codexMode: 'batch'
+      };
+
+      const command = provider.buildTerminalCommand('test prompt', mockRequest, config);
+
+      assert.ok(command);
+      assert.strictEqual(command!.command, '/usr/local/bin/codex');
+      // Batch mode: exec subcommand for non-interactive automation mode
       assert.deepStrictEqual(command!.args, ['exec']);
       // Temp file info in env for adapter to use
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
       assert.ok(command!.env.commentaryPrompt);
       assert.ok(command!.env.commentaryTempFile.includes('commentary-codex'));
+      // Batch mode uses argument-style invocation
       assert.strictEqual(command!.env.commentaryUseArgument, 'true');
     });
 

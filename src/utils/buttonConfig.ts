@@ -13,66 +13,54 @@ export interface ButtonConfig {
 
 /**
  * Get button configuration for the AI agent based on provider
- * Icons are consistent based on MODE (send vs copy), not provider:
- * - CLI/API mode (sends directly): codicon-send
- * - Copy mode (clipboard): codicon-copy
+ * All providers use terminal icon to emphasize CLI/terminal integration
  *
  * @param provider - The configured AI agent provider
- * @param hasCursorCli - Whether Cursor CLI is configured (only relevant for cursor provider)
  * @returns Button configuration with icon HTML, text, and tooltip
  */
-export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: boolean = false): ButtonConfig {
-  // Use consistent icons based on mode, not provider
-  const sendIcon = '<i class="codicon codicon-send"></i>';
-  const copyIcon = '<i class="codicon codicon-copy"></i>';
+export function getAgentButtonConfig(provider: AgentProvider): ButtonConfig {
+  // Use terminal icon for all providers (all-in on CLI/terminal integration)
+  const terminalIcon = '<i class="codicon codicon-terminal"></i>';
 
   switch (provider) {
     case 'claude':
       return {
-        icon: sendIcon,
+        icon: terminalIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to Claude Code via terminal'
       };
 
     case 'cursor':
-      if (hasCursorCli) {
-        return {
-          icon: sendIcon,
-          text: 'Send to agent',
-          tooltip: 'Send comment to Cursor Agent via terminal'
-        };
-      } else {
-        return {
-          icon: copyIcon,
-          text: 'Copy for agent',
-          tooltip: 'Copy comment to clipboard for Cursor chat'
-        };
-      }
+      return {
+        icon: terminalIcon,
+        text: 'Send to agent',
+        tooltip: 'Send comment to Cursor Agent via terminal'
+      };
 
     case 'codex':
       return {
-        icon: sendIcon,
+        icon: terminalIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to Codex CLI via terminal'
       };
 
     case 'gemini':
       return {
-        icon: sendIcon,
+        icon: terminalIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to Gemini CLI via terminal'
       };
 
     case 'vscode':
       return {
-        icon: sendIcon,
+        icon: terminalIcon,
         text: 'Send to chat',
         tooltip: 'Send comment to VS Code Chat'
       };
 
     case 'custom':
       return {
-        icon: sendIcon,
+        icon: terminalIcon,
         text: 'Send to agent',
         tooltip: 'Send comment to custom agent'
       };
@@ -80,9 +68,9 @@ export function getAgentButtonConfig(provider: AgentProvider, hasCursorCli: bool
     default:
       // Fallback for unknown providers
       return {
-        icon: copyIcon,
-        text: 'Copy for agent',
-        tooltip: 'Copy comment to clipboard'
+        icon: terminalIcon,
+        text: 'Send to agent',
+        tooltip: 'Send comment via terminal'
       };
   }
 }
