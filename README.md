@@ -45,6 +45,17 @@ Stay in flow while reviewing your Markdown. Commentary brings **Google Docs-styl
 
 💡 **CLI methods** pipe comments to agentic tools that automatically apply edits and stay open for follow-up. **Manual methods** copy to clipboard for you to paste—useful when CLI isn't available.
 
+### Mermaid Diagrams
+Render diagrams directly in your Markdown preview:
+- **Flowcharts** — Process flows and decision trees
+- **Sequence diagrams** — API interactions and workflows
+- **Class diagrams** — Architecture documentation
+- **State diagrams** — State machines and transitions
+- **Pie charts** — Data visualization
+- **And more** — Entity relationships, Git graphs, timelines
+
+Diagrams automatically adapt to your VS Code theme (light/dark).
+
 ### Beautiful Themes
 Choose from **20 professional themes**:
 - **Water.css** — Modern, clean (light/dark)
@@ -357,6 +368,9 @@ See [LICENSE](LICENSE) for details.
 - [LaTeX.css](https://github.com/vincentdoerig/latex-css) (MIT)
 - [Tufte CSS](https://github.com/edwardtufte/tufte-css) (MIT)
 - [New.css](https://github.com/xz/new.css) (MIT)
+
+**Diagrams powered by:**
+- [Mermaid](https://github.com/mermaid-js/mermaid) (MIT)
 
 **Special thanks to the VS Code extension API and markdown-it ecosystem.**
 
