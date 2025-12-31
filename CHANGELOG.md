@@ -5,6 +5,15 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-12-31
+
+### Added
+- **Mermaid diagram rendering**: Full support for Mermaid diagrams in markdown preview
+  - Flowcharts, sequence diagrams, class diagrams, state diagrams, pie charts, and more
+  - Automatic theme synchronization (dark/light) with VS Code
+  - Secure rendering with `securityLevel: 'strict'`
+  - Theme-aware re-rendering when switching VS Code themes
+
 ## [1.3.0] - 2025-12-19
 
 ### Added
