@@ -411,6 +411,21 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
+    // This mouseup is not on the action button. If a button press started
+    // (mousedown set the flag) but the pointer was released elsewhere, the
+    // click handler that normally clears this never ran — reset it so a later
+    // selectionchange can still dismiss a stale button.
+    suppressSelectionHide = false;
+
+    // Close an open bubble immediately when the user clicks outside it (the
+    // in-bubble guard above already returned for clicks inside). Doing this
+    // synchronously keeps dismissal snappy; only the action-button display is
+    // debounced below.
+    if (commentBubble) {
+      console.log('[OVERLAY] Bubble is open, user clicked outside - closing');
+      hideBubble();
+    }
+
     // Defer the selection read behind a short debounce that resets on each
     // mouseup. This does two things:
     //   1. Multi-click coalescing: a double/triple-click fires multiple
@@ -435,20 +450,7 @@ console.log('[OVERLAY.JS] Script is loading...');
 
       console.log('[OVERLAY] Has valid selection:', hasValidSelection);
 
-      // If bubble is open and user clicked outside
-      if (commentBubble) {
-        console.log('[OVERLAY] Bubble is open, user clicked outside');
-        hideBubble();
-
-        // If no new selection, we're done
-        if (!hasValidSelection) {
-          console.log('[OVERLAY] No new selection, bubble closed');
-          return;
-        }
-
-        // Fall through to show selection action button
-        console.log('[OVERLAY] New selection detected');
-      }
+      // (Any open bubble was already closed synchronously above.)
 
       // Hide any existing selection action button
       hideSelectionActionButton();
