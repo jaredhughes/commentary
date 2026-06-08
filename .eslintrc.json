@@ -67,5 +67,14 @@
     "no-throw-literal": "warn",
     "semi": "off"
   },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-warning-comments": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["out", "dist", "**/*.d.ts"]
 }

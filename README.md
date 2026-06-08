@@ -266,7 +266,7 @@ When you send comments to AI CLI tools, those tools need permission to modify fi
 |----------|------------------|
 | **Claude Code** | Uses `--permission-mode bypassPermissions` flag to skip interactive prompts |
 | **Cursor Agent** | Inherits app-level settings (Auto-run, Auto-apply edits) from Cursor |
-| **Codex CLI** | Uses `exec` subcommand for automation mode |
+| **Codex CLI** | Batch mode uses `exec --sandbox workspace-write` so edits apply (exec is read-only by default) |
 | **Gemini CLI** | Uses `-p` flag for non-interactive prompts |
 
 **Best practices:**
@@ -276,6 +276,8 @@ When you send comments to AI CLI tools, those tools need permission to modify fi
 - Keep your AI CLI tools updated for latest security patches
 
 **Why this is necessary:** CLI tools require non-interactive mode to process comments programmatically. Interactive permission prompts would cause the terminal to hang waiting for input that never comes.
+
+**Note on Claude Code billing (June 15, 2026):** Anthropic moved non-interactive `claude -p` usage onto a separate metered credit pool (billed at API rates). Commentary's Claude provider defaults to **interactive** mode (no `-p`), which still draws from your standard Claude subscription limits. If you set `commentary.agent.claudeMode` to `batch`, Commentary adds `--print` (`claude -p`) — that usage is billed from the separate credit pool. Choose the mode that matches how you want to be billed.
 
 ---
 

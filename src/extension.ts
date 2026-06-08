@@ -13,6 +13,7 @@ import { CommandManager } from './sidebar/commands';
 import { AgentClient } from './agent/client';
 import { MarkdownWebviewProvider } from './preview/markdownWebview';
 import { CommentaryFileDecorationProvider } from './decorations/fileDecorationProvider';
+import { wireMarkdownFileWatcher } from './sidebar/fileWatcher';
 import { detectOptimalProvider, getProviderSetupMessage } from './agent/providerDetection';
 
 let overlayHost: OverlayHost | undefined;
@@ -361,56 +362,19 @@ function activateInternal(context: vscode.ExtensionContext) {
     })
   );
 
-  // Watch for new Markdown files (Issue #15)
+  // Keep the sidebar in sync when Markdown files are created/deleted/renamed
+  // anywhere in the workspace (Issue #15). A FileSystemWatcher is used instead
+  // of workspace.onDidCreate/Delete/RenameFiles because those only fire for
+  // VS Code-mediated operations — files created externally (terminal, git,
+  // other tools) were missed, leaving the Commentary tree stale even though the
+  // Explorer (which has its own watcher) updated. A glob watcher catches both;
+  // a rename surfaces as a delete+create pair, so it stays covered.
+  const markdownFileWatcher = vscode.workspace.createFileSystemWatcher('**/*.md');
   context.subscriptions.push(
-    vscode.workspace.onDidCreateFiles(async (event) => {
-      try {
-        const markdownFiles = event.files.filter(f => f.path.endsWith('.md'));
-        if (markdownFiles.length > 0) {
-          console.log('[Commentary] Markdown files created:', markdownFiles.map(f => f.fsPath));
-          // Refresh sidebar to show new files
-          commentsViewProvider?.refresh();
-        }
-      } catch (error) {
-        console.error('[Commentary] Error in onDidCreateFiles:', error);
-      }
-    })
-  );
-
-  // Watch for deleted Markdown files (Issue #15)
-  context.subscriptions.push(
-    vscode.workspace.onDidDeleteFiles(async (event) => {
-      try {
-        const markdownFiles = event.files.filter(f => f.path.endsWith('.md'));
-        if (markdownFiles.length > 0) {
-          console.log('[Commentary] Markdown files deleted:', markdownFiles.map(f => f.fsPath));
-          // Refresh sidebar to remove deleted files
-          commentsViewProvider?.refresh();
-        }
-      } catch (error) {
-        console.error('[Commentary] Error in onDidDeleteFiles:', error);
-      }
-    })
-  );
-
-  // Watch for renamed Markdown files (Issue #15)
-  context.subscriptions.push(
-    vscode.workspace.onDidRenameFiles(async (event) => {
-      try {
-        const markdownFiles = event.files.filter(f =>
-          f.newUri.path.endsWith('.md') || f.oldUri.path.endsWith('.md')
-        );
-        if (markdownFiles.length > 0) {
-          console.log('[Commentary] Markdown files renamed:', markdownFiles.map(f => ({
-            old: f.oldUri.fsPath,
-            new: f.newUri.fsPath
-          })));
-          // Refresh sidebar to update file paths
-          commentsViewProvider?.refresh();
-        }
-      } catch (error) {
-        console.error('[Commentary] Error in onDidRenameFiles:', error);
-      }
+    ...wireMarkdownFileWatcher(markdownFileWatcher, () => {
+      console.log('[Commentary] Markdown file created/deleted - refreshing sidebar');
+      commentsViewProvider?.refresh();
+      fileDecorationProvider?.refresh();
     })
   );
 

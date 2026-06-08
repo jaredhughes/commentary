@@ -67,10 +67,12 @@ export class CodexProvider implements ProviderStrategy {
     const isBatch = mode === 'batch';
 
     // Codex CLI: interactive mode (stays open) or batch mode (executes and closes)
+    // Batch mode uses `exec`, which runs in a read-only sandbox by default — so
+    // --sandbox workspace-write is required or the requested edits never apply.
     // The actual writing of the temp file happens in the adapter layer
     return {
       command: config.codexCliPath,
-      args: isBatch ? ['exec'] : [],  // Use 'exec' subcommand for batch mode
+      args: isBatch ? ['exec', '--sandbox', 'workspace-write'] : [],  // 'exec' + writable sandbox for batch mode
       workingDirectory: path.dirname(fileUri),
       env: {
         commentaryTempFile: tempFilePath,

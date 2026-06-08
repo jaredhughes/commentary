@@ -214,6 +214,13 @@ console.log('[OVERLAY.JS] Script is loading...');
 
     // Listen for selection changes to hide the action button when selection is cleared
     document.addEventListener('selectionchange', () => {
+      // Don't tear down the button mid-interaction. Clicking the action button
+      // collapses the document selection, which fires selectionchange; if we
+      // hid the button here it would be removed before its click handler runs.
+      // pendingSelection holds the cloned range, so the button can still act.
+      if (suppressSelectionHide || isActionButtonFocused()) {
+        return;
+      }
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || selection.toString().trim().length === 0) {
         // Selection was cleared - hide the action button
@@ -268,6 +275,24 @@ console.log('[OVERLAY.JS] Script is loading...');
   // Selection action button (Google Docs style - small icon that appears on selection)
   let selectionActionButton = null;
   let pendingSelection = null; // Store selection for when user clicks the action button
+  let suppressSelectionHide = false; // True while the user is pressing the action button
+  let pendingSelectionTimer = null; // Debounce timer for showing the action button
+
+  // Small debounce before showing the action button. Each click of a
+  // double/triple-click fires its own mouseup; without this the button flashes
+  // between clicks (e.g. appears after the 2nd of a triple-click). The timer
+  // resets on every mouseup, so the button only appears once the user settles.
+  const SELECTION_ACTION_DELAY_MS = 250;
+
+  /**
+   * True when the action button is the focused/active element, so a
+   * selectionchange triggered by clicking it shouldn't tear it down.
+   */
+  function isActionButtonFocused() {
+    return !!selectionActionButton &&
+      (document.activeElement === selectionActionButton ||
+        selectionActionButton.contains(document.activeElement));
+  }
 
   /**
    * Show a small action button near the selection (Google Docs style)
@@ -292,6 +317,16 @@ console.log('[OVERLAY.JS] Script is loading...');
     button.className = 'commentary-selection-action';
     button.innerHTML = '<i class="codicon codicon-comment"></i>';
     button.title = 'Add comment';
+
+    // Pressing the button must NOT clear the text selection. Without
+    // preventDefault the mousedown moves focus to the button and collapses the
+    // selection, which fires selectionchange and removes the button before its
+    // click handler can run (the bug behind issue #27: no popup on select).
+    button.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressSelectionHide = true;
+    });
 
     // Position the button to the right of the cursor, below the line
     // to avoid overlapping the selected text
@@ -347,6 +382,7 @@ console.log('[OVERLAY.JS] Script is loading...');
       console.log('[OVERLAY] Selection action button hidden');
     }
     pendingSelection = null;
+    suppressSelectionHide = false;
   }
 
   /**
@@ -375,42 +411,59 @@ console.log('[OVERLAY.JS] Script is loading...');
       return;
     }
 
-    // Check for selection first
-    const selection = window.getSelection();
-    const hasSelection = selection && !selection.isCollapsed;
-    const text = hasSelection ? selection.toString().trim() : '';
-    const hasValidSelection = hasSelection && text.length > 0;
+    // Defer the selection read behind a short debounce that resets on each
+    // mouseup. This does two things:
+    //   1. Multi-click coalescing: a double/triple-click fires multiple
+    //      mouseups; resetting the timer means the button only appears once the
+    //      user has settled, not flashing between the 2nd and 3rd click.
+    //   2. In webviews window.getSelection() is not always finalized
+    //      synchronously during mouseup; waiting a beat lets the browser commit
+    //      the selection before we inspect it (a failure mode behind issue #27).
+    const clientX = event.clientX;
+    const clientY = event.clientY;
+    if (pendingSelectionTimer !== null) {
+      clearTimeout(pendingSelectionTimer);
+    }
+    pendingSelectionTimer = setTimeout(() => {
+      pendingSelectionTimer = null;
 
-    console.log('[OVERLAY] Has valid selection:', hasValidSelection);
+      // Check for selection first
+      const selection = window.getSelection();
+      const hasSelection = selection && !selection.isCollapsed;
+      const text = hasSelection ? selection.toString().trim() : '';
+      const hasValidSelection = hasSelection && text.length > 0;
 
-    // If bubble is open and user clicked outside
-    if (commentBubble) {
-      console.log('[OVERLAY] Bubble is open, user clicked outside');
-      hideBubble();
+      console.log('[OVERLAY] Has valid selection:', hasValidSelection);
 
-      // If no new selection, we're done
+      // If bubble is open and user clicked outside
+      if (commentBubble) {
+        console.log('[OVERLAY] Bubble is open, user clicked outside');
+        hideBubble();
+
+        // If no new selection, we're done
+        if (!hasValidSelection) {
+          console.log('[OVERLAY] No new selection, bubble closed');
+          return;
+        }
+
+        // Fall through to show selection action button
+        console.log('[OVERLAY] New selection detected');
+      }
+
+      // Hide any existing selection action button
+      hideSelectionActionButton();
+
+      // Only show selection action button if there's a valid text selection
       if (!hasValidSelection) {
-        console.log('[OVERLAY] No new selection, bubble closed');
+        console.log('[OVERLAY] No selection, nothing to show');
         return;
       }
 
-      // Fall through to show selection action button
-      console.log('[OVERLAY] New selection detected');
-    }
-
-    // Hide any existing selection action button
-    hideSelectionActionButton();
-
-    // Only show selection action button if there's a valid text selection
-    if (!hasValidSelection) {
-      console.log('[OVERLAY] No selection, nothing to show');
-      return;
-    }
-
-    // Valid selection - show small action button (Google Docs style)
-    // User can still copy freely, button only appears after selection
-    // Clicking button opens the full comment bubble
-    showSelectionActionButton(selection, event.clientX, event.clientY);
+      // Valid selection - show small action button (Google Docs style)
+      // User can still copy freely, button only appears after selection
+      // Clicking button opens the full comment bubble
+      showSelectionActionButton(selection, clientX, clientY);
+    }, SELECTION_ACTION_DELAY_MS);
   }
 
   /**

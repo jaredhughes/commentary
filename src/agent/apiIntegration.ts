@@ -43,7 +43,9 @@ export class ApiIntegration {
     }
 
     const config = vscode.workspace.getConfiguration('commentary.agent');
-    const model = config.get<string>('model', 'claude-3-5-sonnet-20241022');
+    // Default to a current model. claude-3-5-sonnet-20241022 was retired
+    // (Oct 28, 2025) and now 404s; claude-sonnet-4-6 is its drop-in successor.
+    const model = config.get<string>('model', 'claude-sonnet-4-6');
 
     try {
       // Get the first note to identify the file
@@ -80,7 +82,9 @@ ${originalContent}`;
           // Call Claude API
           const requestParams: Anthropic.MessageCreateParams = {
             model: model,
-            max_tokens: 8000,
+            // Whole-file rewrites can be large; 8K risked truncating the doc
+            // (lost content). 16K is the recommended non-streaming default.
+            max_tokens: 16000,
             messages: [
               {
                 role: 'user',

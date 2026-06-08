@@ -5,6 +5,25 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Select-to-comment popup not appearing (#27)**: clicking the selection action button collapsed the text selection, which fired `selectionchange` and tore the button down before its click handler ran, so the comment bubble never opened. The button now guards its `mousedown` (and the `selectionchange` handler skips teardown while the button is active).
+- **Comment button flashed between clicks of a double/triple-click**: showing the action button is now debounced (250ms, resets on each `mouseup`), so it appears only once the selection settles instead of popping up mid multi-click. The debounce also lets the webview finalize the selection before it's read.
+- **Sidebar still went stale when files were added/removed externally**: the file-event handlers from #15 (`onDidCreateFiles`/`onDidDeleteFiles`/`onDidRenameFiles`) only fire for VS Code-mediated operations, so files created by the terminal, git, or other tools were missed. Replaced them with a `**/*.md` `FileSystemWatcher`, which also catches external changes.
+- **Direct Claude API used a retired model**: the default model was `claude-3-5-sonnet-20241022`, which Anthropic retired (Oct 28, 2025) and now returns a 404. Default is now `claude-sonnet-4-6` (configurable via `commentary.agent.model`).
+- **Codex batch-mode edits silently no-op'd**: `codex exec` runs in a read-only sandbox by default, so requested edits were never written. Batch mode is now invoked as `codex exec --sandbox workspace-write`.
+
+### Changed
+- Direct Claude API `max_tokens` raised from 8000 to 16000 to avoid truncating whole-file rewrites.
+
+### Added
+- jsdom-based regression tests for the select-to-comment flow, including multi-click debounce coverage (`npm run test:overlay`).
+- Unit tests for the markdown file watcher that keeps the sidebar in sync.
+
+### Notes
+- **Claude Code billing (June 15, 2026):** Anthropic moved non-interactive `claude -p` usage to a separate metered credit pool (API rates). Commentary's Claude provider defaults to **interactive** mode (no `-p`), which stays on standard subscription limits; the optional `commentary.agent.claudeMode: "batch"` adds `--print` (`claude -p`), and that usage draws from the new credit pool.
+
 ## [1.4.0] - 2025-12-31
 
 ### Added

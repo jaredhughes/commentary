@@ -120,8 +120,10 @@ suite('Codex Provider', () => {
 
       assert.ok(command);
       assert.strictEqual(command!.command, '/usr/local/bin/codex');
-      // Batch mode: exec subcommand for non-interactive automation mode
-      assert.deepStrictEqual(command!.args, ['exec']);
+      // Batch mode: exec subcommand for non-interactive automation mode, plus
+      // --sandbox workspace-write so Codex can actually edit the document
+      // (exec defaults to a read-only sandbox, which would silently no-op).
+      assert.deepStrictEqual(command!.args, ['exec', '--sandbox', 'workspace-write']);
       // Temp file info in env for adapter to use
       assert.ok(command!.env);
       assert.ok(command!.env.commentaryTempFile);
