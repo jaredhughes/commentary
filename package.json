@@ -2,7 +2,7 @@
   "name": "commentary",
   "displayName": "Commentary",
   "description": "Inline comments for rendered Markdown in VS Code. Select, annotate, review, and send to your AI agent, without touching the source file.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "jaredhughes",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -483,8 +483,8 @@
         },
         "commentary.agent.model": {
           "type": "string",
-          "default": "claude-3-5-sonnet-20241022",
-          "description": "Model to use for AI agent"
+          "default": "claude-sonnet-4-6",
+          "description": "Model to use for the direct Claude API integration (commentary.agent.claudeApiKey). Defaults to claude-sonnet-4-6; use claude-opus-4-8 for the most capable model."
         },
         "commentary.agent.contextLines": {
           "type": "number",
@@ -554,6 +554,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts --max-warnings 100",
     "test": "node ./out/test/runTest.js",
+    "test:overlay": "npm run compile && mocha \"out/test/overlay/**/*.test.js\" --ui tdd",
     "test:build": "node scripts/copy-themes.test.js",
     "validate": "npm run lint && tsc --noEmit",
     "package": "npm run compile && npm run vscode:prepublish && vsce package --no-git-tag-version --out vsix/",
@@ -563,6 +564,7 @@
     "@exampledev/new.css": "^1.1.3",
     "@lowlighter/matcha": "^3.0.1",
     "@picocss/pico": "^2.1.1",
+    "@types/jsdom": "^28.0.3",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.x",
     "@types/vscode": "^1.85.0",
@@ -572,6 +574,7 @@
     "eslint": "^8.x",
     "glob": "^10.3.10",
     "husky": "^9.1.7",
+    "jsdom": "^22.1.0",
     "latex.css": "^1.13.0",
     "mocha": "^10.2.0",
     "mvp.css": "^1.17.2",
