@@ -20,3 +20,4 @@ media/demo/*.webm
 *.tmp.md
 *_draft.md
 *_temp.md
+.claude-cache/
