@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sidebar still went stale when files were added/removed externally**: the file-event handlers from #15 (`onDidCreateFiles`/`onDidDeleteFiles`/`onDidRenameFiles`) only fire for VS Code-mediated operations, so files created by the terminal, git, or other tools were missed. Replaced them with a `**/*.md` `FileSystemWatcher`, which also catches external changes.
 - **Direct Claude API used a retired model**: the default model was `claude-3-5-sonnet-20241022`, which Anthropic retired (Oct 28, 2025) and now returns a 404. Default is now `claude-sonnet-4-6` (configurable via `commentary.agent.model`).
 - **Codex batch-mode edits silently no-op'd**: `codex exec` runs in a read-only sandbox by default, so requested edits were never written. Batch mode is now invoked as `codex exec --sandbox workspace-write`.
+- **Direct Claude API could overwrite a document with a truncated response**: the whole file was replaced with the response even when it hit the output-token limit. The integration now detects `stop_reason: "max_tokens"`, leaves the document unchanged, and surfaces an error.
 
 ### Changed
 - Direct Claude API `max_tokens` raised from 8000 to 16000 to avoid truncating whole-file rewrites.

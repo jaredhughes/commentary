@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import Anthropic from '@anthropic-ai/sdk';
 import { AgentRequest } from '../types';
+import { extractEditableContent } from './apiResponse';
 
 export class ApiIntegration {
   private anthropic: Anthropic | null = null;
@@ -96,11 +97,17 @@ ${originalContent}`;
 
           progress.report({ message: 'Applying edits...' });
 
-          // Extract response text
-          const responseText = response.content
-            .filter((block) => block.type === 'text')
-            .map((block) => (block as { type: 'text'; text: string }).text)
-            .join('\n');
+          // Extract response text, refusing to apply a truncated response.
+          // We replace the ENTIRE document below, so writing a response that hit
+          // the output-token limit would silently destroy content.
+          const extracted = extractEditableContent(response);
+          if (!extracted.ok) {
+            vscode.window.showErrorMessage(
+              'Claude\'s response was cut off at the output-token limit, so your document was left unchanged. Try fewer or smaller comments, or comment on a smaller section.'
+            );
+            return false;
+          }
+          const responseText = extracted.text;
 
           // Apply edits to document
           const edit = new vscode.WorkspaceEdit();
