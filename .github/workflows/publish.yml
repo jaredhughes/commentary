@@ -11,12 +11,12 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
@@ -39,9 +39,16 @@ jobs:
 
       - name: Resolve tag/version and verify match
         id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          tag="${{ inputs.tag || github.ref_name }}"
+          tag="${INPUT_TAG:-$REF_NAME}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
+            echo "Tag '$tag' does not match expected vX.Y.Z format" >&2
+            exit 1
+          fi
           tag_version="${tag#v}"
           pkg_version="$(node -p "require('./package.json').version")"
           if [ "$tag_version" != "$pkg_version" ]; then
@@ -59,21 +66,29 @@ jobs:
         run: npm run validate
 
       - name: Package extension
+        # --no-git-tag-version: we're packaging an already-tagged commit; don't
+        # let vsce mutate package.json or create a tag.
+        env:
+          VSIX: ${{ steps.meta.outputs.vsix }}
         run: |
+          set -euo pipefail
           mkdir -p vsix
-          npx --yes @vscode/vsce package --no-git-tag-version --out "vsix/${{ steps.meta.outputs.vsix }}"
+          npx --yes '@vscode/vsce@^3' package --no-git-tag-version --out "vsix/$VSIX"
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
           name: commentary-vsix
           path: vsix/${{ steps.meta.outputs.vsix }}
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: error
 
   publish-vscode-marketplace:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - name: Download VSIX
         uses: actions/download-artifact@v4
@@ -84,11 +99,25 @@ jobs:
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx --yes @vscode/vsce publish --packagePath "vsix/${{ needs.build.outputs.vsix }}"
+          VSIX: ${{ needs.build.outputs.vsix }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Idempotency: if this version is already on the Marketplace (e.g. a
+          # re-run via workflow_dispatch), skip rather than fail the job.
+          published="$(npx --yes '@vscode/vsce@^3' show jaredhughes.commentary --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).versions[0].version)}catch{process.stdout.write("")}})' || true)"
+          if [ "$published" = "$VERSION" ]; then
+            echo "Marketplace already shows version $VERSION — skipping publish."
+            exit 0
+          fi
+          npx --yes '@vscode/vsce@^3' publish --packagePath "vsix/$VSIX"
 
   publish-open-vsx:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Download VSIX
         uses: actions/download-artifact@v4
@@ -99,22 +128,31 @@ jobs:
       - name: Publish to Open VSX (with retry)
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VSIX: ${{ needs.build.outputs.vsix }}
         run: |
-          set -e
+          set -euo pipefail
           attempt=1
           max_attempts=5
-          until npx --yes ovsx publish "vsix/${{ needs.build.outputs.vsix }}"; do
-            if [ $attempt -ge $max_attempts ]; then
+          while true; do
+            if npx --yes 'ovsx@^0.10' publish "vsix/$VSIX"; then
+              break
+            fi
+            if [ "$attempt" -ge "$max_attempts" ]; then
               echo "Open VSX publish failed after $attempt attempts" >&2
               exit 1
             fi
-            sleep $((attempt * 60))
+            backoff=$((attempt * 60))
+            echo "Attempt $attempt failed, retrying in ${backoff}s..." >&2
+            sleep "$backoff"
             attempt=$((attempt + 1))
           done
 
   create-github-release:
     needs: [build, publish-vscode-marketplace]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -128,29 +166,30 @@ jobs:
           path: vsix
 
       - name: Extract changelog notes
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
-          version="${{ needs.build.outputs.version }}"
-          awk -v v="$version" '
-            $0 ~ "^## \\[" v "\\]" { found=1; next }
-            found && /^## \[/ { exit }
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { found=1; next }
+            found && index($0, "## [") == 1 { exit }
             found { print }
           ' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then
-            echo "No changelog section found for $version" >&2
+            echo "No changelog section found for $VERSION" >&2
             exit 1
           fi
 
       - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VSIX: ${{ needs.build.outputs.vsix }}
         run: |
           set -euo pipefail
-          tag="${{ needs.build.outputs.tag }}"
-          vsix="vsix/${{ needs.build.outputs.vsix }}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$vsix" --clobber
-            gh release edit "$tag" --notes-file release-notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "vsix/$VSIX" --clobber
+            gh release edit "$TAG" --notes-file release-notes.md
           else
-            gh release create "$tag" "$vsix" --title "$tag" --notes-file release-notes.md
+            gh release create "$TAG" "vsix/$VSIX" --title "$TAG" --notes-file release-notes.md
           fi
