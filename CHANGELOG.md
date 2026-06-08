@@ -5,7 +5,7 @@ All notable changes to the "Commentary" extension will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.1] - 2026-06-08
 
 ### Fixed
 - **Select-to-comment popup not appearing (#27)**: clicking the selection action button collapsed the text selection, which fired `selectionchange` and tore the button down before its click handler ran, so the comment bubble never opened. The button now guards its `mousedown` (and the `selectionchange` handler skips teardown while the button is active).
